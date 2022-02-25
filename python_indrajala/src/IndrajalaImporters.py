@@ -7,14 +7,12 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import json
 
-__VERSION__ = "base/1.0.0"
+from Indrajala import IndrajalaEventSource
 
-class IndrajalaImporterTelegram:
-    def __init__(self, config_file=None, import_file=None):
+class TelegramImporter:
+    def __init__(self, config_file=None):
         if os.path.exists(config_file) is False or os.path.isfile(config_file) is False:
             raise Exception(f"config_file {config_file} does not exist.")
-        if os.path.exists(import_file) is False or os.path.isfile(import_file) is False:
-            raise Exception(f"import_file {import_file} does not exist.")
         with open(config_file, "r") as f:
             config = json.load(f)
             if 'from_uuid4' not in config:
@@ -22,11 +20,16 @@ class IndrajalaImporterTelegram:
                 with open(config_file, "w") as f:
                     json.dump(config, f, indent=4)
         self.config = config
-        self.import_file = import_file
+        if 'source_dir' not in config:
+            raise Exception(f"config_file {config_file} does not contain 'source_dir'.")
+        else:
+            self.source_dir = config['source_dir']
+        if os.path.exists(self.source_dir) is False or os.path.isfile(self.source_dir) is False:
+            raise Exception(f"source_dir {self.source_dir} does not exist.")
         self.ies = IndrajalaEventSource(config_file=config_file)
 
     def import_data(self):
-        with open (self.import_file, "r") as fp:
+        with open (self.source_dir, "r") as fp:
             soup = BeautifulSoup(fp, 'lxml')
 
         for message in soup.find_all('div', class_='body'):
