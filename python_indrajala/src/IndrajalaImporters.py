@@ -52,5 +52,5 @@ class TelegramImporter:
                 print(f"{strtime} [{from_name}] {text[:50]}...")
                 dtime=datetime.datetime.strptime(strtime, '%d.%m.%Y %H:%M:%S')
                 dtlocal=dtime.astimezone()
-                self.ies.set_data(text, dtlocal)
+                self.ies.set_data({'message': text, 'from_name': from_name, 'local_time': strtime}, dtlocal)
 
