@@ -97,9 +97,11 @@ class IndrajalaEventSource:
                 json.dump(config, f, indent=4)
         self.indrajala_event = IndrajalaEvent(domain=domain, to_scope=to_scope, from_instance=from_instance, auth_hash=auth_hash, location=location, data_type=data_type, from_uuid4=from_uuid4)
 
-    def _gen_filename(self):
+    def _gen_filename(self, utctime=None):
+        if utctime is None:
+            utctime = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()
         invalids = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
-        fn=f"{datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()}_{self.from_uuid4}.json"
+        fn=f"{utctime}_{self.from_uuid4}.json"
         for invalid in invalids:
             fn = fn.replace(invalid, '_')
         fp=os.path.join(self.persistent_storage_root, self.domain)
@@ -115,7 +117,7 @@ class IndrajalaEventSource:
             utctime = datetime_with_any_timezone.astimezone(ZoneInfo('UTC')).isoformat()
         self.indrajala_event.time = utctime
         self.indrajala_event.set_data(data, duration)
-        filename = self._gen_filename()
+        filename = self._gen_filename(utctime)
         with open(filename, "w") as f:
             json.dump(self.indrajala_event.__dict__, f, indent=4)
         return self
