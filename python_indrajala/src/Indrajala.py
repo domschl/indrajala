@@ -23,12 +23,12 @@ class IndrajalaEvent:
         self.data_type = data_type
         self.location = location
 
-    def set_data(self, data, utcisotime=None, duration=0.0):
+    def set_data(self, data, utcisotime=None, utcisotime_end=None):
         if utcisotime is None:
             self.time = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()  # or  'now()' and 'localtime'
         else:
             self.time = utcisotime
-        self.duration = duration
+        self.utcisotime_end = utcisotime_end
         self.data = data
         self.uuid4 = str(uuid.uuid4())
         return self
@@ -110,14 +110,21 @@ class IndrajalaEventSource:
         fn = os.path.join(fp, fn)
         return fn
 
-    def set_data(self, data, datetime_with_any_timezone=None, duration=0.0):
+    def set_data(self, data, datetime_with_any_timezone=None, datetime_with_any_timezone_end=None, domain=None):
         if datetime_with_any_timezone is None:
-            utctime = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()  # or  'now()' and 'localtime'
+            utcisotime = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()  # or  'now()' and 'localtime'
         else:
-            utctime = datetime_with_any_timezone.astimezone(ZoneInfo('UTC')).isoformat()
-        self.indrajala_event.time = utctime
-        self.indrajala_event.set_data(data, duration)
-        filename = self._gen_filename(utctime)
+            utcisotime = datetime_with_any_timezone.astimezone(ZoneInfo('UTC')).isoformat()
+        self.indrajala_event.time = utcisotime
+        if datetime_with_any_timezone_end is None:
+            utcisotime_end = utcisotime  # or  'now()' and 'localtime'
+        else:
+            utcisotime_end = datetime_with_any_timezone_end.astimezone(ZoneInfo('UTC')).isoformat()
+        self.indrajala_event.set_data(data, utcisotime, utcisotime_end)
+        if domain is not None:
+            self.indrajala_event.domain = domain
+            self.domain = domain  # hmm
+        filename = self._gen_filename(utcisotime)
         with open(filename, "w") as f:
             json.dump(self.indrajala_event.__dict__, f, indent=4)
         return self
