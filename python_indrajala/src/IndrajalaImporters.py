@@ -84,13 +84,18 @@ class AppleHealthImporter:
         self.config, self.ies = checkIndrajalaConfig(config=config, additional_fields=['source_dir'])
 
     def import_data(self):
-        emergency_break = 100
+        emergency_break = 10000
         n = 0
         expected_fields = ['type', 'sourceName', 'sourceVersion', 'unit', 'creationDate', 'startDate', 'endDate', 'value']
         optional_fields = {'value': 'Event'}  # Give a default value for optional fields.
         data_file = os.path.join(self.config['source_dir'], 'Export.xml')
         if os.path.exists(data_file) is False or os.path.isfile(data_file) is False:
             raise Exception(f"Apple Health data_file {data_file} does not exist.")
+        current_cluster_date = None
+        cluster_data = None
+        cluster_type = None
+        cluster_start = None
+        cluster_end = None
         for _, element in etree.iterparse(data_file, tag='Record'):
             n += 1
             if n > emergency_break:
@@ -110,6 +115,8 @@ class AppleHealthImporter:
                     d[field]=optional_fields[field]
 
             # Apple mess:  '2015-11-13 07:23:35 +0100'
+            cluster_date = d['startDate'][:10]
+            cluster_time = d['startDate'][11:19]
             dt= datetime.datetime.strptime(d['startDate'], '%Y-%m-%d %H:%M:%S %z')
             de= datetime.datetime.strptime(d['endDate'], '%Y-%m-%d %H:%M:%S %z')
             bloat = 'HKQuantityTypeIdentifier'
@@ -137,6 +144,37 @@ class AppleHealthImporter:
             for field in avail_fields:
                 data[field]=d[field]
             domain = self.config['domain'].replace('{data_type}', d['type'])
-            self.ies.set_data(data, datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain)
+            if cluster_date == current_cluster_date and cluster_type == d['type']:
+                if cluster_data is None:
+                    cluster_data = []
+                cluster_end = d['endDate']
+                cluster_data.append((cluster_time, data['value']))
+            else:
+                if cluster_data is None:
+                    cluster_data = []
+                    cluster_start = d['startDate']
+                    cluster_end = d['endDate']
+                    cluster_type = d['type']
+                    current_cluster_date = cluster_date
+                    cluster_data.append((cluster_time, data['value']))
+                else:
+                    dt= datetime.datetime.strptime(cluster_start, '%Y-%m-%d %H:%M:%S %z')
+                    de= datetime.datetime.strptime(cluster_end, '%Y-%m-%d %H:%M:%S %z')
+                    print(f"Cluster-write {cluster_type} {cluster_start} - {cluster_end}: {cluster_data}")
+                    data_wr=data.copy()
+                    data_wr['value']=cluster_data
+                    self.ies.set_data(data_wr, datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain)
+                    cluster_data = []
+                    cluster_start = d['startDate']
+                    cluster_end = d['endDate']
+                    cluster_type = d['type']
+                    current_cluster_date = cluster_date
+                    cluster_data.append((cluster_time, data['value']))
             element.clear(keep_tail=True)
+        if cluster_data is not None:
+            print(f"Cluster-flush: {cluster_data}")
+            dt= datetime.datetime.strptime(cluster_start, '%Y-%m-%d %H:%M:%S %z')
+            de= datetime.datetime.strptime(cluster_end, '%Y-%m-%d %H:%M:%S %z')
+            data['value'] = cluster_data
+            self.ies.set_data(data, datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain)
 
