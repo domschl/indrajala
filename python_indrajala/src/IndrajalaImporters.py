@@ -11,11 +11,11 @@ from copy import copy
 
 from Indrajala import IndrajalaEventSource, __SCHEMA__
 
-def checkIndrajalaConfig(config, additional_fields=None) -> IndrajalaEventSource:
+def checkIndrajalaConfig(config, additional_fields=None):
     """
     Check if the config file exists and is valid
     """
-    if isinstance(config, 'str'):
+    if isinstance(config, str):
         if os.path.exists(config) is False or os.path.isfile(config) is False:
             raise Exception(f"config_file {config} does not exist.")
         with open(config, "r") as f:
@@ -30,31 +30,16 @@ def checkIndrajalaConfig(config, additional_fields=None) -> IndrajalaEventSource
     for field in required_fields:
         if field not in config:
             raise Exception(f"config_file {config} is missing field {field}")
-    return IndrajalaEventSource(config=config)
+    return config, IndrajalaEventSource(config=config)
 
 class TelegramImporter:
-    def __init__(self, config_file=None):
-        if os.path.exists(config_file) is False or os.path.isfile(config_file) is False:
-            raise Exception(f"config_file {config_file} does not exist.")
-        with open(config_file, "r") as f:
-            config = json.load(f)
-            if 'from_uuid4' not in config:
-                config['from_uuid4'] = str(uuid.uuid4())
-                with open(config_file, "w") as f:
-                    json.dump(config, f, indent=4)
-        self.config = config
-        if 'source_dir' not in config:
-            raise Exception(f"config_file {config_file} does not contain 'source_dir'.")
-        else:
-            self.source_dir = config['source_dir']
-        if os.path.exists(self.source_dir) is False or os.path.isdir(self.source_dir) is False:
-            raise Exception(f"source_dir {self.source_dir} is not a directory.")
-        self.ies = IndrajalaEventSource(config=config)
+    def __init__(self, config=None):
+        self.config, self.ies = checkIndrajalaConfig(config=config, additional_fields=['source_dir'])
 
     def import_data(self):
-        dirs = [name for name in os.listdir(self.source_dir) if os.path.isdir(os.path.join(self.source_dir, name))]
+        dirs = [name for name in os.listdir(self.config['source_dir']) if os.path.isdir(os.path.join(self.config['source_dir'], name))]
         for dir in dirs:
-            path = os.path.join(self.source_dir, dir)
+            path = os.path.join(self.config['source_dir'], dir)
             repl_token='{chat_id}'
             if repl_token in self.config['domain']:
                 domain = self.config['domain'].replace(repl_token, dir)
@@ -95,35 +80,21 @@ class TelegramImporter:
                                 self.ies.set_data({'message': text, 'from_name': from_name, 'local_time': strtime}, datetime_with_any_timezone=dtlocal, domain=domain)
 
 class AppleHealthImporter:
-    def __init__(self, config_file=None):
-        if os.path.exists(config_file) is False or os.path.isfile(config_file) is False:
-            raise Exception(f"config_file {config_file} does not exist.")
-        with open(config_file, "r") as f:
-            config = json.load(f)
-            if 'from_uuid4' not in config:
-                config['from_uuid4'] = str(uuid.uuid4())
-                with open(config_file, "w") as f:
-                    json.dump(config, f, indent=4)
-        self.config = config
-        if 'source_dir' not in config:
-            raise Exception(f"config_file {config_file} does not contain 'source_dir'.")
-        else:
-            self.source_dir = config['source_dir']
-        if os.path.exists(self.source_dir) is False or os.path.isdir(self.source_dir) is False:
-            raise Exception(f"source_dir {self.source_dir} is not a directory.")
-        if 'domain' not in config:
-            raise Exception(f"config_file {config_file} does not contain 'domain'.")
-        else:
-            if '{data_type}' not in config['domain']:
-                raise Exception(f"config_file {config_file} does not contain token '{{data_type}}' in 'domain': {config['domain']}.")
-        self.ies = IndrajalaEventSource(config_file=config_file)
+    def __init__(self, config=None):
+        self.config, self.ies = checkIndrajalaConfig(config=config, additional_fields=['source_dir'])
 
     def import_data(self):
+        emergency_break = 100
+        n = 0
         expected_fields = ['type', 'sourceName', 'sourceVersion', 'unit', 'creationDate', 'startDate', 'endDate', 'value']
-        data_file = os.path.join(self.source_dir, 'Export.xml')
+        optional_fields = {'value': 'Event'}  # Give a default value for optional fields.
+        data_file = os.path.join(self.config['source_dir'], 'Export.xml')
         if os.path.exists(data_file) is False or os.path.isfile(data_file) is False:
             raise Exception(f"Apple Health data_file {data_file} does not exist.")
         for _, element in etree.iterparse(data_file, tag='Record'):
+            n += 1
+            if n > emergency_break:
+                break
             d=element.attrib
             ok=True
             for field in expected_fields:
@@ -133,6 +104,10 @@ class AppleHealthImporter:
             if ok is False:
                 continue
             avail_fields=expected_fields.copy()
+            for field in optional_fields.keys():
+                if field not in d:
+                    avail_fields.append(field)
+                    d[field]=optional_fields[field]
 
             # Apple mess:  '2015-11-13 07:23:35 +0100'
             dt= datetime.datetime.strptime(d['startDate'], '%Y-%m-%d %H:%M:%S %z')
@@ -150,6 +125,8 @@ class AppleHealthImporter:
                 for att in devatts:
                     par=att.split(':')
                     if len(par)==2:
+                        if par[1][-1]=='>':  # remove trailing > from object-marker
+                            par[1]=par[1][:-1]
                         dev[par[0]]=par[1]
                 for field in ['name', 'manufacturer', 'model', 'hardware', 'software']:
                     if field in dev:
