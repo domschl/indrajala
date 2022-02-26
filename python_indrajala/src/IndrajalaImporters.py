@@ -9,7 +9,28 @@ import json
 from lxml import etree
 from copy import copy
 
-from Indrajala import IndrajalaEventSource
+from Indrajala import IndrajalaEventSource, __SCHEMA__
+
+def checkIndrajalaConfig(config, additional_fields=None) -> IndrajalaEventSource:
+    """
+    Check if the config file exists and is valid
+    """
+    if isinstance(config, 'str'):
+        if os.path.exists(config) is False or os.path.isfile(config) is False:
+            raise Exception(f"config_file {config} does not exist.")
+        with open(config, "r") as f:
+            config = json.load(f)
+            if 'from_uuid4' not in config:
+                config['from_uuid4'] = str(uuid.uuid4())
+                with open(config, "w") as f:
+                    json.dump(config, f, indent=4)
+    required_fields = __SCHEMA__
+    if additional_fields is not None:
+        required_fields.extend(additional_fields)
+    for field in required_fields:
+        if field not in config:
+            raise Exception(f"config_file {config} is missing field {field}")
+    return IndrajalaEventSource(config=config)
 
 class TelegramImporter:
     def __init__(self, config_file=None):
@@ -28,7 +49,7 @@ class TelegramImporter:
             self.source_dir = config['source_dir']
         if os.path.exists(self.source_dir) is False or os.path.isdir(self.source_dir) is False:
             raise Exception(f"source_dir {self.source_dir} is not a directory.")
-        self.ies = IndrajalaEventSource(config_file=config_file)
+        self.ies = IndrajalaEventSource(config=config)
 
     def import_data(self):
         dirs = [name for name in os.listdir(self.source_dir) if os.path.isdir(os.path.join(self.source_dir, name))]
