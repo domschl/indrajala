@@ -84,8 +84,8 @@ class AppleHealthImporter:
         self.config, self.ies = checkIndrajalaConfig(config=config, additional_fields=['source_dir'])
 
     def import_data(self):
-        emergency_break = 10000
-        n = 0
+        # emergency_break = 10000
+        # n = 0
         expected_fields = ['type', 'sourceName', 'sourceVersion', 'unit', 'creationDate', 'startDate', 'endDate', 'value']
         optional_fields = {'value': 'Event'}  # Give a default value for optional fields.
         data_file = os.path.join(self.config['source_dir'], 'Export.xml')
@@ -97,9 +97,9 @@ class AppleHealthImporter:
         cluster_start = None
         cluster_end = None
         for _, element in etree.iterparse(data_file, tag='Record'):
-            n += 1
-            if n > emergency_break:
-                break
+            # n += 1
+            # if n > emergency_break:
+            #     break
             d=element.attrib
             ok=True
             for field in expected_fields:
