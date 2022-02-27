@@ -1,15 +1,17 @@
-# Filename: {time}_{domain}_{uuid4}.json
 import uuid
 import os
 import datetime
-from zoneinfo import ZoneInfo
-import pandas as pd
+# from zoneinfo import ZoneInfo
+# import pandas as pd
 from bs4 import BeautifulSoup
 import json
 from lxml import etree
 from copy import copy
 
 from Indrajala import IndrajalaEventSource, __SCHEMA__
+
+# TODO: entity registry
+# TODO: canonical data names
 
 def checkIndrajalaConfig(config, additional_fields=None):
     """
@@ -94,6 +96,7 @@ class AppleHealthImporter:
         current_cluster_date = None
         cluster_data = None
         cluster_type = None
+        cluster_sourceName = None
         cluster_start = None
         cluster_end = None
         for _, element in etree.iterparse(data_file, tag='Record'):
@@ -144,7 +147,8 @@ class AppleHealthImporter:
             for field in avail_fields:
                 data[field]=d[field]
             domain = self.config['domain'].replace('{data_type}', d['type'])
-            if cluster_date == current_cluster_date and cluster_type == d['type']:
+            # TODO: currently data is local time, especially clustered data. Trade-off useability vs. generalization.
+            if cluster_date == current_cluster_date and cluster_type == d['type'] and cluster_sourceName == d['sourceName']:
                 if cluster_data is None:
                     cluster_data = []
                 cluster_end = d['endDate']
@@ -155,6 +159,7 @@ class AppleHealthImporter:
                     cluster_start = d['startDate']
                     cluster_end = d['endDate']
                     cluster_type = d['type']
+                    cluster_sourceName = d['sourceName']
                     current_cluster_date = cluster_date
                     cluster_data.append((cluster_time, data['value']))
                 else:
@@ -168,6 +173,7 @@ class AppleHealthImporter:
                     cluster_start = d['startDate']
                     cluster_end = d['endDate']
                     cluster_type = d['type']
+                    cluster_sourceName = d['sourceName']
                     current_cluster_date = cluster_date
                     cluster_data.append((cluster_time, data['value']))
             element.clear(keep_tail=True)
