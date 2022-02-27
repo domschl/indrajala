@@ -145,3 +145,74 @@ class IndrajalaReport:
                 df = df.append(row, ignore_index=True)
         return df
 
+class IndrajalaNeo:
+    def __init__(self, persistent_storage_root):
+        self.version = "base/1.0.0"
+        self.schema = ['domain', 'to_scope', 'from_instance', 'from_uuid4', 'auth_hash', 'location', 'data_type']
+        if os.path.exists(persistent_storage_root) is False or os.path.isdir(persistent_storage_root) is False:
+             raise Exception(f"persistent_storage_root {persistent_storage_root} is not a directory.")
+        self.persistent_storage_root = persistent_storage_root
+        self.clustering(is_enabled=False)
+
+    def set_default_record(self, default_record):
+        if isinstance(default_record, str):
+            filename = default_record
+            try:
+                with open(filename, "r") as f:
+                    default_record = json.load(f)
+            except Exception as e:
+                raise Exception(f"Error while loading default_record from {filename}: {e}")
+            if 'from_uuid4' not in default_record:
+                default_record['from_uuid4'] = str(uuid.uuid4())
+                with open(filename, "w") as f:
+                    json.dump(default_record, f, indent=4)
+        for field in self.schema:
+            if getattr(default_record, field) is None:
+                raise Exception(f"Default record {default_record} does not contain field {field}")
+        self.default_record = default_record
+
+    def _gen_filename(self, domain, utctime=None):
+        if utctime is None:
+            utctime = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()
+        invalids = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '{', '}', '\n', '\r', ')', '(']
+        fn=f"{utctime}_{self.default_record['from_uuid4']}.json"
+        for invalid in invalids:
+            fn = fn.replace(invalid, '_')
+        fp=os.path.join(self.persistent_storage_root, domain)
+        if not os.path.exists(fp):
+            os.makedirs(fp)
+        fn = os.path.join(fp, fn)
+        return fn
+
+    def clustering(self, is_enabled=True):
+        if is_enabled is False:
+            if self.custer is True:
+                # TODO Flush
+        else:
+            # TODO reset
+        self.cluster = is_enabled
+
+    def set_data(self, data, datetime_with_any_timezone=None, datetime_with_any_timezone_end=None, domain=None):
+        ij = self.config.copy()
+        if datetime_with_any_timezone is None:
+            utcisotime = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()
+        else:
+            utcisotime = datetime_with_any_timezone.astimezone(ZoneInfo('UTC')).isoformat()
+        if datetime_with_any_timezone_end is None:
+            utcisotime_end = utcisotime
+        else:
+            utcisotime_end = datetime_with_any_timezone_end.astimezone(ZoneInfo('UTC')).isoformat()
+        ij['time'] = utcisotime
+        ij['time_end'] = utcisotime_end
+        if domain is not None:
+            ij['domain'] = domain
+        if self.cluster is True:
+            # TODO cluster
+        else:
+            ij['data'] = data
+            filename = self._gen_filename(utcisotime, ij['domain'])
+            with open(filename, "w") as f:
+                json.dump(ij, f, indent=4)
+
+        
+
