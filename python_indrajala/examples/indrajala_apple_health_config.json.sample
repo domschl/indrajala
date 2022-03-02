@@ -1,15 +1,17 @@
 {
     "persistent_storage_root": "./store",
-    "source_dir": "some_directory/rawdata/Apple-Health-export",
-    "domain": "person/someone/health/apple/{data_type}",
-    "to_scope": "personal",
-    "from_instance": "apple/health/export",
-    "data_type": "sensor_data",
-    "location": {
-        "alias": "home",
-        "latitude": "44.4444",
-        "longitude": "8.8888"
-    },
-    "auth_hash": "",
-    "from_uuid4": "eb488888-d444-4333-8888-768720577777"
+    "import_path": "<some-path-to-directory-with-apple-health-export-file-Export.xml>"
+    "default_record": {
+        "domain": "person/some-person-name-here/health/apple/{data_type}",
+        "to_scope": "personal",
+        "from_instance": "apple/health/export/{from_instance}",
+        "data_type": "sensor_data/{data_type}",
+        "location": {
+            "alias": "home",
+            "latitude": "4.44444",
+            "longitude": "1.1111"
+        },
+        "auth_hash": "",
+    }
 }
+
