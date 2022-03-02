@@ -4,6 +4,7 @@ import datetime
 from bs4 import BeautifulSoup
 import json
 from lxml import etree
+import re
 
 from Indrajala import Indrajala
 
@@ -78,6 +79,41 @@ class AppleHealthImporter:
         self.indra = Indrajala(persistent_storage_root)
         self.indra.set_default_record(default_record)
         self.import_path = import_path
+        self.field_names={'HeartRate': 'heart_rate', 'BodyMassIndex': 'body_mass_index', 'Height': 'height', 'BodyMass': 'body_mass'}
+        self.units={'bpm': ('hz', 'hz', lambda x: float(x)/60.0), 'count':('count', 'count', lambda x: float(x)), 
+                    'kg':('g', 'g', lambda x: float(x)*1000.0), 'cm':('m', 'm', lambda x: float(x)/100.0),
+                    'count/min':('hz', 'hz', lambda x: float(x)/60.0)}
+
+    @staticmethod
+    def _translate_source(source_name):
+        # translate camelCase to snake_case
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', source_name)
+        invalids = ['.', '/', '\\', ' ', ':', '*', '?', '"', '<', '>', '|', '\n', '\r', "'"]
+        for invalid in invalids:
+            s1 = s1.replace(invalid, '_')
+        return s1.lower()
+
+    def _translate_type(self, type_name):
+        if type_name not in self.field_names:
+            raise Exception(f'unknown type {type_name}')
+        return self.field_names[type_name]
+
+    def _translate_unit(self, unit_name):
+        if unit_name not in self.units:
+            raise Exception(f'unknown unit {unit_name}')
+        return self.units[unit_name][0]
+
+    def _translate_value(self, value, from_unit):
+        if from_unit not in self.units:
+            raise Exception(f'unknown unit {from_unit} conversion requested for {value}')
+        return self.units[from_unit][2](value)
+
+    @staticmethod
+    def _path_safe(name):
+        invalids = ['.', '/', '\\', ' ', ':', '*', '?', '"', '<', '>', '|', '\n', '\r', "'"]
+        for invalid in invalids:
+            name = name.replace(invalid, '_')
+        return name
 
     def import_data(self, max_data=None):
         n = 0
@@ -132,10 +168,13 @@ class AppleHealthImporter:
             data={}
             for field in avail_fields:
                 data[field]=d[field]
-            domain = self.indra.default_record['domain'].replace('{data_type}', d['type'])
-            from_instance = self.indra.default_record['from_instance'].replace('{from_instance}', d['sourceName'])
-            data_type = self.indra.default_record['data_type'].replace('{data_type}', d['type'])+'/'+d['unit']
-            self.indra.set_data(data['value'], datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain,
+            source = self._translate_source(d['sourceName'])
+            dtype = self._translate_type(d['type'])
+            unit = self._path_safe(self._translate_unit(d['unit']))
+            domain = self.indra.default_record['domain'].replace('{data_type}', dtype)
+            from_instance = self.indra.default_record['from_instance'].replace('{from_instance}', source)
+            data_type = self.indra.default_record['data_type'].replace('{data_type}', dtype)+'/'+unit
+            self.indra.set_data(self._translate_value(data['value'], d['unit']), datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain,
                                 from_instance=from_instance, data_type=data_type)
             element.clear(keep_tail=True)
         self.indra.cluster_close()
