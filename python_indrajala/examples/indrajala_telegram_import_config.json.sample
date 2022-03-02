@@ -1,16 +1,16 @@
 {
     "persistent_storage_root": "./store",
-    "source_dir": "some_telegram_export_dir/chats/chat_1/messages.html",
-    "domain": "person/entity_main/chat/telegram/entity_recipient_name",
-    "to_scope": "personal/social",
-    "from_instance": "something/telegram_importer",
-    "data_type": "social/chat",
-    "location": {
-        "alias": "home",
-        "latitude": "33.3333",
-        "longitude": "22.22222"
-    },
-    "auth_hash": "",
-    "from_uuid4": "bb92aaaa-41aa-4222-a666-c6b12fffffff"
+    "import_path": "<some-path-to-telegram-export-dir>/chats/",
+    "default_record": {
+        "domain": "person/some-name-here/chat/telegram/{chat_id}",
+        "to_scope": "personal/social",
+        "from_instance": "telegram_importer",
+        "data_type": "social/chat",
+        "location": {
+            "alias": "home",
+            "latitude": "4.444444",
+            "longitude": "1.111111"
+        },
+        "auth_hash": "",
+    }
 }
-
