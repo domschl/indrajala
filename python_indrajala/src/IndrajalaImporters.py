@@ -1,56 +1,46 @@
 import uuid
 import os
 import datetime
-# from zoneinfo import ZoneInfo
-# import pandas as pd
 from bs4 import BeautifulSoup
 import json
 from lxml import etree
-from copy import copy
 
-from Indrajala import IndrajalaEventSource, __SCHEMA__
+from Indrajala import Indrajala
 
 # TODO: entity registry
 # TODO: canonical data names
 
-def checkIndrajalaConfig(config, additional_fields=None):
-    """
-    Check if the config file exists and is valid
-    """
-    if isinstance(config, str):
-        if os.path.exists(config) is False or os.path.isfile(config) is False:
-            raise Exception(f"config_file {config} does not exist.")
-        with open(config, "r") as f:
-            config = json.load(f)
-            if 'from_uuid4' not in config:
-                config['from_uuid4'] = str(uuid.uuid4())
-                with open(config, "w") as f:
-                    json.dump(config, f, indent=4)
-    required_fields = __SCHEMA__
-    if additional_fields is not None:
-        required_fields.extend(additional_fields)
-    for field in required_fields:
-        if field not in config:
-            raise Exception(f"config_file {config} is missing field {field}")
-    return config, IndrajalaEventSource(config=config)
+def load_import_config(config_file):
+    with open(config_file) as f:
+        config = json.load(f)
+    if 'persistent_storage_root' not in config:
+        raise Exception(f'persistent_storage_root not specified in config {config_file}')
+    if 'import_path' not in config:
+        raise Exception(f'import_path not specified in config {config_file}')
+    if 'default_record' not in config:
+        raise Exception(f'default_record not specified in config {config_file}')
+    if 'from_uuid4' not in config['default_record']:
+        config['default_record']['from_uuid4'] = str(uuid.uuid4())
+        with open(config_file, "w") as f:
+            json.dump(config, f, indent=4)
+    return (config['persistent_storage_root'], config['import_path'], config['default_record'])
 
 class TelegramImporter:
-    def __init__(self, config=None):
-        self.config, self.ies = checkIndrajalaConfig(config=config, additional_fields=['source_dir'])
+    def __init__(self, config_file):
+        persistent_storage_root, import_path, default_record = load_import_config(config_file)
+        self.indra = Indrajala(persistent_storage_root)
+        self.indra.set_default_record(default_record)
+        self.import_path = import_path
 
     def import_data(self):
-        dirs = [name for name in os.listdir(self.config['source_dir']) if os.path.isdir(os.path.join(self.config['source_dir'], name))]
+        dirs = [name for name in os.listdir(self.import_path) if os.path.isdir(os.path.join(self.import_path, name))]
         for dir in dirs:
-            path = os.path.join(self.config['source_dir'], dir)
+            path = os.path.join(self.import_path, dir)
             repl_token='{chat_id}'
-            if repl_token in self.config['domain']:
-                domain = self.config['domain'].replace(repl_token, dir)
+            if repl_token in self.indra.default_record['domain']:
+                domain = self.indra.default_record['domain'].replace(repl_token, dir)
             else:
-                domain = self.config['domain']
-
-            if repl_token in domain:
-                print(f"{domain} contains {repl_token}")
-                exit(-1)
+                domain = self.indra.default_record['domain']
 
             for file in os.listdir(path):
                 if file.endswith(".html"):
@@ -79,30 +69,28 @@ class TelegramImporter:
                                 print(f"{strtime} [{from_name}] {text[:50]}...")
                                 dtime=datetime.datetime.strptime(strtime, '%d.%m.%Y %H:%M:%S')
                                 dtlocal=dtime.astimezone()
-                                self.ies.set_data({'message': text, 'from_name': from_name, 'local_time': strtime}, datetime_with_any_timezone=dtlocal, domain=domain)
+                                self.indra.set_data({'message': text, 'from_name': from_name, 'local_time': strtime}, 
+                                                    datetime_with_any_timezone=dtlocal, domain=domain)
 
 class AppleHealthImporter:
-    def __init__(self, config=None):
-        self.config, self.ies = checkIndrajalaConfig(config=config, additional_fields=['source_dir'])
+    def __init__(self, config_file):
+        persistent_storage_root, import_path, default_record = load_import_config(config_file)
+        self.indra = Indrajala(persistent_storage_root)
+        self.indra.set_default_record(default_record)
+        self.import_path = import_path
 
-    def import_data(self):
-        # emergency_break = 10000
-        # n = 0
+    def import_data(self, max_data=None):
+        n = 0
         expected_fields = ['type', 'sourceName', 'sourceVersion', 'unit', 'creationDate', 'startDate', 'endDate', 'value']
         optional_fields = {'value': 'Event'}  # Give a default value for optional fields.
-        data_file = os.path.join(self.config['source_dir'], 'Export.xml')
+        data_file = os.path.join(self.import_path, 'Export.xml')
         if os.path.exists(data_file) is False or os.path.isfile(data_file) is False:
             raise Exception(f"Apple Health data_file {data_file} does not exist.")
-        current_cluster_date = None
-        cluster_data = None
-        cluster_type = None
-        cluster_sourceName = None
-        cluster_start = None
-        cluster_end = None
+        self.indra.cluster_open()
         for _, element in etree.iterparse(data_file, tag='Record'):
-            # n += 1
-            # if n > emergency_break:
-            #     break
+            n += 1
+            if max_data is not None and n > max_data:
+                break
             d=element.attrib
             ok=True
             for field in expected_fields:
@@ -118,8 +106,6 @@ class AppleHealthImporter:
                     d[field]=optional_fields[field]
 
             # Apple mess:  '2015-11-13 07:23:35 +0100'
-            cluster_date = d['startDate'][:10]
-            cluster_time = d['startDate'][11:19]
             dt= datetime.datetime.strptime(d['startDate'], '%Y-%m-%d %H:%M:%S %z')
             de= datetime.datetime.strptime(d['endDate'], '%Y-%m-%d %H:%M:%S %z')
             bloat = 'HKQuantityTypeIdentifier'
@@ -146,41 +132,11 @@ class AppleHealthImporter:
             data={}
             for field in avail_fields:
                 data[field]=d[field]
-            domain = self.config['domain'].replace('{data_type}', d['type'])
-            # TODO: currently data is local time, especially clustered data. Trade-off useability vs. generalization.
-            if cluster_date == current_cluster_date and cluster_type == d['type'] and cluster_sourceName == d['sourceName']:
-                if cluster_data is None:
-                    cluster_data = []
-                cluster_end = d['endDate']
-                cluster_data.append((cluster_time, data['value']))
-            else:
-                if cluster_data is None:
-                    cluster_data = []
-                    cluster_start = d['startDate']
-                    cluster_end = d['endDate']
-                    cluster_type = d['type']
-                    cluster_sourceName = d['sourceName']
-                    current_cluster_date = cluster_date
-                    cluster_data.append((cluster_time, data['value']))
-                else:
-                    dt= datetime.datetime.strptime(cluster_start, '%Y-%m-%d %H:%M:%S %z')
-                    de= datetime.datetime.strptime(cluster_end, '%Y-%m-%d %H:%M:%S %z')
-                    print(f"Cluster-write {cluster_type} {cluster_start} - {cluster_end}: {cluster_data}")
-                    data_wr=data.copy()
-                    data_wr['value']=cluster_data
-                    self.ies.set_data(data_wr, datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain)
-                    cluster_data = []
-                    cluster_start = d['startDate']
-                    cluster_end = d['endDate']
-                    cluster_type = d['type']
-                    cluster_sourceName = d['sourceName']
-                    current_cluster_date = cluster_date
-                    cluster_data.append((cluster_time, data['value']))
+            domain = self.indra.default_record['domain'].replace('{data_type}', d['type'])
+            from_instance = self.indra.default_record['from_instance'].replace('{from_instance}', d['sourceName'])
+            data_type = self.indra.default_record['data_type'].replace('{data_type}', d['type'])+'/'+d['unit']
+            self.indra.set_data(data['value'], datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain,
+                                from_instance=from_instance, data_type=data_type)
             element.clear(keep_tail=True)
-        if cluster_data is not None:
-            print(f"Cluster-flush: {cluster_data}")
-            dt= datetime.datetime.strptime(cluster_start, '%Y-%m-%d %H:%M:%S %z')
-            de= datetime.datetime.strptime(cluster_end, '%Y-%m-%d %H:%M:%S %z')
-            data['value'] = cluster_data
-            self.ies.set_data(data, datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain)
+        self.indra.cluster_close()
 
