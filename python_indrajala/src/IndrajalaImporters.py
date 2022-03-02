@@ -79,19 +79,20 @@ class AppleHealthImporter:
         self.indra = Indrajala(persistent_storage_root)
         self.indra.set_default_record(default_record)
         self.import_path = import_path
-        self.field_names={'HeartRate': 'heart_rate', 'BodyMassIndex': 'body_mass_index', 'Height': 'height', 'BodyMass': 'body_mass'}
+        self.field_names={'HeartRate': 'heart_rate', 'BodyMassIndex': 'body_mass_index', 'Height': 'height', 'BodyMass': 'body_mass',
+                          'OxygenSaturation': 'oxygen_saturation', 'StepCount': 'step_count'}
         self.units={'bpm': ('hz', 'hz', lambda x: float(x)/60.0), 'count':('count', 'count', lambda x: float(x)), 
                     'kg':('g', 'g', lambda x: float(x)*1000.0), 'cm':('m', 'm', lambda x: float(x)/100.0),
-                    'count/min':('hz', 'hz', lambda x: float(x)/60.0)}
+                    'count/min':('hz', 'hz', lambda x: float(x)/60.0), '%':('%', '%', lambda x: float(x))}
 
     @staticmethod
     def _translate_source(source_name):
         # translate camelCase to snake_case
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', source_name)
+        source_name = ''.join(['_'+c.lower() if c>='A' and c<='Z' else c for c in source_name])[1:]
         invalids = ['.', '/', '\\', ' ', ':', '*', '?', '"', '<', '>', '|', '\n', '\r', "'"]
         for invalid in invalids:
-            s1 = s1.replace(invalid, '_')
-        return s1.lower()
+            source_name = source_name.replace(invalid, '_')
+        return source_name
 
     def _translate_type(self, type_name):
         if type_name not in self.field_names:
