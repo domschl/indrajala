@@ -9,6 +9,48 @@ import json
 
 __VERSION__ = "base/1.0.0"
 
+class IndrajalaUnits:
+    def init(self):
+        self.SI_table = {'count': ('count', 'count', lambda x: float(x)),
+                         'cm': ('m', 'm', lambda x: float(x)/100.0),
+                         'kg': ('kg', 'g', lambda x: float(x)*1000.0),
+                         'count/min': ('hz', 'hz', lambda x: float(x)/60.0),
+                         '%': ('%', '%', lambda x: float(x)),
+                         'mmHg': ('mmHg', 'Pa', lambda x: float(x)* 133.322387415),
+                         'degC': ('degC', 'K', lambda x: float(x)+273.15),
+                         'km': ('km', 'm', lambda x: float(x)*1000.0),
+                         'kcal': ('kcal', 'J', lambda x: float(x)*4184.0),
+                         'min': ('min', 's', lambda x: float(x)*60.0),
+                         'm': ('m', 'm', lambda x: float(x)),
+                         'mL/min·kg': ('mL/min·kg', 'L/s·kg', lambda x: float(x)/60000.0),
+                         'dBASPL': ('dBASPL', 'dBASPL', lambda x: float(x)),
+                         'km/hr': ('km/hr', 'm/s', lambda x: float(x)/3.6),
+                         'm/s': ('m/s', 'm/s', lambda x: float(x)),
+                         'hr': ('hr', 's', lambda x: float(x)*3600.0),
+                         'ms': ('ms', 's', lambda x: float(x)/1000.0)
+                         }
+        self.desc_table = { ('count', 'count',          'N', ''),
+                            ('m',     'length',         'l', 'm'),
+                            ('kg',    'mass',           'M', 'g'),
+                            ('Hz',    'frequency',      'F', 'Hz'),
+                            ('%',     'percent',        'p', '%'),
+                            ('mmHg',  'pressure',       'P', 'mmHg'),
+                            ('degC',  'temperature',    'T', 'degC'),
+                            ('km',    'distance',       'd', 'km'),
+                            ('kcal',  'energy',         'E', 'kcal'),
+                            ('s',     'time',           't', 's'),
+                            ('m/s',   'velocity',       'v', 'm/s'),
+                            ('dBASPL','sound pressure', 'P', 'dBASPL'),
+                            ('km/hr', 'speed',          'v', 'm/s'),
+                            ('hr',    'time',           't', 's'),
+                            ('ms',    'time',           't', 's')}
+
+    def convertToSI(self, unit, value):
+        if unit in self.SI_table:
+            return self.SI_table[unit][2](value)
+        else:
+            return value
+
 class Indrajala:
     def __init__(self, persistent_storage_root):
         self.version = "base/1.0.0"
