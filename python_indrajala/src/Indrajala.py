@@ -4,10 +4,12 @@ import os
 import datetime
 from zoneinfo import ZoneInfo
 import pandas as pd
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 import json
 
 __VERSION__ = "base/1.0.0"
+
+# TODO remove:
 __SCHEMA__ = ['persistent_storage_root', 'domain', 'to_scope', 'from_instance', 'from_uuid4', 'auth_hash', 'location', 'data_type']
 
 class IndrajalaEvent:
@@ -152,7 +154,8 @@ class IndrajalaNeo:
         if os.path.exists(persistent_storage_root) is False or os.path.isdir(persistent_storage_root) is False:
              raise Exception(f"persistent_storage_root {persistent_storage_root} is not a directory.")
         self.persistent_storage_root = persistent_storage_root
-        self.clustering(is_enabled=False)
+        self._clustering(is_enabled=False)
+        self.default_record = None
 
     def set_default_record(self, default_record):
         if isinstance(default_record, str):
@@ -184,16 +187,75 @@ class IndrajalaNeo:
         fn = os.path.join(fp, fn)
         return fn
 
-    def clustering(self, is_enabled=True):
-        if is_enabled is False:
-            if self.custer is True:
-                # TODO Flush
+    def _cluster_data_reset(self):
+        self.cluster_ij = None
+        self.current_cluster_date = None
+        self.cluster_data = None
+        self.cluster_data_type = None
+        self.cluster_from_instance = None
+        self.cluster_start = None
+        self.cluster_end = None
+        
+    def _cluster_data_flush(self):
+        if self.cluster_data is None or self.cluster_ij is None:
+            return
+        filename = self._gen_filename(self.cluster_start, self.cluster_ij['domain'])
+        self.cluster_ij['data'] = self.cluster_data
+        with open(filename, "w") as f:
+            json.dump(self.cluster_ij, f) # , indent=4)
+        self._cluster_data_reset()
+
+    def _cluster_data_append(self, ij, data):
+        cluster_date = ij['time'][:10]
+        cluster_time = ij['time'][11:19]
+        if self.current_cluster_date == cluster_date and self.cluster_data_type == ij['data_type'] and \
+           self.cluster_from_instance == ij['from_instance']:
+            if self.cluster_data is None:
+                self.cluster_data = []
+                self.cluster_ij = ij
+            self.cluster_end = ij['time_end']
+            self.cluster_data.append((cluster_time, data))
         else:
-            # TODO reset
+            if self.cluster_data is None:
+                self.cluster_data = []
+                self.cluster_ij = ij
+                self.cluster_start = ij['time']
+                self.cluster_end = ij['time_end']
+                self.cluster_data_type = ij['data_type']
+                self.cluster_from_instance = ij['from_instance']
+                self.current_cluster_date = cluster_date
+                self.cluster_data.append((cluster_time, data))
+            else:
+                self._cluster_data_flush()
+                self.cluster_data = []
+                self.cluster_ij = ij
+                self.cluster_start = ij['time']
+                self.cluster_end = ij['time_end']
+                self.cluster_data_type = ij['data_type']
+                self.cluster_from_instance = ij['from_instance']
+                self.current_cluster_date = cluster_date
+                self.cluster_data.append((cluster_time, data))
+
+    def _clustering(self, is_enabled=True):
+        if is_enabled is False:
+            if self.cluster is True:
+                # Flush
+                self._cluster_data_flush()
+        else:
+            if self.cluster is False:
+                self._cluster_data_reset()
         self.cluster = is_enabled
 
-    def set_data(self, data, datetime_with_any_timezone=None, datetime_with_any_timezone_end=None, domain=None):
-        ij = self.config.copy()
+    def cluster_open(self):
+        self._clustering(True);
+
+    def cluster_close(self):
+        self._clustering(False);
+
+    def set_data(self, data, datetime_with_any_timezone=None, datetime_with_any_timezone_end=None, domain=None, from_instance=None, data_type=None):
+        if self.default_record is None:
+            raise Exception("Default record is not set: use set_default_record()")
+        ij = self.default_record.copy()
         if datetime_with_any_timezone is None:
             utcisotime = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()
         else:
@@ -206,13 +268,16 @@ class IndrajalaNeo:
         ij['time_end'] = utcisotime_end
         if domain is not None:
             ij['domain'] = domain
+        if from_instance is not None:
+            ij['from_instance'] = from_instance
+        if data_type is not None:
+            ij['data_type'] = data_type
         if self.cluster is True:
-            # TODO cluster
+            # cluster
+            self._cluster_data_append(ij, data)
         else:
             ij['data'] = data
             filename = self._gen_filename(utcisotime, ij['domain'])
             with open(filename, "w") as f:
                 json.dump(ij, f, indent=4)
-
-        
 
