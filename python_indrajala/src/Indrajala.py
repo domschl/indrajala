@@ -208,13 +208,15 @@ class IndrajalaNeo:
     def _cluster_data_append(self, ij, data):
         cluster_date = ij['time'][:10]
         cluster_time = ij['time'][11:19]
-        if self.current_cluster_date == cluster_date and self.cluster_data_type == ij['data_type'] and \
-           self.cluster_from_instance == ij['from_instance']:
+        cluster_date_end = ij['time_end'][:10]
+        cluster_time_end = ij['time_end'][11:19]
+        if self.current_cluster_date == cluster_date and self.current_cluster_date == cluster_date_end and \
+           self.cluster_data_type == ij['data_type'] and self.cluster_from_instance == ij['from_instance']:
             if self.cluster_data is None:
                 self.cluster_data = []
                 self.cluster_ij = ij
             self.cluster_end = ij['time_end']
-            self.cluster_data.append((cluster_time, data))
+            self.cluster_data.append((cluster_time, cluster_time_end, data))
         else:
             if self.cluster_data is None:
                 self.cluster_data = []
@@ -224,7 +226,7 @@ class IndrajalaNeo:
                 self.cluster_data_type = ij['data_type']
                 self.cluster_from_instance = ij['from_instance']
                 self.current_cluster_date = cluster_date
-                self.cluster_data.append((cluster_time, data))
+                self.cluster_data.append((cluster_time, cluster_time_end, data))
             else:
                 self._cluster_data_flush()
                 self.cluster_data = []
@@ -234,7 +236,9 @@ class IndrajalaNeo:
                 self.cluster_data_type = ij['data_type']
                 self.cluster_from_instance = ij['from_instance']
                 self.current_cluster_date = cluster_date
-                self.cluster_data.append((cluster_time, data))
+                self.cluster_data.append((cluster_time, cluster_time_end, data))
+            if cluster_date != cluster_date_end:
+                self._cluster_data_flush()
 
     def _clustering(self, is_enabled=True):
         if is_enabled is False:
@@ -280,4 +284,57 @@ class IndrajalaNeo:
             filename = self._gen_filename(utcisotime, ij['domain'])
             with open(filename, "w") as f:
                 json.dump(ij, f, indent=4)
+
+    def compile_dataframe(self, domain, columns, filter_start_iso_utctime=None, filter_end_ico_utctime=None):
+        fp=os.path.join(self.persistent_storage_root, domain)
+        if 'time' not in columns:
+            columns.append('time')
+        if not os.path.exists(fp):
+            raise Exception(f"domain {domain} does not exist.")
+        files = os.listdir(fp)
+        if len(files) == 0:
+            print(f"No data found for {domain}")
+            return None
+
+        df = None
+        for file in files:
+            with open(os.path.join(fp, file), "r") as f:
+                record = json.load(f)
+            if filter_start_iso_utctime is not None and record['time_end'] < filter_start_iso_utctime:
+                continue
+            if filter_end_ico_utctime is not None and record['time'] > filter_end_ico_utctime:
+                continue
+            clustered = isinstance(record['data'], list)
+            if clustered:
+                if len(record['data'][0]) != 3:
+                    raise Exception(f"Invalid cluster-format in data of {file}, record {record['data'][0]} should be a list of tuples (start, end, data)")
+            if clustered is True:
+                sample_data = record['data'][0][2]
+            else:
+                sample_data = record['data']
+            for column in columns:
+                if column not in record and column not in sample_data:
+                    raise Exception(f"column {column} does not exist in data for domain {domain}")
+            row0 = {column : record[column] for column in record if column in columns}
+            if clustered is True:
+                for row in record['data']:
+                    start_time = row[0]+record['time'][11:]
+                    end_time = row[1]+record['time_end'][11:]
+                    row0['time'] = start_time
+                    row0['time_end'] = end_time
+                    row1 = {column : row[column] for column in row if column in columns}
+                    rowf = row0 | row1
+                    if df is None:
+                        df = pd.DataFrame(rowf, index=['time'])
+                    else:
+                        df = df.append(rowf, ignore_index=True)
+            else:
+                row1 = {column : record['data'][column] for column in record['data'] if column in columns}
+                row = row0 | row1
+                if df is None:
+                    df = pd.DataFrame(row, index=['time'])
+                else:
+                    df = df.append(row, ignore_index=True)
+        return df
+
 
