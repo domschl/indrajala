@@ -1,0 +1,16 @@
+{
+    "persistent_storage_root": "./store",
+    "import_path": "<path-to-google-csv-format-takeout-Contacts-folder>/Contacts",
+    "default_record": {
+        "domain": "entity/person",
+        "to_scope": "entity",
+        "from_instance": "google_contacts_importer",
+        "data_type": "entity/person",
+        "location": {
+            "alias": "home",
+            "latitude": "4.4444",
+            "longitude": "1.11111"
+        },
+        "auth_hash": "",
+    }
+}

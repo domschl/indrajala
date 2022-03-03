@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import json
 from lxml import etree
 import re
+import pandas as pd
 
 from Indrajala import Indrajala
 
@@ -79,8 +80,35 @@ class AppleHealthImporter:
         self.indra = Indrajala(persistent_storage_root)
         self.indra.set_default_record(default_record)
         self.import_path = import_path
-        self.field_names={'HeartRate': 'heart_rate', 'BodyMassIndex': 'body_mass_index', 'Height': 'height', 'BodyMass': 'body_mass',
-                          'OxygenSaturation': 'oxygen_saturation', 'StepCount': 'step_count'}
+        self.field_names={'BodyMassIndex': 'body_mass_index','Height': 'height','BodyMass': 'body_mass','HeartRate': 'heart_rate',
+                          'OxygenSaturation': 'oxygen_saturation','BloodPressureSystolic': 'blood_pressure_systolic',
+                          'BloodPressureDiastolic': 'blood_pressure_diastolic','BodyTemperature': 'body_temperature',
+                          'BodyFatPercentage': 'body_fat_percentage','LeanBodyMass': 'lean_body_mass','StepCount': 'step_count',
+                          'DistanceWalkingRunning': 'distance_walking_running','BasalEnergyBurned': 'basal_energy_burned',
+                          'ActiveEnergyBurned': 'active_energy_burned','FlightsClimbed': 'flights_climbed',
+                          'AppleExerciseTime': 'apple_exercise_time','DistanceCycling': 'distance_cycling',
+                          'DistanceSwimming': 'distance_swimming','SwimmingStrokeCount': 'swimming_stroke_count',
+                          'RestingHeartRate': 'resting_heart_rate','VO2Max': 'vo2_max',
+                          'WalkingHeartRateAverage': 'walking_heart_rate_average',
+                          'EnvironmentalAudioExposure': 'environmental_audio_exposure',
+                          'HeadphoneAudioExposure': 'headphone_audio_exposure',
+                          'WalkingDoubleSupportPercentage': 'walking_double_support_percentage',
+                          'SixMinuteWalkTestDistance': 'six_minute_walk_test_distance','AppleStandTime': 'apple_stand_time',
+                          'WalkingSpeed': 'walking_speed','WalkingStepLength': 'walking_step_length',
+                          'WalkingAsymmetryPercentage': 'walking_asymmetry_percentage','StairAscentSpeed': 'stair_ascent_speed',
+                          'StairDescentSpeed': 'stair_descent_speed',
+                          'AppleWalkingSteadiness': 'apple_walking_steadiness',
+                          'HeartRateVariabilitySDNN': 'heart_rate_variability_sdnn',
+                          # data types
+                          'HKDataTypeSleepDurationGoal': 'data_type_sleep_duration_goal',
+                          # category types
+                          'HKCategoryTypeIdentifierSleepAnalysis': 'category_type_identifier_sleep_analysis',
+                          'HKCategoryTypeIdentifierAppleStandHour': 'category_type_identifier_apple_stand_hour',
+                          'HKCategoryTypeIdentifierMindfulSession': 'category_type_identifier_mindful_session',
+                          'HKCategoryTypeIdentifierHandwashingEvent': 'category_type_identifier_handwashing_event',
+                    }
+
+
         self.units={'bpm': ('hz', 'hz', lambda x: float(x)/60.0), 'count':('count', 'count', lambda x: float(x)), 
                     'kg':('g', 'g', lambda x: float(x)*1000.0), 'cm':('m', 'm', lambda x: float(x)/100.0),
                     'count/min':('hz', 'hz', lambda x: float(x)/60.0), '%':('%', '%', lambda x: float(x))}
@@ -171,12 +199,37 @@ class AppleHealthImporter:
                 data[field]=d[field]
             source = self._translate_source(d['sourceName'])
             dtype = self._translate_type(d['type'])
-            unit = self._path_safe(self._translate_unit(d['unit']))
+            if 'unit' in d:
+                unit = d['unit']
+                unit_path = self._path_safe(self._translate_unit(unit))
+            else:
+                unit_path = None
+                unit = None
             domain = self.indra.default_record['domain'].replace('{data_type}', dtype)
             from_instance = self.indra.default_record['from_instance'].replace('{from_instance}', source)
-            data_type = self.indra.default_record['data_type'].replace('{data_type}', dtype)+'/'+unit
-            self.indra.set_data(self._translate_value(data['value'], d['unit']), datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain,
+            data_type = self.indra.default_record['data_type'].replace('{data_type}', dtype)
+            if unit_path is not None and unit_path != '':
+                data_type = data_type + '/'+unit_path
+            self.indra.set_data(self._translate_value(data['value'], unit), datetime_with_any_timezone=dt, datetime_with_any_timezone_end=de, domain=domain,
                                 from_instance=from_instance, data_type=data_type)
             element.clear(keep_tail=True)
         self.indra.cluster_close()
+
+class GoogleContactsImporter():
+    def __init__(self, config_file):
+        persistent_storage_root, import_path, default_record = load_import_config(config_file)
+        self.indra = Indrajala(persistent_storage_root)
+        self.indra.set_default_record(default_record)
+        self.import_path = import_path
+        self.field_names={
+                    }
+
+    def import_data(self, address_book='All Contacts', max_data=None):
+        data_path = os.path.join(self.import_path, address_book)
+        filename = os.path.join(data_path, 'All Contacts.csv')
+        if os.path.exists(filename) is False or os.path.isfile(filename) is False:
+            raise Exception(f"Google Contacts data_file {filename} does not exist.")
+        df = pd.read_csv(filename, sep=',', header=0, index_col=0)
+        print(df.head())
+        
 
