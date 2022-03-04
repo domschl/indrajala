@@ -2,7 +2,10 @@
 import uuid
 import os
 import datetime
-from zoneinfo import ZoneInfo
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 import pandas as pd
 # from bs4 import BeautifulSoup
 import json

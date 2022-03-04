@@ -1,11 +1,17 @@
 import uuid
 import os
 import datetime
+try:
+    from zoneinfo import ZoneInfo
+except:
+    from backports.zoneinfo import ZoneInfo
+
 from bs4 import BeautifulSoup
 import json
 from lxml import etree
 import re
 import pandas as pd
+import numpy as np
 
 from Indrajala import Indrajala
 
@@ -230,6 +236,88 @@ class GoogleContactsImporter():
         if os.path.exists(filename) is False or os.path.isfile(filename) is False:
             raise Exception(f"Google Contacts data_file {filename} does not exist.")
         df = pd.read_csv(filename, sep=',', header=0, index_col=0)
-        print(df.head())
-        
+        # df.replace('',np.nan)
+        # dfc = df.dropna(how='all', axis='columns')
+        # print(dfc.head())
+        # 
+        has_cont = []
+        drops = []
+        for col in df.columns.values.tolist():
+            cont=False
+            lst_cont = None
+            for v in df[col].values.tolist():
+                if v is not None and v != '' and v!=np.nan and str(v)!="nan":
+                    cont=True
+                    lst_cont = v
+                    break
+            if cont is False:
+                print(f"Dropping column {col}")
+                drops.append(col)
+                # df.drop(col, axis=1, inplace=True)
+            else:
+                # print(f"Keeping column {col}, content {lst_cont}")
+                pass
+
+        dfc = df.drop(drops, axis=1)
+
+        print(dfc.head())
+
+        print(dfc.columns.values.tolist())
+
+        attribs = {}
+
+        analyse= ['Birthday', 'Name Prefix']
+
+        print("-----------------------")
+
+        for col in dfc.columns.values.tolist():
+            # print(f"Column {col}")
+            for v in df[col].values.tolist():
+                if v is not None and v != '' and v!=np.nan and str(v)!="nan":
+                    if col not in attribs:
+                        attribs[col]={'count':0}
+                    attribs[col]['count']+=1
+                    if col in analyse:
+                        print(f"{col}={v}")
+
+        print(attribs)
+
+        print("-----------------------")
+
+        for index, row in dfc.iterrows():
+            b=str(row['Birthday'])
+            if b is not None and b != '' and b!=np.nan and str(b)!="nan":
+                if b[:2]=='16':
+                   print(f"Invalid year {b}")
+                else:
+                    dt = datetime.datetime.strptime(b, '%Y-%m-%d')
+                    utctime=dt.replace(tzinfo=ZoneInfo('UTC')).isoformat()
+                    print(f"i:[{index}] {dt} {utctime}")
+
+
+        print("-----------------------")
+        # pd.set_option('display.max_columns', None)
+        n=0
+        for index, row in dfc.iterrows():
+            if str(index)=='nan':
+                print()
+                print(f"NAN:")
+                for v in row.values.tolist():
+                    if v is not None and v != '' and v!=np.nan and str(v)!="nan":
+                        print(f"{v} ", end='')
+                print()
+                print()
+            else:
+                # print(f"i({n}):[{index}] ", end='')
+                pass
+            n+=1
+
+        print("-----------------------")
+        for index, row in dfc.iterrows():
+            if str(index)!='nan':
+                nn=index.split(' ')
+                if len(nn)==2:
+                    print(f"* {index}")
+                else:
+                    print(f"  -- {index}")
 
