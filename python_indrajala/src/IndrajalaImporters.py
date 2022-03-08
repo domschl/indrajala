@@ -236,6 +236,9 @@ class GoogleContactsImporter():
         if os.path.exists(filename) is False or os.path.isfile(filename) is False:
             raise Exception(f"Google Contacts data_file {filename} does not exist.")
         df = pd.read_csv(filename, sep=',', header=0, index_col=0)
+        return df
+
+    def test_stuff(self, df):
         # df.replace('',np.nan)
         # dfc = df.dropna(how='all', axis='columns')
         # print(dfc.head())
