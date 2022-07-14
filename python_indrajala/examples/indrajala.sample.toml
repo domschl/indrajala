@@ -1,0 +1,23 @@
+# Provisional main config
+
+[indrajala]
+application="default"
+systemd=false
+modules=["in_async_mqtt","in_postgresql","in_signal_server"]
+
+[in_signal_server]
+active=true
+signal_port=17417
+
+[in_postgresql]
+active=true
+connection=""
+
+[in_indrajala]
+active=false
+rootpath=""
+
+[in_async_mqtt]
+active=true
+broker="hostname-of-mqtt-server"
+topics=["#"]
