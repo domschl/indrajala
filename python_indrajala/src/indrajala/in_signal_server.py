@@ -12,6 +12,7 @@ class EventProcessor:
         self.log=main_logger
         self.port=toml_data[name]['signal_port']
         self.toml_data=toml_data
+        self.name = name
 
     async def async_init(self, loop):
         self.loop=loop
@@ -78,7 +79,8 @@ class EventProcessor:
         return self.server
 
     async def get(self):
-        return None
+        await asyncio.sleep(1.0)
+        return {'topic': None, 'msg': None, 'origin': self.name}
 
     async def put(self, _):
-        pass
+        return
