@@ -2,4 +2,6 @@
 *.egg-info
 dist/
 __pycache__/
+vscode/
 
+indrajala.toml
