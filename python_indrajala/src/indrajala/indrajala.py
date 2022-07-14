@@ -145,7 +145,7 @@ def read_config_arguments():
     formatter=logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
 
     msh=logging.StreamHandler()
-    msh.setLevel(logging.DEBUG)
+    msh.setLevel(logging.WARNING)
     msh.setFormatter(formatter)
     main_logger.addHandler(msh)
 

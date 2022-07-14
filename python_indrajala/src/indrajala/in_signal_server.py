@@ -11,7 +11,6 @@ class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
         self.log=main_logger
         self.port=int(toml_data[name]['signal_port'])
-        print(f"{type(self.port)} {self.port}")
         self.toml_data=toml_data
         self.name = name
 
