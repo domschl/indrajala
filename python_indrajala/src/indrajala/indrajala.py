@@ -74,6 +74,10 @@ async def main_runner(main_logger, modules, toml_data, args):
             else:
                 active_tasks=active_tasks.union((asyncio.create_task(modules[origin_module].get()),))
             if res['topic'] is not None:
+                if res['topic']=="$SYS/PROCESS":
+                    if 'msg' in res and res['msg']=='QUIT':
+                        terminate_main_runner=True
+                        continue
                 for module in modules:
                     if module!=origin_module:
                         for sub in subs[module]:
@@ -159,6 +163,11 @@ def read_config_arguments():
     except Exception as e:
         main_logger.warning(f"Couldn't read {toml_file}, {e}")
         exit(0)
+    if args.kill_daemon is True:
+        toml_data['in_signal_server']['kill_daemon']=True
+    else:
+        toml_data['in_signal_server']['kill_daemon']=False
+
     return main_logger, toml_data, args
 
 

@@ -10,13 +10,15 @@ class EventProcessor:
     start new instance (if kill option was not set.) """
     def __init__(self, name, main_logger, toml_data):
         self.log=main_logger
-        self.port=toml_data[name]['signal_port']
+        self.port=int(toml_data[name]['signal_port'])
+        print(f"{type(self.port)} {self.port}")
         self.toml_data=toml_data
         self.name = name
 
     async def async_init(self, loop):
         self.loop=loop
         self.exit_future=self.loop.create_future()
+        await self.check_register_socket()
         return ["$SYS"]
 
     async def handle_client(self, reader, writer):
@@ -55,13 +57,13 @@ class EventProcessor:
             writer.write(message.encode())
             data = await reader.read(100) # until('\n')
             writer.close()
-            await asyncio.sleep(1)  # otherwise new instance of keyboard fails
+            # await asyncio.sleep(1)  # otherwise new instance of keyboard fails
             
             self.log.debug(f'Received: {data.decode()!r}')
             if 'quitting' in data.decode():
                 print('Other instance did terminate.')
                 self.log.info("Old instance terminated.")
-            if self.args.kill_daemon is True:
+            if self.toml_data[self.name]['kill_daemon'] is True:
                 print("Exiting after quitting other instance.")
                 exit(0)
         except Exception as e:
@@ -79,8 +81,8 @@ class EventProcessor:
         return self.server
 
     async def get(self):
-        await asyncio.sleep(1.0)
-        return {'topic': None, 'msg': None, 'origin': self.name}
+        ret=await self.exit_future
+        return {'topic': '$SYS/PROCESS', 'msg': 'QUIT', 'origin': self.name}
 
     async def put(self, _):
         return
