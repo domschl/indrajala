@@ -159,7 +159,11 @@ class EventProcessor:
         self.logger=main_logger
         self.toml_data=toml_data
         self.name=name
+        self.active = False
         return
+
+    def isActive(self):
+        return self.active
 
     async def async_init(self, loop):
         self.loop=loop
@@ -169,18 +173,23 @@ class EventProcessor:
         await self.async_mqtt.initial_connect()  # Needs to happen after last_will is set.
         for topic in self.toml_data[self.name]['topics']:
             self.async_mqtt.subscribe(topic)
+        self.active=True
         return []
 
     async def get(self):
         # self.msg=self.loop.create_future()
         # self.msg.set_result({'topic': 'hello', 'msg':'world', 'origin': self.name})
         # that_msg = await self.msg
-        tp, ms = await self.async_mqtt.message()
-        self.logger.info(f"MQ: {tp}-{ms}")
-        that_msg={'topic': tp, 'msg':ms, 'origin': self.name}
-        self.logger.debug(f"{self.name}: Sending message {that_msg}")
-        return that_msg
+        if self.active is True:
+            tp, ms = await self.async_mqtt.message()
+            self.logger.info(f"MQ: {tp}-{ms}")
+            that_msg={'topic': tp, 'msg':ms, 'origin': self.name}
+            self.logger.debug(f"{self.name}: Sending message {that_msg}")
+            return that_msg
+        else:
+            return {'topic': None, 'msg': None, 'name': self.name}
 
     async def put(self, msg):
-        self.logger.debug(f"{self.name}: Received message {msg}")
+        if self.active is True:
+            self.logger.debug(f"{self.name}: Received message {msg}")
         return

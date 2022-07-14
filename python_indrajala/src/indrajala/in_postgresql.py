@@ -14,7 +14,7 @@ class EventProcessor:
             self.active=False
         return
 
-    def isActive():
+    def isActive(self):
         return self.active
 
     async def async_init(self, loop):
