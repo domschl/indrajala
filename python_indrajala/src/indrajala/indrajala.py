@@ -60,22 +60,26 @@ async def main_runner(main_logger, modules, toml_data, args):
 
     active_tasks=tasks
     while terminate_main_runner is False:
+        main_logger.debug(f"Active tasks: {len(active_tasks)}")
         finished_tasks, active_tasks = await asyncio.wait(active_tasks,return_when=asyncio.FIRST_COMPLETED)
         for task in finished_tasks:
             res=task.result()
-            if res is None:
+            if res is None or 'topic' not in res or 'origin' not in res:
                 continue
             main_logger.debug(f"Finished: {res}")
             origin_module=res['origin']
             main_logger.debug(f"adding task from {origin_module}")
-            active_tasks=active_tasks.union((asyncio.create_task(modules[origin_module].get()),))
-            main_logger.debug(f"Active tasks: {len(active_tasks)}")
-            for module in modules:
-                if module!=origin_module:
-                    for sub in subs[module]:
-                        if mqcmp(res['topic'],sub) is True:
-                            await modules[module].put(res)
-                            break
+            if len(active_tasks)==0:
+                active_tasks=[asyncio.create_task(modules[origin_module].get())]
+            else:
+                active_tasks=active_tasks.union((asyncio.create_task(modules[origin_module].get()),))
+            if res['topic'] is not None:
+                for module in modules:
+                    if module!=origin_module:
+                        for sub in subs[module]:
+                            if mqcmp(res['topic'],sub) is True:
+                                await modules[module].put(res)
+                                break
     main_logger.info(f"All done, terminating indrajala.")
 
 def load_modules(main_logger, toml_data, args):
