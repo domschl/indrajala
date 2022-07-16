@@ -2,6 +2,7 @@ import os
 import logging
 from hashlib import md5
 import urllib.request as request
+import pickle
 
 class Downloader:
     def __init__(self, cache_dir='download_cache', use_cache=True):
@@ -18,7 +19,22 @@ class Downloader:
                 self.use_cache = False
                 self.log.error(f"Failed to create cache {cache_dir}: {e}")
 
-    def get(self, url, decode=False, cache=True):
+    def transform(self, data, transforms):
+        if transforms is None:
+            return data
+        trs=[ t.strip().lower() for t in transforms.split(",") ]
+        for t in trs:
+            if t=='decode':
+                data=data.decode('utf-8')
+                continue
+            if t=='unpickle':
+                data=pickle.loads(data)
+                continue
+            self.log.error(f"Unknown transform {t}, ignored.")
+        return data
+
+    def get(self, url, cache=True, transforms=None):
+        """ Transforms: comma separated string containing 'pickle' and/or 'decode' """
         url_comps=url.rsplit('/', 1)
         if len(url_comps)==0:
             self.log.error(f"Invalid url {url}")
@@ -27,56 +43,41 @@ class Downloader:
         cache_path = os.path.join(self.cache_dir, cache_filename)
         if self.use_cache is True and cache is True:
             if os.path.exists(cache_path):
-                if decode is True:
-                    try:
-                        with open(cache_path, 'r') as f:
-                            data=f.read()
-                    except Exception as e:
-                        self.log.error(f"Failed to read cache {cache_path} for {url}: {e}")
-                        return None
-                    self.log.info(f"Read {url} from cache at {cache_path}")
-                    return data
-                else:
-                    try:
-                        with open(cache_path, 'rb') as f:
-                            data=f.read()
-                    except Exception as e:
-                        self.log.error(f"Failed to read cache {cache_path} for {url}: {e}")
-                        return None
-                    self.log.info(f"Read {url} from cache at {cache_path}")
+                try:
+                    with open(cache_path, 'rb') as f:
+                        data=f.read()
+                except Exception as e:
+                    self.log.error(f"Failed to read cache {cache_path} for {url}: {e}")
+                    return None
+                self.log.info(f"Read {url} from cache at {cache_path}")
+                if len(data)>0:
+                    data=self.transform(data, transforms)
                     return data
         else:
             cache = False
-        self.log.info("Starting download from {url}...")
+        self.log.info(f"Starting download from {url}...")
         try:
             response = request.urlopen(url)
-            bin_data = response.read()
+            data = response.read()
         except Exception as e:
             print(f"Failed to download from {url}: {e}")
             return None
         self.log.info(f"Download from {url}: OK.")
-        if decode is True:
-            data=bin_data.decode('utf-8')
-            if cache is True:
-                try:
-                    with open(cache_path, 'w') as f:
-                        f.write(data)
-                except Exception as e:
-                    self.log.warning(f"Failed to save to cache at {cache_path} for {url}: {e}")
-            return data
-        else:
-            if cache is True:
-                try:
-                    with open(cache_path, 'wb') as f:
-                        f.write(bin_data)
-                except Exception as e:
-                    self.log.warning(f"Failed to save to cache at {cache_path} for {url}: {e}")
-            return bin_data
+        if cache is True:
+            try:
+                with open(cache_path, 'wb') as f:
+                    f.write(data)
+            except Exception as e:
+                self.log.warning(f"Failed to save to cache at {cache_path} for {url}: {e}")
+        data=self.transform(data,transforms)
+        return data
 
 if __name__ == "__main__":
     source_url='https://www.ncei.noaa.gov/pub/data/paleo/pages2k/EuroMed2k/eujja_2krecon_nested_cps.txt'
+    source2_url='https://www.ncei.noaa.gov/pub/data/paleo/reconstructions/climate12k/temperature/version1.0.0/Temp12k_v1_0_0.pkl'
     logging.basicConfig(format='%(asctime)s %(levelname)s %(name)s %(message)s', level=logging.INFO)
     dl=Downloader()
-    text=dl.get(source_url)
-    print(f"Length of data: {len(text)}")
+    text=dl.get(source_url,transforms='decode')
+    data2=dl.get(source2_url,transforms='unpickle')
+    print(f"Length of data1: {len(text)}, data2: {len(data2)}")
 
