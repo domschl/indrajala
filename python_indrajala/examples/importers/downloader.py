@@ -27,6 +27,9 @@ class Downloader:
             if t=='decode':
                 data=data.decode('utf-8')
                 continue
+            if t=='decode_latin1':
+                data=data.decode('latin1')
+                continue
             if t=='unpickle':
                 data=pickle.loads(data)
                 continue
@@ -71,13 +74,4 @@ class Downloader:
                 self.log.warning(f"Failed to save to cache at {cache_path} for {url}: {e}")
         data=self.transform(data,transforms)
         return data
-
-if __name__ == "__main__":
-    source_url='https://www.ncei.noaa.gov/pub/data/paleo/pages2k/EuroMed2k/eujja_2krecon_nested_cps.txt'
-    source2_url='https://www.ncei.noaa.gov/pub/data/paleo/reconstructions/climate12k/temperature/version1.0.0/Temp12k_v1_0_0.pkl'
-    logging.basicConfig(format='%(asctime)s %(levelname)s %(name)s %(message)s', level=logging.INFO)
-    dl=Downloader()
-    text=dl.get(source_url,transforms='decode')
-    data2=dl.get(source2_url,transforms='unpickle')
-    print(f"Length of data1: {len(text)}, data2: {len(data2)}")
 
