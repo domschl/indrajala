@@ -12,6 +12,8 @@ import json
 
 __VERSION__ = "base/1.0.0"
 
+# XXX checkout: https://docs.astropy.org/en/stable/units/index.html
+
 class IndrajalaUnits:
     def init(self):
         self.SI_table = {'count': ('count', 'count', lambda x: float(x)),
