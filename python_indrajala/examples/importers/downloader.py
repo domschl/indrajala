@@ -17,7 +17,7 @@ class Downloader:
                 return
             try:
                 os.makedirs(cache_dir)
-                self.log.info(f"Cache directory {cache_dir} created.")
+                self.log.debug(f"Cache directory {cache_dir} created.")
             except Exception as e:
                 self.use_cache = False
                 self.log.error(f"Failed to create cache {cache_dir}: {e}")
@@ -46,7 +46,7 @@ class Downloader:
             return None
         data='\n'.join(lines[start-1:stop])
         lno=len(data.split('\n'))
-        self.log.info(f"Extracted {lno} lines, [{start}:{stop}]")
+        self.log.debug(f"Extracted {lno} lines, [{start}:{stop}]")
         return data
 
     def extract_html_table(self, data, index):
@@ -66,7 +66,6 @@ class Downloader:
     def single_transform(self, data, transform):
         for t in transform:
             if len(t)>0:
-                print(f"EX: {t}")
                 tf=getattr(self, t[0])
                 if tf is not None:
                     data=tf(data,*t[1:])
@@ -75,6 +74,12 @@ class Downloader:
                     return None
         return data
 
+    def add_prefix(self, data, prefix):
+        return prefix+'\n'+data
+
+    def replace(self, data, token, replacement):
+        return data.replace(token, replacement)
+        
     def transform(self, data, transforms):
         data_dict={}
         if transforms is None:
@@ -101,20 +106,20 @@ class Downloader:
                 except Exception as e:
                     self.log.error(f"Failed to read cache {cache_path} for {url}: {e}")
                     return None
-                self.log.info(f"Read {url} from cache at {cache_path}")
+                self.log.debug(f"Read {url} from cache at {cache_path}")
                 if len(data)>0:
                     data=self.transform(data, transforms)
                     return data
         else:
             cache = False
-        self.log.info(f"Starting download from {url}...")
+        self.log.debug(f"Starting download from {url}...")
         try:
             response = request.urlopen(url)
             data = response.read()
         except Exception as e:
             self.log.error(f"Failed to download from {url}: {e}")
             return None
-        self.log.info(f"Download from {url}: OK.")
+        self.log.debug(f"Download from {url}: OK.")
         if cache is True:
             try:
                 with open(cache_path, 'wb') as f:
