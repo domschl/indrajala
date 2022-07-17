@@ -58,10 +58,15 @@ class Downloader:
             self.log.error(f"No table with index {index}, table count is {lno}")
             return None
 
-    def csv_separator(self, data, sep):
+    def pandas_csv_separator(self, data, sep):
         if sep==' ':
             return pd.read_csv(io.StringIO(data), delim_whitespace=True)
         return pd.read_csv(io.StringIO(data), sep=sep)
+
+    def pandas_csv_separator_nan(self, data, sep, nan):
+        if sep==' ':
+            return pd.read_csv(io.StringIO(data), delim_whitespace=True, na_values=nan)
+        return pd.read_csv(io.StringIO(data), sep=sep, na_values=nan)
 
     def single_transform(self, data, transform):
         for t in transform:
@@ -79,7 +84,7 @@ class Downloader:
 
     def replace(self, data, token, replacement):
         return data.replace(token, replacement)
-        
+
     def transform(self, data, transforms):
         data_dict={}
         if transforms is None:

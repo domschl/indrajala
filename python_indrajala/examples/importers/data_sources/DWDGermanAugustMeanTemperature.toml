@@ -10,5 +10,5 @@ data_source="https://opendata.dwd.de/climate_environment/CDC/regional_averages_D
 related_publications=["https://opendata.dwd.de/climate_environment/CDC/"]
 
 [datasets]
-germany_august_meantemp=[["decode", "utf-8"],["extract_lines",2],["csv_separator", ';']]
+germany_august_meantemp=[["decode", "utf-8"],["extract_lines",2],["pandas_csv_separator", ';']]
 

@@ -11,5 +11,5 @@ data_source="ftp://ftp.ncdc.noaa.gov/pub/data/paleo/icecore/greenland/summit/gis
 related_publications=["https://www.pnas.org/doi/10.1073/pnas.97.4.1331"]
 
 [datasets]
-gisp2icecoretemp=[["decode", "utf-8"], ["extract_lines",75,1707],["csv_separator", ' ']]
-gisp2icecoreaccum=[["decode", "utf-8"], ["extract_lines",1717],["csv_separator", ' ']]
+gisp2icecoretemp=[["decode", "utf-8"], ["extract_lines",75,1707],["pandas_csv_separator", ' ']]
+gisp2icecoreaccum=[["decode", "utf-8"], ["extract_lines",1717],["pandas_csv_separator", ' ']]
