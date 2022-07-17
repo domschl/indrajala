@@ -22,59 +22,48 @@ class Downloader:
                 self.use_cache = False
                 self.log.error(f"Failed to create cache {cache_dir}: {e}")
 
+    def decode(self, data, encoding_name):
+        return data.decode(encoding_name)
+
+    def unpickle(self, data):
+        return pickle.loads(data)
+
+    def extract_lines(self, data, start, stop=0):
+        lines=data.split('\n')
+        if stop==0:
+            stop=len(lines)
+        if start<0:
+            start=len(lines)+start
+        if stop<0:
+            stop=len(lines)+stop
+        if start<1 or stop<=start:
+            self.log.error(f"Format required: extract_lines(start_line_no:end_line_no), e.g. extract_lines(10:100)")
+            self.log.error(f"start_line_no >=1 and end_line_no>start_line_no")
+            return None
+        if stop>len(lines):
+            self.log.error(f"Format required: extract_lines(start_line_no:end_line_no), e.g. extract_lines(10:100)")
+            self.log.error(f"end_line_no {stop} is > line-count in source file: {len(lines)}")
+            return None
+        data='\n'.join(lines[start-1:stop])
+        lno=len(data.split('\n'))
+        self.log.info(f"Extracted {lno} lines, [{start}:{stop}]")
+        return data
+
+    def csv_separator(self, data, sep):
+        if sep==' ':
+            return pd.read_csv(io.StringIO(data), delim_whitespace=True)
+        return pd.read_csv(io.StringIO(data), sep=sep)
+
     def single_transform(self, data, transform):
-        trs=[ t.strip().lower() for t in transform.split(",") ]  # XXX bad parser!
-        for t in trs:
-            if t=='decode_utf8':
-                data=data.decode('utf-8')
-                continue
-            if t=='decode_latin1':
-                data=data.decode('latin1')
-                continue
-            if t=='unpickle':
-                data=pickle.loads(data)
-                continue
-            ft=re.search('extract_lines\((.+?)\)',t)
-            if ft is not None:
-                prs=ft.group(1).split(':')
-                if len(prs)!=2:
-                    self.log.error(f"Format required: extract_lines(start_line_no:end_line_no), e.g. extract_lines(10:100)")
+        for t in transform:
+            if len(t)>0:
+                print(f"EX: {t}")
+                tf=getattr(self, t[0])
+                if tf is not None:
+                    data=tf(data,*t[1:])
+                else:
+                    self.log.error("Transform {t[0]} isn't available!")
                     return None
-                lines=data.split('\n')
-                if prs[1]=="":
-                    prs[1]=str(len(lines))
-                s0=int(prs[0])
-                s1=int(prs[1])
-                if s0<0:
-                    s0=len(lines)+s0
-                if s1<0:
-                    s1=len(lines)+s1
-                if s0<1 or s1<=s0:
-                    self.log.error(f"Format required: extract_lines(start_line_no:end_line_no), e.g. extract_lines(10:100)")
-                    self.log.error(f"start_line_no >=1 and end_line_no>start_line_no")
-                    return None
-                if s1>len(lines):
-                    self.log.error(f"Format required: extract_lines(start_line_no:end_line_no), e.g. extract_lines(10:100)")
-                    self.log.error(f"end_line_no {s1} is > line-count in source file: {len(lines)}")
-                    return None
-                data='\n'.join(lines[s0-1:s1])
-                ln=len(data.split('\n'))
-                self.log.info(f"Extract {ln} lines, [{s0}:{s1}]")
-                continue
-            ft=re.search("csv_separator\('(.+?)'\)",t)
-            if ft is not None:
-                sep=ft.group(1)
-                if sep==' ':
-                    data=pd.read_csv(io.StringIO(data), delim_whitespace=True)
-                    continue
-                if sep=='\t':
-                    data=pd.read_csv(io.StringIO(data), sep='\t')
-                    continue
-                if sep==';':
-                    data=pd.read_csv(io.StringIO(data), sep=';')
-                    continue
-                self.log.error(f"Unexpected csv_separator {sep}, possible values are ' ','\\t',';'")
-            self.log.error(f"Unknown transform {t}, ignored.")
         return data
 
     def transform(self, data, transforms):
