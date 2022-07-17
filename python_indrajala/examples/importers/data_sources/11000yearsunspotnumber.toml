@@ -11,4 +11,4 @@ data_source="https://www.ncei.noaa.gov/pub/data/paleo/climate_forcing/solar_vari
 related_publications=["https://www.ncei.noaa.gov/access/paleo-search/study/5780"]
 
 [datasets]
-sunspots11000yrs="decode_latin1,extract_lines(70:),csv_separator(' ')"
+sunspots11000yrs=[["decode","latin1"],["extract_lines",70],["csv_separator", ' ']]

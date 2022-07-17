@@ -10,4 +10,4 @@ data_source="https://www.ncei.noaa.gov/pub/data/paleo/pages2k/EuroMed2k/eujja_2k
 related_publications=["https://www.ncei.noaa.gov/access/paleo-search/study/19600"]
 
 [datasets]
-euromed2k="decode_utf8,csv_separator('\t')"
+euromed2k=[["decode", "utf-8"], ["csv_separator", '\t']]
