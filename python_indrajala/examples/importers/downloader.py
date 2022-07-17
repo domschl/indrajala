@@ -49,6 +49,15 @@ class Downloader:
         self.log.info(f"Extracted {lno} lines, [{start}:{stop}]")
         return data
 
+    def extract_html_table(self, data, index):
+        tables=pd.read_html(data)
+        if len(tables)>index:
+            return tables[index]
+        else:
+            lno=len(tables)
+            self.log.error(f"No table with index {index}, table count is {lno}")
+            return None
+
     def csv_separator(self, data, sep):
         if sep==' ':
             return pd.read_csv(io.StringIO(data), delim_whitespace=True)
