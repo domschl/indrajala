@@ -1,8 +1,6 @@
 import os
 import logging
-import io
 import tomlkit
-import pandas as pd
 
 from downloader import Downloader
 
@@ -52,4 +50,8 @@ def get_datasets(log=logging):
                 #     print(data.tail())
                 dfs[dataset]=data
     return dfs
-            
+ 
+if __name__=="__main__":
+    dfs=get_datasets()
+    print(f"{len(dfs)} datasets available: {dfs.keys()}")
+
