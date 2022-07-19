@@ -28,3 +28,11 @@ rootpath=""
 active=true
 broker="mqtt-server-hostname"
 topics=["#"]
+
+# Websocket
+[in_async_websocket]
+port=23577
+ssl=true
+ssl_certfile=certs/certfile.pem
+ssl_keyfile=certs/keyfile.em
+
