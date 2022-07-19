@@ -4,6 +4,7 @@ dist/
 __pycache__/
 vscode/
 .ipynb_checkpoints/
+certs/
 
 indrajala.toml
 *.log
