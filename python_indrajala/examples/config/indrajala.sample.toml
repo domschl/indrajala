@@ -4,7 +4,7 @@
 [indrajala]
 application="default"
 systemd=false
-modules=["in_async_mqtt","in_postgresql","in_signal_server"]
+modules=["in_async_mqtt","in_postgresql","in_signal_server","in_async_websockets"]
 
 # Signal server makes sure that only one instance of indrajala
 # is running per host (using a default socket). It cana shutdown
@@ -29,9 +29,11 @@ active=true
 broker="mqtt-server-hostname"
 topics=["#"]
 
-# Websocket
-[in_async_websocket]
+# Websockets
+[in_async_websockets]
+active=true
 port=23577
+bind_address="0.0.0.0"
 ssl=true
 ssl_certfile=certs/certfile.pem
 ssl_keyfile=certs/keyfile.em

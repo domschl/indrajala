@@ -52,6 +52,10 @@ async def main_runner(main_logger, modules, toml_data, args):
 
     tasks=[]
     for module in modules:
+        m_op=getattr(modules[module], "server_task", None)
+        if callable(m_op) is True:
+            tasks.append(asyncio.create_task(modules[module].server_task()))
+            main_logger.info(f"Task {module} has separate server_task(), started module-specific background server")
         main_logger.debug(f"adding task from {module}")
         tasks.append(asyncio.create_task(modules[module].get()))
 
@@ -60,20 +64,23 @@ async def main_runner(main_logger, modules, toml_data, args):
 
     active_tasks=tasks
     while terminate_main_runner is False:
-        main_logger.debug(f"Active tasks: {len(active_tasks)}")
+        main_logger.debug(f"Active tasks1: {len(active_tasks)}")
         finished_tasks, active_tasks = await asyncio.wait(active_tasks,return_when=asyncio.FIRST_COMPLETED)
+        main_logger.debug(f"Active tasks2: {len(active_tasks)}")
         for task in finished_tasks:
             res=task.result()
             if res is None or 'topic' not in res or 'origin' not in res:
+                main_logger.warning(f"Invalid empty msg {res}")
                 continue
             main_logger.debug(f"Finished: {res}")
             origin_module=res['origin']
             main_logger.debug(f"adding task from {origin_module}")
+            main_logger.info(f"Getting {origin_module}")
             if len(active_tasks)==0:
                 active_tasks=[asyncio.create_task(modules[origin_module].get())]
             else:
                 active_tasks=active_tasks.union((asyncio.create_task(modules[origin_module].get()),))
-            if res['topic'] is not None:
+            if 'topic' in res and res['topic'] is not None:
                 if res['topic']=="$SYS/PROCESS":
                     if 'msg' in res and res['msg']=='QUIT':
                         terminate_main_runner=True
@@ -133,9 +140,8 @@ def read_config_arguments():
     os.chdir(dname)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config-file', action='store', dest="toml_file", type=pathlib.Path, default='../../examples/indrajala.toml', help="path to indrajala.toml config file.")
-    parser.add_argument('-s', '--security-information', action='store', dest="security", type=pathlib.Path, default='../../examples/security', help="path to directory containing certificats and account information.")
-    parser.add_argument('-l', '--log-file', action='store', dest="log_file", type=pathlib.Path, default='../../examples/indrajala.log', help='filepath to logfile')
+    parser.add_argument('-c', '--config-dir', action='store', dest="config_dir", type=pathlib.Path, default='config', help="path to config_dir that contains indrajala.toml and other config files.")
+    parser.add_argument('-l', '--log-dir', action='store', dest="log_dir", type=pathlib.Path, default='log', help='filepath to log directory')
     parser.add_argument('-k', action='store_true', dest='kill_daemon', help='Kill existing instance and terminate.')
 
     args = parser.parse_args()
@@ -145,17 +151,18 @@ def read_config_arguments():
     formatter=logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
 
     msh=logging.StreamHandler()
-    msh.setLevel(logging.INFO)
+    msh.setLevel(logging.DEBUG)
     msh.setFormatter(formatter)
     main_logger.addHandler(msh)
 
-    log_file=args.log_file
+    log_file=os.path.join(args.log_dir,'indrajala.log')
     mfh=logging.FileHandler(log_file, mode='w')
     mfh.setLevel(logging.DEBUG)
     mfh.setFormatter(formatter)
     main_logger.addHandler(mfh)
 
-    toml_file=args.toml_file
+    config_dir=args.config_dir
+    toml_file=os.path.join(config_dir,'indrajala.toml')
 
     try:
         with open(toml_file,'r') as f:
@@ -168,6 +175,7 @@ def read_config_arguments():
     else:
         toml_data['in_signal_server']['kill_daemon']=False
 
+    toml_data['indrajala']['config_dir']=str(config_dir)
     return main_logger, toml_data, args
 
 
