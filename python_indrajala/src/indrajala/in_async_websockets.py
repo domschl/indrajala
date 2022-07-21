@@ -3,6 +3,8 @@ import asyncio
 import ssl
 import websockets
 
+a=1
+
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
         self.log=main_logger

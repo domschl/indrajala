@@ -1,12 +1,13 @@
-import logging
 import uuid
 import asyncio
 import socket
 import paho.mqtt.client as mqtt
 import time
 
+
 class AsyncMqttHelper:
     '''Helper module for async wrapper for paho mqtt'''
+
     def __init__(self, log, loop, client):
         self.log = log
         self.loop = loop
@@ -48,14 +49,14 @@ class AsyncMqttHelper:
 
     async def misc_loop(self):
         self.log.debug("misc_loop started")
-        state=True
-        while state is True: 
+        state = True
+        while state is True:
             if self.client.loop_misc() != mqtt.MQTT_ERR_SUCCESS:
-                state=False
+                state = False
             if self.client.loop_read() != mqtt.MQTT_ERR_SUCCESS:
-                state=False
+                state = False
             if self.client.loop_write() != mqtt.MQTT_ERR_SUCCESS:
-                state=False
+                state = False
             try:
                 await asyncio.sleep(0.1)
             except asyncio.CancelledError:
@@ -66,11 +67,12 @@ class AsyncMqttHelper:
 
 class AsyncMqtt:
     '''Async wrapper for paho_mqtt'''
+
     def __init__(self, loop, logger, mqtt_server, reconnect_delay=1):
         self.log = logger
         self.loop = loop
         self.mqtt_server = mqtt_server
-        self.reconnect_delay=reconnect_delay
+        self.reconnect_delay = reconnect_delay
         self.got_message = None
 
         self.client_id = hex(uuid.getnode()) + "-" + str(uuid.uuid4())
@@ -83,15 +85,15 @@ class AsyncMqtt:
         self.aioh = AsyncMqttHelper(self.log, self.loop, self.client)
 
     def last_will(self, last_will_topic, last_will_message, qos=0, retain=True):
-            self.client.will_set(last_will_topic, last_will_message, qos, retain)
+        self.client.will_set(last_will_topic, last_will_message, qos, retain)
 
     async def initial_connect(self, max_wait=30):
-        connect_start=time.time()
-        connected=False
+        connect_start = time.time()
+        connected = False
         while connected is False:
-            connected=self.connect()
+            connected = self.connect()
             if connected is False:
-                if time.time()-connect_start<max_wait:
+                if time.time() - connect_start < max_wait:
                     self.log.debug("Trying to connect again...")
                     await asyncio.sleep(2)
                 else:
@@ -101,7 +103,7 @@ class AsyncMqtt:
         return connected
 
     def connect(self):
-        self.active_disconnect=False
+        self.active_disconnect = False
         try:
             self.client.connect(self.mqtt_server, 1883, 45)
             self.client.socket().setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
@@ -112,10 +114,10 @@ class AsyncMqtt:
             return False
 
     async def reconnect(self):
-        is_connected=False
-        while is_connected==False:
+        is_connected = False
+        while is_connected is False:
             await asyncio.sleep(self.reconnect_delay)
-            is_connected=self.connect()
+            is_connected = self.connect()
 
     def on_connect(self, client, userdata, flags, rc):
         self.disconnected = self.loop.create_future()
@@ -136,29 +138,30 @@ class AsyncMqtt:
             self.got_message.set_result((msg.topic, msg.payload))
 
     async def message(self):
-            self.got_message = self.loop.create_future()
-            topic, payload = await self.got_message
-            self.got_message = None
-            return topic, payload
+        self.got_message = self.loop.create_future()
+        topic, payload = await self.got_message
+        self.got_message = None
+        return topic, payload
 
     def on_disconnect(self, client, userdata, rc):
         self.log.debug("on_disconnect")
         self.disconnected.set_result(rc)
-        if self.active_disconnect is not True and self.reconnect_delay and self.reconnect_delay>0:
+        if self.active_disconnect is not True and self.reconnect_delay and self.reconnect_delay > 0:
             self.log.debug("Trying to reconnect...")
             asyncio.create_task(self.reconnect())
 
     async def disconnect(self):
-        self.active_disconnect=True
+        self.active_disconnect = True
         self.client.disconnect()
         self.log.debug(f"Disconnected: {await self.disconnected}")
-        self.active_disconnect=False
+        self.active_disconnect = False
+
 
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
-        self.logger=main_logger
-        self.toml_data=toml_data
-        self.name=name
+        self.logger = main_logger
+        self.toml_data = toml_data
+        self.name = name
         self.active = False
         return
 
@@ -166,14 +169,16 @@ class EventProcessor:
         return self.active
 
     async def async_init(self, loop):
-        self.loop=loop
+        self.loop = loop
         self.async_mqtt = AsyncMqtt(loop, self.logger, self.toml_data[self.name]['broker'])
         if 'last_will_topic' in self.toml_data[self.name] and 'last_will_message' in self.toml_data[self.name]:
-            self.async_mqtt.last_will(self.toml_data[self.name]['last_will_topic'],self.toml_data[self.name]['last_will_message'])
+            lwt = self.toml_data[self.name]['last_will_topic']
+            lwm = self.toml_data[self.name]['last_will_message']
+            self.async_mqtt.last_will(lwt, lwm)
         await self.async_mqtt.initial_connect()  # Needs to happen after last_will is set.
         for topic in self.toml_data[self.name]['topics']:
             self.async_mqtt.subscribe(topic)
-        self.active=True
+        self.active = True
         return []
 
     async def get(self):
@@ -183,7 +188,7 @@ class EventProcessor:
         if self.active is True:
             tp, ms = await self.async_mqtt.message()
             self.logger.info(f"MQ: {tp}-{ms}")
-            that_msg={'topic': tp, 'msg':ms, 'origin': self.name}
+            that_msg = {'topic': tp, 'msg': ms, 'origin': self.name}
             self.logger.debug(f"{self.name}: Sending message {that_msg}")
             return that_msg
         else:
