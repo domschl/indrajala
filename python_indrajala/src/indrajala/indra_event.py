@@ -1,9 +1,23 @@
 import json
+import datetime
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
 
 class IndraTime:
     def __init__(self, timespec: str):
-        self.timepec=timespec
+        self.timepec = timespec
+        # interval_specs = r"[-+]?(?:\d*\.\d+|\d+) to [-+]?(?:\d*\.\d+|\d+) (million|thousand|hundred) years ago"
         pass
+
+    def from_datetime(self, datetime_with_any_timezone):
+        if datetime_with_any_timezone is None:
+            utcisotime = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()
+        else:
+            utcisotime = datetime_with_any_timezone.astimezone(ZoneInfo('UTC')).isoformat()
+        _ = utcisotime
 
 
 class IndraEvent:
@@ -32,4 +46,3 @@ class IndraEvent:
 
     def __call__(self):
         return json.dumps(self, default=vars)
-
