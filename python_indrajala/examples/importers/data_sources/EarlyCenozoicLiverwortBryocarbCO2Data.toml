@@ -13,3 +13,4 @@ Note="There is TXT version, but it is corrupted by random line-breakes, hence XL
 
 [datasets]
 CenozoicCO2=[["pandas_excel_rowskips", [0,1]]]
+CenozoicCO2Filtered=[["pandas_excel_rowskips", [0,1]], ["pandas_filter", ['age_ka', 'Age_uncertainty_pos_ka', 'Age_uncertainty_neg_ka', 'CO2_ppm', 'CO2_uncertainty_pos_ppm', 'CO2_uncertainty_neg_ppm']]]
