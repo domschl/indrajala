@@ -60,16 +60,16 @@ class Downloader:
 
     def pandas_csv_separator(self, data, sep):
         if sep==' ':
-            return pd.read_csv(io.StringIO(data), delim_whitespace=True)
-        return pd.read_csv(io.StringIO(data), sep=sep)
+            return pd.read_csv(io.StringIO(data), delim_whitespace=True, engine='python')
+        return pd.read_csv(io.StringIO(data), sep=sep, engine='python')
 
     def pandas_csv_separator_nan(self, data, sep, nan):
         if sep==' ':
-            return pd.read_csv(io.StringIO(data), delim_whitespace=True, na_values=nan)
-        return pd.read_csv(io.StringIO(data), sep=sep, na_values=nan)
+            return pd.read_csv(io.StringIO(data), delim_whitespace=True, na_values=nan, engine='python')
+        return pd.read_csv(io.StringIO(data), sep=sep, na_values=nan, engine='python')
 
-    def pandas_excel(self, data):
-        return pd.read_excel(data)
+    def pandas_excel_rowskips(self, data, skiprow_list):
+        return pd.read_excel(data, skiprows=skiprow_list)
 
     def single_transform(self, data, transform):
         for t in transform:
@@ -99,7 +99,6 @@ class Downloader:
         return data_dict
 
     def get(self, url, cache=True, transforms=None):
-        """ Transforms: comma separated string containing 'pickle' and/or 'decode' """
         url_comps=url.rsplit('/', 1)
         if len(url_comps)==0:
             self.log.error(f"Invalid url {url}")
