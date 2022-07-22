@@ -1,0 +1,14 @@
+[citation]
+title="Early Cenozoic Liverwort-Bryocarb CO2 Data"
+description="We present high-resolution records of Mesozoic and early Cenozoic atmospheric CO2 concentrations from a combination of carbon-isotope analyses of non-vascular plant (bryophyte) fossils and theoretical modelling. These records indicate that atmospheric CO2 rose from ~420 p.p.m.v. in the Triassic period (about 200 million years ago) to a peak of ~1,130 p.p.m.v. in the Middle Cretaceous (about 100 million years ago). Atmospheric CO2 levels then declined to ~680 p.p.m.v. by 60 million years ago."
+authors=["D.L. Royer", "M. Pagani", "D.J. Beerling"]
+publication_date="2008"
+last_update="2012"
+publisher="Geobiology, 10(4), 298-310"
+id="doi: 10.1111/j.1472-4669.2012.00320.x"
+version=""
+data_source="https://www.ncei.noaa.gov/pub/data/paleo/climate_forcing/trace_gases/Paleo-pCO2/liverwort_fletcher_2008.xlsx"
+related_publications=["https://www.ncei.noaa.gov/access/paleo-search/study/23250"]
+
+[datasets]
+CenozoicCO2=[["pandas_excel"]]

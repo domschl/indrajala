@@ -68,6 +68,9 @@ class Downloader:
             return pd.read_csv(io.StringIO(data), delim_whitespace=True, na_values=nan)
         return pd.read_csv(io.StringIO(data), sep=sep, na_values=nan)
 
+    def pandas_excel(self, data):
+        return pd.read_excel(data)
+
     def single_transform(self, data, transform):
         for t in transform:
             if len(t)>0:
