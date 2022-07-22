@@ -12,4 +12,4 @@ related_publications=["https://www.ncei.noaa.gov/access/paleo-search/study/23250
 Note="There is TXT version, but it is corrupted by random line-breakes, hence XLS"
 
 [datasets]
-CenozoicCO2=[["pandas_excel"]]
+CenozoicCO2=[["pandas_excel", [0,1]]]
