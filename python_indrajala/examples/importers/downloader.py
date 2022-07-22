@@ -63,6 +63,9 @@ class Downloader:
             return pd.read_csv(io.StringIO(data), delim_whitespace=True, engine='python')
         return pd.read_csv(io.StringIO(data), sep=sep, engine='python')
 
+    def pandas_filter(self, data, column_list):
+        return data.filter(column_list, axis=1)
+
     def pandas_csv_separator_nan(self, data, sep, nan):
         if sep==' ':
             return pd.read_csv(io.StringIO(data), delim_whitespace=True, na_values=nan, engine='python')
