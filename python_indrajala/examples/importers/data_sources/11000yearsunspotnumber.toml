@@ -9,6 +9,7 @@ id="https://doi.org/10.25921/y6td-ne29"
 version=""
 data_source="https://www.ncei.noaa.gov/pub/data/paleo/climate_forcing/solar_variability/solanki2004-ssn.txt"
 related_publications=["https://www.ncei.noaa.gov/access/paleo-search/study/5780"]
+tags=['sunspots']
 
 [datasets]
 sunspots11000yrs=[["decode","latin1"],["extract_lines",70],["pandas_csv_separator", ' ']]

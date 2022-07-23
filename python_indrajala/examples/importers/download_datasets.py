@@ -48,7 +48,9 @@ def get_datasets(log=logging):
                 #     print(data.head())
                 #     print("...")
                 #     print(data.tail())
-                dfs[dataset]=data
+                dfs[dataset]={}
+                dfs[dataset]['data']=data
+                dfs[dataset]['metadata']=data_desc['citation']
     return dfs
  
 if __name__=="__main__":

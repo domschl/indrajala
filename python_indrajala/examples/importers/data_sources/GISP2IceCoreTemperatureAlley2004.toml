@@ -9,6 +9,7 @@ id="Quaternary Science Reviews 19:213-226."
 version=""
 data_source="ftp://ftp.ncdc.noaa.gov/pub/data/paleo/icecore/greenland/summit/gisp2/isotopes/gisp2_temp_accum_alley2000.txt"
 related_publications=["https://www.pnas.org/doi/10.1073/pnas.97.4.1331"]
+tags=['temperature','icecore','greenland']
 
 [datasets]
 gisp2icecoretemp=[["decode", "utf-8"], ["extract_lines",75,1707],["pandas_csv_separator", ' ']]

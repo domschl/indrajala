@@ -9,6 +9,7 @@ id=""
 version=""
 data_source="https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.csv"
 related_publications=["https://gml.noaa.gov/ccgg/trends/data.html"]
+tags=['co2', 'mauna_loa', 'direct_measurement']
 
 [datasets]
 MaunaLoaWeeklyHistoricalCO2=[["decode","utf-8"],["extract_lines", 48],["pandas_csv_separator_nan", ",", -999.99]]

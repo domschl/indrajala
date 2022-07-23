@@ -8,6 +8,7 @@ id=""
 version=""
 data_source="https://opendata.dwd.de/climate_environment/CDC/regional_averages_DE/monthly/air_temperature_mean/regional_averages_tm_08.txt"
 related_publications=["https://opendata.dwd.de/climate_environment/CDC/"]
+tags=['temperature', 'germany', 'direct_measurement', 'summer']
 
 [datasets]
 germany_august_meantemp=[["decode", "utf-8"],["extract_lines",2],["pandas_csv_separator", ';']]

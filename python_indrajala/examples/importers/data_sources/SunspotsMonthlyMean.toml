@@ -9,6 +9,7 @@ id=""
 version=""
 data_source="https://www.sidc.be/silso/DATA/SN_m_tot_V2.0.txt"
 related_publications=["https://www.sidc.be/silso/infosnmtot"]
+tags=['sunspots', 'direct_measurement']
 
 [datasets]
 sunspotsmonthlymean1749=[["decode","utf-8"],["add_prefix","Year Month FracYear MonthlyMean StdDev ObsCount"], ["replace", " *", "  "], ["pandas_csv_separator_nan", " ",-1]]

@@ -8,6 +8,7 @@ id="doi: 10.1088/1748-9326/11/2/024001"
 version=""
 data_source="https://www.ncei.noaa.gov/pub/data/paleo/pages2k/EuroMed2k/eujja_2krecon_nested_cps.txt"
 related_publications=["https://www.ncei.noaa.gov/access/paleo-search/study/19600"]
+tags=['temperature', 'tree_ring', 'europe', 'summer']
 
 [datasets]
 euromed2k=[["decode", "utf-8"], ["pandas_csv_separator", '\t']]
