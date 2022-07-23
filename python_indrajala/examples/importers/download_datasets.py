@@ -38,7 +38,14 @@ def get_datasets(log=logging):
                     continue
             # print("----------------------------------------------------------------------------------")
             # print(f"Processing {filepath}")
-            data_dicts=dl.get(data_desc['citation']['data_source'],transforms=data_desc['datasets'])
+            if 'user_agent' in data_desc['citation']:
+                ua=data_desc['citation']['user_agent']
+            else:
+                ua=None
+            data_dicts=dl.get(data_desc['citation']['data_source'],transforms=data_desc['datasets'],user_agent=ua)
+            if data_dicts is None:
+                log.error(f"Failed to retrieve dataset(s) from {data_desc['citation']['data_source']}")
+                continue
             for dataset in data_dicts:
                 # print(f">>> {dataset}")
                 data=data_dicts[dataset]
