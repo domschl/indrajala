@@ -9,6 +9,7 @@ id=""
 version=""
 data_source="https://en.wikipedia.org/wiki/Geologic_time_scale"
 related_publications=["https://en.wikipedia.org/wiki/Geologic_time_scale"]
+tags=['time_interval_names']
 
 [datasets]
 geologictimescale=[["extract_html_table", 4]]
