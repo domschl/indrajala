@@ -6,6 +6,12 @@ import pickle
 import re
 import io
 import pandas as pd
+import requests
+try:
+    import cloudscraper
+    cloudscraper_available=True
+except ImportError:
+    pass
 
 class Downloader:
     def __init__(self, cache_dir='download_cache', use_cache=True):
@@ -74,6 +80,9 @@ class Downloader:
     def pandas_excel_rowskips(self, data, skiprow_list):
         return pd.read_excel(data, skiprows=skiprow_list)
 
+    def pandas_excel_worksheet_subset(self, data, worksheet_name, include_rows, include_columns):
+        return pd.read_excel(data, sheet_name=worksheet_name, skiprows=lambda x: x+1 not in range(include_rows[0], include_rows[1]+1), usecols=include_columns)
+
     def single_transform(self, data, transform):
         for t in transform:
             if len(t)>0:
@@ -101,18 +110,22 @@ class Downloader:
                 data_dict[dataset_name]=dataset
         return data_dict
 
-    def get(self, url, cache=True, transforms=None):
+    def get(self, url, cache=True, transforms=None, user_agent=None):
         url_comps=url.rsplit('/', 1)
         if len(url_comps)==0:
             self.log.error(f"Invalid url {url}")
             return None
-        cache_filename=url_comps[-1]+"_"+md5(url.encode('utf-8')).hexdigest()
+        fn=url_comps[-1]
+        if '=' in fn:
+            url_comps=fn.rsplit('=', 1)
+        cache_filename=url_comps[-1]  # +"_"+md5(url.encode('utf-8')).hexdigest()
         cache_path = os.path.join(self.cache_dir, cache_filename)
         if self.use_cache is True and cache is True:
             if os.path.exists(cache_path):
                 try:
                     with open(cache_path, 'rb') as f:
                         data=f.read()
+                        dl=True
                 except Exception as e:
                     self.log.error(f"Failed to read cache {cache_path} for {url}: {e}")
                     return None
@@ -123,13 +136,34 @@ class Downloader:
         else:
             cache = False
         self.log.debug(f"Starting download from {url}...")
-        try:
-            response = request.urlopen(url)
-            data = response.read()
-        except Exception as e:
-            self.log.error(f"Failed to download from {url}: {e}")
-            return None
-        self.log.debug(f"Download from {url}: OK.")
+        data=None
+        if user_agent is not None:
+            req = request.Request(
+                url, 
+                data=None, 
+                headers={
+                    'user-agent': user_agent,
+                    'accept': '*/*'
+                }
+            )
+            self.log.info(f"Downloading with user_agent set to: {user_agent}")
+            dl=False
+            
+            try:
+                response = request.urlopen(req)
+                data = response.read()
+                dl=True
+            except Exception as e:
+                self.log.error(f"Failed to download from {url}: {e}")
+                return None
+        else:
+            try:
+                response = request.urlopen(url)
+                data = response.read()
+            except Exception as e:
+                self.log.error(f"Failed to download from {url}: {e}")
+                return None
+        self.log.info(f"Download from {url}: OK.")
         if cache is True:
             try:
                 with open(cache_path, 'wb') as f:
