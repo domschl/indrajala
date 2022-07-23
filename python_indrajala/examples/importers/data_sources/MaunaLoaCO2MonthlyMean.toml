@@ -1,0 +1,14 @@
+[citation]
+title="Mauna Loa CO2 monthly mean data"
+description="Data from March 1958 through April 1974 have been obtained by C. David Keeling of the Scripps Institution of Oceanography (SIO) and were obtained from the Scripps website (scrippsco2.ucsd.edu). Monthly mean CO2 constructed from daily mean values Scripps data downloaded from http://scrippsco2.ucsd.edu/data/atmospheric_co2 Monthly values are corrected to center of month based on average seasonal cycle. Missing days can be asymmetric which would produce a high or low bias. Missing months have been interpolated, for NOAA data indicated by negative stdev and uncertainty. We have no information for SIO data about Ndays, stdv, unc so that they are also indicated by negative numbers"
+authors=["Dr. Pieter Tans", "Dr. Ralph Keeling"]
+publication_date="2022-06"
+last_update="2022-06"
+publisher="Dr. Pieter Tans, NOAA/GML (gml.noaa.gov/ccgg/trends/) and Dr. Ralph Keeling, Scripps Institution of Oceanography (scrippsco2.ucsd.edu/)."
+id=""
+version=""
+data_source="https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_mm_mlo.csv"
+related_publications=["https://gml.noaa.gov/ccgg/trends/data.html"]
+
+[datasets]
+MaunaLoaMonthlyCO2=[["decode","utf-8"],["extract_lines", 52],["pandas_csv_separator_nan", ",", [-1, -9.99, -0.99]]]
