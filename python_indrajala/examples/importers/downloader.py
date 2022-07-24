@@ -105,6 +105,7 @@ class Downloader:
         if transforms is None:
             return data
         for dataset_name in transforms:
+            self.log.info(f"Creating dataset {dataset_name}")
             dataset=self.single_transform(data,transforms[dataset_name])
             if dataset is not None:
                 data_dict[dataset_name]=dataset
