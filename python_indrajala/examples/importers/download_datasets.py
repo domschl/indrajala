@@ -42,7 +42,11 @@ def get_datasets(log=logging):
                 ua=data_desc['citation']['user_agent']
             else:
                 ua=None
-            data_dicts=dl.get(data_desc['citation']['data_source'],transforms=data_desc['datasets'],user_agent=ua)
+            if 'redirect' in data_desc['citation']:
+                use_redirect = data_desc['citation']['redirect']
+            else:
+                use_redirect = False
+            data_dicts=dl.get(data_desc['citation']['data_source'],transforms=data_desc['datasets'],user_agent=ua, resolve_redirects=use_redirect)
             if data_dicts is None:
                 log.error(f"Failed to retrieve dataset(s) from {data_desc['citation']['data_source']}")
                 continue

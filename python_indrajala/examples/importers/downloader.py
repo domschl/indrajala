@@ -2,16 +2,14 @@ import os
 import logging
 from hashlib import md5
 import urllib.request as request
+import cgi
 import pickle
 import re
 import io
 import pandas as pd
+import json
+import datetime
 import requests
-try:
-    import cloudscraper
-    cloudscraper_available=True
-except ImportError:
-    pass
 
 class Downloader:
     def __init__(self, cache_dir='download_cache', use_cache=True):
@@ -19,14 +17,34 @@ class Downloader:
         self.use_cache = use_cache
         self.log = logging.getLogger("Downloader")
         if use_cache is True:
-            if os.path.isdir(cache_dir) is True:
-                return
+            self.cache_info = {}
+            if os.path.isdir(cache_dir) is False:
+                try:
+                    os.makedirs(cache_dir)
+                    self.log.debug(f"Cache directory {cache_dir} created.")
+                except Exception as e:
+                    self.use_cache = False
+                    self.log.error(f"Failed to create cache {cache_dir}: {e}")
+                    return
+            self.cache_info_file=os.path.join(cache_dir, 'cache_info.json')
+            if os.path.exists(self.cache_info_file):
+                try:
+                    with open(self.cache_info_file, 'r') as f:
+                        self.cache_info = json.load(f)
+                except Exception as e:
+                    self.log.error(f"Failed to read cache_info: {e}")
+
+    def update_cache(self, url, cache_filename):
+        if self.use_cache:
+            self.cache_info[url]={}
+            self.cache_info[url]['cache_filename'] = cache_filename
+            self.cache_info[url]['time'] = datetime.datetime.now().isoformat()
             try:
-                os.makedirs(cache_dir)
-                self.log.debug(f"Cache directory {cache_dir} created.")
+                with open(self.cache_info_file,'w') as f:
+                    json.dump(self.cache_info,f,indent=4)
+                    self.log.info(f"Saved cache_info to {self.cache_info_file}")
             except Exception as e:
-                self.use_cache = False
-                self.log.error(f"Failed to create cache {cache_dir}: {e}")
+                self.log.error(f"Failed to update cache_info: {e}")
 
     def decode(self, data, encoding_name):
         return data.decode(encoding_name)
@@ -111,17 +129,56 @@ class Downloader:
                 data_dict[dataset_name]=dataset
         return data_dict
 
-    def get(self, url, cache=True, transforms=None, user_agent=None):
-        url_comps=url.rsplit('/', 1)
-        if len(url_comps)==0:
-            self.log.error(f"Invalid url {url}")
-            return None
-        fn=url_comps[-1]
-        if '=' in fn:
-            url_comps=fn.rsplit('=', 1)
-        cache_filename=url_comps[-1]  # +"_"+md5(url.encode('utf-8')).hexdigest()
-        cache_path = os.path.join(self.cache_dir, cache_filename)
-        if self.use_cache is True and cache is True:
+    def get(self, url, transforms=None, user_agent=None, resolve_redirects=False):
+        cache_filename = None
+        cache_path = None
+        if resolve_redirects is True:
+            try:
+                self.log.info(f"Test for redirect: {url}")
+                r = requests.get(url, allow_redirects=True)
+                self.log.info(f"ReqInfo: {r}")
+                if r.url != url:
+                    self.log.warning(f"Redirect resolved: {url}->{r.url}")
+                    url = r.url
+            except Exception as e:
+                self.log.info(f"Could not resolve redirects {e}")
+        if self.use_cache is True:
+            if url in self.cache_info:
+                cache_filename = self.cache_info[url]['cache_filename']
+                cache_path = os.path.join(self.cache_dir, cache_filename)
+                cache_time = self.cache_info[url]['time']
+
+        retrieved = False
+        if cache_filename is None:
+            try:
+                remotefile = request.urlopen(url)
+                remote_info = remotefile.info()
+                # self.log.info(f"Remote.info: {remote_info}")
+                if 'Content-Disposition' in remote_info:
+                    info = remote_info['Content-Disposition']
+                    value, params = cgi.parse_header(info)
+                    # self.log.info(f"header: {params}")
+                    if 'filename' in params:
+                        cache_filename = params["filename"]
+                        cache_path = os.path.join(self.cache_dir, cache_filename)
+                        request.urlretrieve(url, cache_path)
+                        retrieved = True
+            except Exception as e:
+                cache_filename = None
+                self.log.info(f"Retrieving filename: {e}")
+            if retrieved is True:
+                self.update_cache(url, cache_filename)
+        if cache_filename is None:
+            url_comps=url.rsplit('/', 1)
+            if len(url_comps)==0:
+                self.log.error(f"Invalid url {url}")
+                return None
+            fn=url_comps[-1]
+            if '=' in fn:
+                url_comps=fn.rsplit('=', 1)
+            cache_filename=url_comps[-1]  # +"_"+md5(url.encode('utf-8')).hexdigest()
+            cache_path = os.path.join(self.cache_dir, cache_filename)
+        if self.use_cache is True:
             if os.path.exists(cache_path):
                 try:
                     with open(cache_path, 'rb') as f:
@@ -134,9 +191,7 @@ class Downloader:
                 if len(data)>0:
                     data=self.transform(data, transforms)
                     return data
-        else:
-            cache = False
-        self.log.debug(f"Starting download from {url}...")
+        self.log.info(f"Starting download from {url}...")
         data=None
         if user_agent is not None:
             req = request.Request(
@@ -165,10 +220,11 @@ class Downloader:
                 self.log.error(f"Failed to download from {url}: {e}")
                 return None
         self.log.info(f"Download from {url}: OK.")
-        if cache is True:
+        if self.use_cache is True:
             try:
                 with open(cache_path, 'wb') as f:
                     f.write(data)
+                    self.update_cache(url, cache_filename)
             except Exception as e:
                 self.log.warning(f"Failed to save to cache at {cache_path} for {url}: {e}")
         data=self.transform(data,transforms)
