@@ -9,6 +9,10 @@ import io
 import pandas as pd
 import json
 import datetime
+try:
+    from zoneinfo import ZoneInfo
+except:
+    from backports.zoneinfo import ZoneInfo
 import requests
 
 class Downloader:
@@ -54,7 +58,7 @@ class Downloader:
         if self.use_cache:
             self.cache_info[url]={}
             self.cache_info[url]['cache_filename'] = cache_filename
-            self.cache_info[url]['time'] = datetime.datetime.now().isoformat()
+            self.cache_info[url]['time'] = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()
             try:
                 with open(self.cache_info_file,'w') as f:
                     json.dump(self.cache_info,f,indent=4)
@@ -163,6 +167,9 @@ class Downloader:
                 cache_filename = self.cache_info[url]['cache_filename']
                 cache_path = os.path.join(self.cache_dir, cache_filename)
                 cache_time = self.cache_info[url]['time']
+                delta=(datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')) - datetime.datetime.fromisoformat(cache_time)).total_seconds()
+                self.log.info(f"Cache-age of {cache_filename} is {delta} seconds.")
+                
 
         retrieved = False
         if cache_filename is None:
