@@ -59,7 +59,9 @@ class Downloader:
                 if 'cache_filename' in self.cache_info[other_url]:
                     if self.cache_info[other_url]['cache_filename'] == cache_filename:
                         self.log.error('FATAL cache name clash: {other_url} and {url} both want to cache a file named {cache_filename}')
-                        self.log.error('Caching will not work for {url}')
+                        self.log.error('Caching will not work for {url}, cache for {other_url} delete too.')
+                        self.log.error('-----Algorithm must be changed!------')
+                        del self.cache_info[other_url]
                         return
             self.cache_info[url]={}
             self.cache_info[url]['cache_filename'] = cache_filename
