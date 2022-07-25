@@ -33,6 +33,22 @@ class Downloader:
                         self.cache_info = json.load(f)
                 except Exception as e:
                     self.log.error(f"Failed to read cache_info: {e}")
+            entries=list(self.cache_info.keys())
+            for entry in entries:
+                valid = True
+                for mand in ['cache_filename', 'time']:
+                    if mand not in self.cache_info[entry]:
+                        self.log.warning(f"Cache-entry for {entry} inconsistent: no {mand} field, deleting entry.")
+                        del self.cache_info[entry]
+                        valid = False
+                        break
+                if valid is False: 
+                    continue
+                lpath=os.path.join(self.cache_dir, self.cache_info[entry]['cache_filename'])
+                if os.path.exists(lpath) is False:
+                    self.log.warning(f"Local file {lpath} for cache entry {entry} does not exist, deleting cache entry.")
+                    del self.cache_info[entry]
+                    continue
 
     def update_cache(self, url, cache_filename):
         if self.use_cache:
