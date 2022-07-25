@@ -9,10 +9,6 @@ import io
 import pandas as pd
 import json
 import datetime
-try:
-    from zoneinfo import ZoneInfo
-except:
-    from backports.zoneinfo import ZoneInfo
 import requests
 
 class Downloader:
@@ -37,6 +33,7 @@ class Downloader:
                         self.cache_info = json.load(f)
                 except Exception as e:
                     self.log.error(f"Failed to read cache_info: {e}")
+            # Check for cache consistency, delete inconsistent entries:
             entries=list(self.cache_info.keys())
             for entry in entries:
                 valid = True
@@ -58,11 +55,11 @@ class Downloader:
         if self.use_cache:
             self.cache_info[url]={}
             self.cache_info[url]['cache_filename'] = cache_filename
-            self.cache_info[url]['time'] = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()
+            self.cache_info[url]['time'] = datetime.datetime.now().isoformat()
             try:
                 with open(self.cache_info_file,'w') as f:
                     json.dump(self.cache_info,f,indent=4)
-                    self.log.info(f"Saved cache_info to {self.cache_info_file}")
+                    # self.log.info(f"Saved cache_info to {self.cache_info_file}")
             except Exception as e:
                 self.log.error(f"Failed to update cache_info: {e}")
 
@@ -149,14 +146,14 @@ class Downloader:
                 data_dict[dataset_name]=dataset
         return data_dict
 
-    def get(self, url, transforms=None, user_agent=None, resolve_redirects=False):
+    def get(self, url, transforms=None, user_agent=None, resolve_redirects=True):
         cache_filename = None
         cache_path = None
         if resolve_redirects is True:
             try:
-                self.log.info(f"Test for redirect: {url}")
+                # self.log.info(f"Test for redirect: {url}")
                 r = requests.get(url, allow_redirects=True)
-                self.log.info(f"ReqInfo: {r}")
+                # self.log.info(f"ReqInfo: {r}")
                 if r.url != url:
                     self.log.warning(f"Redirect resolved: {url}->{r.url}")
                     url = r.url
@@ -167,9 +164,6 @@ class Downloader:
                 cache_filename = self.cache_info[url]['cache_filename']
                 cache_path = os.path.join(self.cache_dir, cache_filename)
                 cache_time = self.cache_info[url]['time']
-                delta=(datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')) - datetime.datetime.fromisoformat(cache_time)).total_seconds()
-                self.log.info(f"Cache-age of {cache_filename} is {delta} seconds.")
-                
 
         retrieved = False
         if cache_filename is None:
@@ -184,13 +178,16 @@ class Downloader:
                     if 'filename' in params:
                         cache_filename = params["filename"]
                         cache_path = os.path.join(self.cache_dir, cache_filename)
+                        self.log.info(f"Local filename is set to {cache_filename}")
+                        self.log.info(f"Starting download via retrieve from {url}...")
                         request.urlretrieve(url, cache_path)
+                        self.log.info(f"Download from {url}: OK.")
                         retrieved = True
             except Exception as e:
                 cache_filename = None
-                self.log.info(f"Retrieving filename: {e}")
             if retrieved is True:
                 self.update_cache(url, cache_filename)
+                return
         if cache_filename is None:
             url_comps=url.rsplit('/', 1)
             if len(url_comps)==0:
@@ -199,21 +196,25 @@ class Downloader:
             fn=url_comps[-1]
             if '=' in fn:
                 url_comps=fn.rsplit('=', 1)
-            cache_filename=url_comps[-1]  # +"_"+md5(url.encode('utf-8')).hexdigest()
+            cache_filename=url_comps[-1]
             cache_path = os.path.join(self.cache_dir, cache_filename)
         if self.use_cache is True:
             if os.path.exists(cache_path):
+                dl = False
                 try:
                     with open(cache_path, 'rb') as f:
                         data=f.read()
                         dl=True
                 except Exception as e:
                     self.log.error(f"Failed to read cache {cache_path} for {url}: {e}")
-                    return None
-                self.log.debug(f"Read {url} from cache at {cache_path}")
-                if len(data)>0:
-                    data=self.transform(data, transforms)
-                    return data
+                if dl is True:
+                    self.log.info(f"Read {url} from cache at {cache_path}")
+                    if len(data)>0:
+                        data=self.transform(data, transforms)
+                        return data
+                    else:
+                        self.log.error(f"Ignoring zero-length cache-file {cache_path}")
+                        dl = False
         self.log.info(f"Starting download from {url}...")
         data=None
         if user_agent is not None:
