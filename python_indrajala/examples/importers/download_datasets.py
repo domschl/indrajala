@@ -65,6 +65,7 @@ def get_datasets(log=logging):
     return dfs
  
 if __name__=="__main__":
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(name)s %(message)s', level=logging.INFO)
     dfs=get_datasets()
     print(f"{len(dfs)} datasets available: {dfs.keys()}")
 
