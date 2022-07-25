@@ -53,6 +53,14 @@ class Downloader:
 
     def update_cache(self, url, cache_filename):
         if self.use_cache:
+            for other_url in self.cache_info:
+                if other_url == url:
+                    continue
+                if 'cache_filename' in self.cache_info[other_url]:
+                    if self.cache_info[other_url]['cache_filename'] == cache_filename:
+                        self.log.error('FATAL cache name clash: {other_url} and {url} both want to cache a file named {cache_filename}')
+                        self.log.error('Caching will not work for {url}')
+                        return
             self.cache_info[url]={}
             self.cache_info[url]['cache_filename'] = cache_filename
             self.cache_info[url]['time'] = datetime.datetime.now().isoformat()
