@@ -10,7 +10,7 @@ version=""
 data_source="https://www.ncei.noaa.gov/pub/data/paleo/icecore/antarctica/antarctica2015co2composite.txt"
 related_publications=["http://ncdc.noaa.gov/paleo/study/17975", "http://onlinelibrary.wiley.com/doi/10.1002/2014GL061957/abstract"]
 time_interval = ["-51.03 BP", "805668.87 BP"]
-tags=['co2', 'icecore', 'antarctica', 'secundary']
+tags=['co2', 'icecore', 'antarctica', 'composite']
 
 [datasets]
-CO2800k=[["decode", "utf-8"],["extract_lines",138,2039],["pandas_csv_separator", '\t']]
+CO2_800k_composite=[["decode", "utf-8"],["extract_lines",138,2039],["pandas_csv_separator", '\t']]
