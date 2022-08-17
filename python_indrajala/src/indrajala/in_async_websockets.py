@@ -80,5 +80,5 @@ class EventProcessor:
     async def put(self, msg):
         if self.active is False:
             return
-        self.logger.debug(f"{self.name}: Received message {msg}")
+        self.log.debug(f"{self.name}: Received message {msg}")
         return

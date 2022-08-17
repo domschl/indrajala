@@ -3,6 +3,7 @@ import asyncio
 import socket
 import paho.mqtt.client as mqtt
 import time
+import logging
 
 
 class AsyncMqttHelper:
@@ -159,7 +160,9 @@ class AsyncMqtt:
 
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
-        self.logger = main_logger
+        self.logger = logging.getLogger('IndraMQTT')  # main_logger
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.debug("Start MQTT EventProcessor")
         self.toml_data = toml_data
         self.name = name
         self.active = False
