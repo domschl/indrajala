@@ -4,7 +4,7 @@
 [indrajala]
 application="default"
 systemd=false
-modules=["in_async_mqtt","in_postgresql","in_signal_server","in_async_websockets"]
+modules=["in_async_mqtt","in_postgresql","in_signal_server","in_async_websockets", "in_csv_tree"]
 
 # Signal server makes sure that only one instance of indrajala
 # is running per host (using a default socket). It cana shutdown
@@ -23,9 +23,14 @@ connection="host='database-hostname' dbname='testdb' user='some-user'"
 active=false
 rootpath=""
 
+[in_csv_tree]
+active=true
+rootpath="<some-path>/indrajala/python_indrajala/examples/csv_tree"
+
 # MQTT interface based on PAHO MQTT
 [in_async_mqtt]
 active=true
+startup_delay_sec=20
 broker="mqtt-server-hostname"
 topics=["#"]
 

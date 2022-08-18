@@ -166,6 +166,8 @@ class EventProcessor:
         self.toml_data = toml_data
         self.name = name
         self.active = False
+        self.startup_time = time.time()
+        self.startup_delay_sec = self.toml_data[self.name]['startup_delay_sec']
         return
 
     def isActive(self):
@@ -188,13 +190,14 @@ class EventProcessor:
         # self.msg=self.loop.create_future()
         # self.msg.set_result({'topic': 'hello', 'msg':'world', 'origin': self.name})
         # that_msg = await self.msg
-        if self.active is True:
+        if self.active is True and time.time()-self.startup_time > self.startup_delay_sec:
             tp, ms = await self.async_mqtt.message()
             self.logger.info(f"MQ: {tp}-{ms}")
             that_msg = {'topic': tp, 'msg': ms, 'origin': self.name}
             self.logger.debug(f"{self.name}: Sending message {that_msg}")
             return that_msg
         else:
+            self.logger.debug(f"STARTUP-DELAY {time.time()-self.startup_time}")
             return {'topic': None, 'msg': None, 'name': self.name}
 
     async def put(self, msg):
