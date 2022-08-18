@@ -59,7 +59,7 @@ class EventProcessor:
                 f.write('time,msg\n')
         with open(fn, 'a') as f:
             for row in data:
-                f.write(str(row[0]) + ',' + str(row[1]) + '\n')
+                f.write(row[0]+',' + row[1] + '\n')
         return True
     async def put(self, msg):
         if self.active is False:
