@@ -2,6 +2,7 @@ import sys
 import signal
 import atexit
 import asyncio
+import logging
 
 
 class EventProcessor:
@@ -9,7 +10,7 @@ class EventProcessor:
     start new instance (if kill option was not set.) """
 
     def __init__(self, name, main_logger, toml_data):
-        self.log = main_logger
+        self.log = logging.getLogger('indra.signal_server') # main_logger
         self.port = int(toml_data[name]['signal_port'])
         self.toml_data = toml_data
         self.name = name

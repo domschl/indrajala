@@ -3,6 +3,8 @@ import asyncio
 import socket
 import paho.mqtt.client as mqtt
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import logging
 
 
@@ -160,14 +162,15 @@ class AsyncMqtt:
 
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
-        self.logger = logging.getLogger('IndraMQTT')  # main_logger
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.debug("Start MQTT EventProcessor")
+        self.log = main_logger # logging.getLogger('indramqtt') # main_logger
+        self.log.setLevel(logging.DEBUG)
+        self.log.debug("Start MQTT EventProcessor")
         self.toml_data = toml_data
         self.name = name
         self.active = False
         self.startup_time = time.time()
         self.startup_delay_sec = self.toml_data[self.name]['startup_delay_sec']
+        self.log.warning(f"Startup-delay: {self.startup_delay_sec}")
         return
 
     def isActive(self):
@@ -175,7 +178,7 @@ class EventProcessor:
 
     async def async_init(self, loop):
         self.loop = loop
-        self.async_mqtt = AsyncMqtt(loop, self.logger, self.toml_data[self.name]['broker'])
+        self.async_mqtt = AsyncMqtt(loop, self.log, self.toml_data[self.name]['broker'])
         if 'last_will_topic' in self.toml_data[self.name] and 'last_will_message' in self.toml_data[self.name]:
             lwt = self.toml_data[self.name]['last_will_topic']
             lwm = self.toml_data[self.name]['last_will_message']
@@ -190,17 +193,18 @@ class EventProcessor:
         # self.msg=self.loop.create_future()
         # self.msg.set_result({'topic': 'hello', 'msg':'world', 'origin': self.name})
         # that_msg = await self.msg
-        if self.active is True and time.time()-self.startup_time > self.startup_delay_sec:
+        if self.active is True:
             tp, ms = await self.async_mqtt.message()
-            self.logger.info(f"MQ: {tp}-{ms}")
+            self.log.info(f"MQ: {tp}-{ms}")
             that_msg = {'topic': tp, 'msg': ms, 'origin': self.name}
-            self.logger.debug(f"{self.name}: Sending message {that_msg}")
+            if time.time()-self.startup_time > self.startup_delay_sec:
+                that_msg['time'] = datetime.now(tz=ZoneInfo('UTC')).isoformat()
+            self.log.debug(f"{self.name}: Sending message {that_msg}")
             return that_msg
         else:
-            self.logger.debug(f"STARTUP-DELAY {time.time()-self.startup_time}")
             return {'topic': None, 'msg': None, 'name': self.name}
 
     async def put(self, msg):
         if self.active is True:
-            self.logger.debug(f"{self.name}: Received message {msg}")
+            self.log.debug(f"{self.name}: Received message {msg}")
         return

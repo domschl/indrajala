@@ -2,12 +2,12 @@ import os
 import asyncio
 import ssl
 import websockets
+import logging
 
-a=1
 
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
-        self.log=main_logger
+        self.log=logging.getLogger('indra.async_ws') # main_logger
         self.toml_data=toml_data
         self.name=name
         self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
