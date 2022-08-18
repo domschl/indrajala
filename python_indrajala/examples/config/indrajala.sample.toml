@@ -36,7 +36,7 @@ topics=["#"]
 
 # Websockets
 [in_async_websockets]
-active=true
+active=false
 port=23577
 bind_address="0.0.0.0"
 ssl=true
