@@ -4,9 +4,10 @@ import logging
 from zoneinfo import ZoneInfo
 from datetime import datetime
 
+
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
-        self.log = main_logger # logging.getLogger("CSV")
+        self.log = main_logger  # logging.getLogger("CSV")
         # self.log.setLevel(logging.DEBUG)
         #  self.msh = logging.StreamHandler()
         # self.msh.setLevel(logging.DEBUG)
@@ -15,7 +16,7 @@ class EventProcessor:
         # self.log.addHandler(self.msh)
         self.toml_data = toml_data
         self.name = name
-        self.ev_store={}
+        self.ev_store = {}
         self.current_date = None
         self.active = False
         try:
@@ -53,7 +54,7 @@ class EventProcessor:
     def flush_data(self, filepath, filename, data):
         if os.path.isdir(filepath) is False:
             os.makedirs(filepath)
-        fn=os.path.join(filepath, filename)
+        fn = os.path.join(filepath, filename)
         if os.path.isfile(fn) is False:
             with open(fn, 'w') as f:
                 f.write('time,msg\n')
@@ -61,10 +62,11 @@ class EventProcessor:
             for row in data:
                 f.write(row[0]+',' + row[1] + '\n')
         return True
+
     async def put(self, msg):
         if self.active is False:
             return
-        filename=str
+        filename = str
         self.log.debug(f"{self.name}: Received message {msg}")
         if 'time' in msg:
             if 'topic' in msg:
