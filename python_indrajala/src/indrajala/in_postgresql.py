@@ -2,9 +2,10 @@ import asyncio
 import psycopg
 import logging
 
+
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
-        self.log=logging.getLogger('indra.postgresql') # main_logger
+        self.log = logging.getLogger('indra.postgresql')  # main_logger
         self.toml_data = toml_data
         self.name = name
         try:

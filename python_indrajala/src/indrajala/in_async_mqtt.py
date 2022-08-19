@@ -162,7 +162,7 @@ class AsyncMqtt:
 
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
-        self.log = main_logger # logging.getLogger('indramqtt') # main_logger
+        self.log = main_logger  # logging.getLogger('indramqtt') # main_logger
         self.log.setLevel(logging.DEBUG)
         self.log.debug("Start MQTT EventProcessor")
         self.toml_data = toml_data
