@@ -82,7 +82,7 @@ class EventProcessor:
 
     async def get(self):
         _ = await self.exit_future
-        return {'topic': '$SYS/PROCESS', 'msg': 'QUIT', 'origin': self.name}
+        return {'cmd': 'system', 'topic': '$SYS/PROCESS', 'msg': 'QUIT', 'origin': self.name}
 
     async def put(self, _):
         return

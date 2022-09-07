@@ -29,7 +29,7 @@ class EventProcessor:
         if self.active is False:
             return None
         await asyncio.sleep(1.0)
-        msg = {'topic': 'hello', 'msg': 'world', 'origin': self.name}
+        msg = {'cmd': 'ping', 'topic': 'hello', 'msg': 'world', 'origin': self.name}
         self.log.debug(f"{self.name}: Sending message {msg}")
         # return {'topic': None, 'msg': None, 'origin': self.name}
         return msg

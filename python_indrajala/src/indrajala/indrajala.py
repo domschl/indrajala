@@ -83,17 +83,27 @@ async def main_runner(main_logger, modules, toml_data, args):
                 active_tasks = [asyncio.create_task(modules[origin_module].get())]
             else:
                 active_tasks = active_tasks.union((asyncio.create_task(modules[origin_module].get()),))
-            if 'topic' in res and res['topic'] is not None:
-                if res['topic'] == "$SYS/PROCESS":
-                    if 'msg' in res and res['msg'] == 'QUIT':
-                        terminate_main_runner = True
-                        continue
-                for module in modules:
-                    if module != origin_module:
-                        for sub in subs[module]:
-                            if mqcmp(res['topic'], sub) is True:
-                                await modules[module].put(res)
-                                break
+            if 'cmd' not in res:
+                main_logger.error(f"Invalid result without 'cmd' field: {res}")
+                continue
+            if res['cmd']=='event':
+                if 'topic' in res and res['topic'] is not None:
+                    for module in modules:
+                        if module != origin_module:
+                            for sub in subs[module]:
+                                if mqcmp(res['topic'], sub) is True:
+                                    await modules[module].put(res)
+                                    break
+            elif res['cmd']=='system':
+                if 'topic' in res and res['topic'] is not None:
+                    if res['topic'] == "$SYS/PROCESS":
+                        if 'msg' in res and res['msg'] == 'QUIT':
+                            terminate_main_runner = True
+                            continue
+            elif res['cmd']=='ping':
+                main_logger.info(f"Received and ignored ping {res}")
+            else:
+                main_logger.error(f"Unknown cmd {res['cmd']} in {res}")
     main_logger.info("All done, terminating indrajala.")
 
 
