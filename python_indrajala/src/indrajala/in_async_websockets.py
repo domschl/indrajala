@@ -2,12 +2,11 @@ import os
 import asyncio
 import ssl
 import websockets
-import logging
 
 
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
-        self.log = logging.getLogger('indra.async_ws')  # main_logger
+        self.log = main_logger
         self.toml_data = toml_data
         self.name = name
         self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -45,6 +44,7 @@ class EventProcessor:
         self.log.info("Websockets server started.")
         self.online_future.set_result(0)
         self.active = True
+        self.log.debug(f"server_task websockets: serving.")
         await stop
         self.log.info("Websockets: Terminated")
 
@@ -55,13 +55,19 @@ class EventProcessor:
         self.online_future = asyncio.Future()
         # async with websockets.serve(self.get_request, self.bind_address, self.port, ssl=self.ssl_context):
         #     await asyncio.Future();  # run forever
+        self.log.debug(f"Async init websockets: starting serve at {self.bind_address}:{self.port}")
         self.start_server = websockets.serve(self.get_request, self.bind_address, self.port, ssl=self.ssl_context)
         return ['#']
 
     async def get_request(self, websocket, path):
+        self.log.debug("Waiting for recv()...")
         req = await websocket.recv()
+
         self.log.info(f"WS: {req}")
+        await websocket.send("OK")
+        await websocket.close()
         self.req_queue.put_nowait(req)
+        self.log.info("WS: queued")
         # await self.req_queue.put(req)
         # await websocket.send(greeting)
 
@@ -72,6 +78,7 @@ class EventProcessor:
             self.log.info("WS got active, continuing!")
         self.log.info("Q-get")
         req = await self.req_queue.get()
+        self.log.info("Q-got")
         self.req_queue.task_done()
         self.log.info(f"WSTR: {req}")
         msg = {'origin': self.name, 'topic': "ws", 'body': req}
