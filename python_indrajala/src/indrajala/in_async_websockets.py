@@ -35,6 +35,7 @@ class EventProcessor:
                 self.enabled = True
             except Exception as e:
                 self.log.error(f"Failed to read ssl certs: {e}")
+        self.online_future = asyncio.future()
         return
 
     def isActive(self):
@@ -55,7 +56,7 @@ class EventProcessor:
         if self.enabled is False:
             return []
         self.loop = loop
-        self.online_future = asyncio.Future()
+
         # async with websockets.serve(self.get_request, self.bind_address, self.port, ssl=self.ssl_context):
         #     await asyncio.Future();  # run forever
         self.log.debug(f"Async init websockets: starting serve at {self.bind_address}:{self.port}")
