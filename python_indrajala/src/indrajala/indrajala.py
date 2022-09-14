@@ -171,10 +171,14 @@ def read_config_arguments():
     main_logger.addHandler(msh)
 
     log_file = os.path.join(args.log_dir, 'indrajala.log')
-    mfh = logging.FileHandler(log_file, mode='w')
-    mfh.setLevel(logging.DEBUG)
-    mfh.setFormatter(formatter)
-    main_logger.addHandler(mfh)
+    print(log_file)
+    try:
+        mfh = logging.FileHandler(log_file, mode='w')
+        mfh.setLevel(logging.DEBUG)
+        mfh.setFormatter(formatter)
+        main_logger.addHandler(mfh)
+    except Exception as e:
+        print(f"FATAL: failed to create file-handler for logging at {log_file}")
 
     config_dir = args.config_dir
     toml_file = os.path.join(config_dir, 'indrajala.toml')
