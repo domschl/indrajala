@@ -199,8 +199,10 @@ class EventProcessor:
             that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'time': ut, 'origin': self.name}
             if time.time()-self.startup_time > self.startup_delay_sec:
                 that_msg['time'] = datetime.now(tz=ZoneInfo('UTC')).isoformat()
-            self.log.debug(f"{self.name}: Sending message {that_msg}")
-            return that_msg
+                self.log.debug(f"{self.name}: Sending message {that_msg}")
+                return that_msg
+            else:
+                return {'topic': None, 'msg': None, 'name': self.name}
         else:
             return {'topic': None, 'msg': None, 'name': self.name}
 
