@@ -20,6 +20,7 @@ class EventProcessor:
         cert_dir = os.path.join(config_dir, 'certs')
         self.active = False
         self.enabled = False
+        # self.online_future = None
         if self.use_ssl is True:
             cf = os.path.join(cert_dir, toml_data['in_async_websockets']['ssl_certfile'])
             kf = os.path.join(cert_dir, toml_data['in_async_websockets']['ssl_keyfile'])
@@ -46,7 +47,7 @@ class EventProcessor:
         await asyncio.sleep(1.0)
         await self.start_server
         self.log.info("Websockets server started.")
-        self.online_future.set_result(0)
+        # self.online_future.set_result(0)
         self.active = True
         self.log.debug(f"server_task websockets: serving.")
         await stop
@@ -56,7 +57,7 @@ class EventProcessor:
         if self.enabled is False:
             return []
         self.loop = loop
-        self.online_future = asyncio.Future()
+        # self.online_future = asyncio.Future()
 
         # async with websockets.serve(self.get_request, self.bind_address, self.port, ssl=self.ssl_context):
         #     await asyncio.Future();  # run forever
@@ -79,8 +80,9 @@ class EventProcessor:
     async def get(self):
         if self.active is False:
             self.log.warning("WS-get before active!")
-            await self.online_future
-            self.log.info("WS got active, continuing!")
+            return None
+            # await self.online_future
+            # self.log.info("WS got active, continuing!")
         self.log.info("Q-get")
         req = await self.req_queue.get()
         self.log.info("Q-got")
