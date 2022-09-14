@@ -43,6 +43,7 @@ class EventProcessor:
     async def server_task(self):
         self.log.info("Starting websockets server...")
         stop = asyncio.Future()
+        await asyncio.sleep(1.0)
         await self.start_server
         self.log.info("Websockets server started.")
         self.online_future.set_result(0)
