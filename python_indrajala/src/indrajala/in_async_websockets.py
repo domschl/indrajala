@@ -2,6 +2,9 @@ import os
 import asyncio
 import ssl
 import websockets
+import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 class EventProcessor:
@@ -81,7 +84,16 @@ class EventProcessor:
         self.log.info("Q-got")
         self.req_queue.task_done()
         self.log.info(f"WSTR: {req}")
-        msg = {'origin': self.name, 'topic': "ws", 'body': req}
+        default_toks = {'cmd':'ping', 'origin':self.name, 'time': datetime.now(tz=ZoneInfo('UTC')), 'topic': 'ws', 'body': ''} 
+        if req and len(req)>0 and req[0]=='{':
+            try:
+                msg = json.loads(req)
+            except:
+                msg = {}
+        for tok in default_toks:
+            if tok not in msg:
+                self.log.warning(f"Required token {tok} not in msg obj {msg}, setting {tok}={default_toks[tok]}")
+                msg[tok]=default_toks[tok]
         return msg
 
     async def put(self, msg):
