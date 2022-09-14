@@ -53,6 +53,8 @@ async def main_runner(main_logger, modules, toml_data, args):
         main_logger.debug(f"async_init of {module}")
         subs[module] = await modules[module].async_init(loop)
 
+    await asyncio.sleep(1.0)  # Give those async inits some time XXX: dirty!
+
     tasks = []
     for module in modules:
         m_op = getattr(modules[module], "server_task", None)
