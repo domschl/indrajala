@@ -40,6 +40,6 @@ active=true
 port=23577
 bind_address="0.0.0.0"
 ssl=true
-ssl_certfile=certs/certfile.pem
-ssl_keyfile=certs/keyfile.em
+ssl_certfile="certs/certfile.pem"
+ssl_keyfile="certs/keyfile.pem"
 
