@@ -138,13 +138,13 @@ class AsyncMqtt:
         if not self.got_message:
             self.log.debug(f"Got unexpected message: {msg}")
         else:
-            self.got_message.set_result((msg.topic, msg.payload))
+            self.got_message.set_result((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
 
     async def message(self):
         self.got_message = self.loop.create_future()
-        topic, payload = await self.got_message
+        topic, payload, utctimestamp = await self.got_message
         self.got_message = None
-        return topic, payload
+        return topic, payload, utctimestamp
 
     def on_disconnect(self, client, userdata, rc):
         self.log.debug("on_disconnect")
@@ -194,9 +194,9 @@ class EventProcessor:
         # self.msg.set_result({'topic': 'hello', 'msg':'world', 'origin': self.name})
         # that_msg = await self.msg
         if self.active is True:
-            tp, ms = await self.async_mqtt.message()
+            tp, ms, ut = await self.async_mqtt.message()
             self.log.info(f"MQ: {tp}-{ms}")
-            that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'origin': self.name}
+            that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'time': ut, 'origin': self.name}
             if time.time()-self.startup_time > self.startup_delay_sec:
                 that_msg['time'] = datetime.now(tz=ZoneInfo('UTC')).isoformat()
             self.log.debug(f"{self.name}: Sending message {that_msg}")

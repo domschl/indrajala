@@ -3,6 +3,8 @@ import signal
 import atexit
 import asyncio
 import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 class EventProcessor:
@@ -82,7 +84,7 @@ class EventProcessor:
 
     async def get(self):
         _ = await self.exit_future
-        return {'cmd': 'system', 'topic': '$SYS/PROCESS', 'msg': 'QUIT', 'origin': self.name}
+        return {'cmd': 'system', 'time': datetime.now(tz=ZoneInfo('UTC')), 'topic': '$SYS/PROCESS', 'msg': 'QUIT', 'origin': self.name}
 
     async def put(self, _):
         return
