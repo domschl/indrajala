@@ -207,7 +207,7 @@ class EventProcessor:
         if self.active is True:
             tp, ms, ut = await self.async_mqtt.message()
             self.log.debug(f"MQ: {tp}-{ms}")
-            that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'time': ut.isoformat(), 'origin': self.name}
+            that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'uuid': str(uuid.uuid4()), 'time': ut.isoformat(), 'origin': self.name}
             if time.time()-self.startup_time > self.startup_delay_sec:
                 if self.first_msg is False:
                     self.first_msg = True

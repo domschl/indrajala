@@ -5,6 +5,7 @@ import pathlib
 import tomlkit
 import asyncio
 import importlib
+import uuid
 
 
 indrajala_version = '0.0.1'
@@ -79,8 +80,8 @@ async def main_runner(main_logger, modules, toml_data, args):
                     main_logger.warning(f"Result should never be None, task {task}")
                     res = {}
                 if 'origin' not in res:
-                    main_logger.warning(f"Origin not set in task {task}")
-                    res['origin'] = task
+                    main_logger.error(f"Origin not set in task {task}")
+                    # res['origin'] = task
                 # continue
             main_logger.debug(f"Finished: {res}")
             origin_module = res['origin']
@@ -94,6 +95,9 @@ async def main_runner(main_logger, modules, toml_data, args):
                 main_logger.error(f"Invalid result without 'cmd' field: {res}")
                 continue
             if res['cmd']=='event':
+                if 'uuid' not in res:
+                    main_logger.warning(f'Missing uuid in event {res}')
+                    res['uuid']=str(uuid.uuid4())
                 if 'topic' in res and res['topic'] is not None:
                     for module in modules:
                         if module != origin_module:
