@@ -23,7 +23,7 @@ class EventProcessor:
             if self.toml_data[self.name]['active'] is False:
                 return
             if os.path.isdir(self.toml_data[self.name]['rootpath']) is False:
-                self.log.error(f"{self.name}: Root directory {self.toml_data[self.name]['root']} does not exist")
+                self.log.error(f"{self.name}: Root directory {self.toml_data[self.name]['rootpath']} does not exist")
                 return
         except Exception as e:
             self.log.error(f"{self.name}: {e}")
@@ -80,10 +80,10 @@ class EventProcessor:
                     self.current_date = date
                     # XXX: if actual caching is used, flush here:
                     if msg['topic'] in self.ev_store and len(self.ev_store[msg['topic']]['data'])>0:
-                        if not self.flush_data(self.ev_store[msg['topic']], self.ev_store[msg['topic']]['date'], self.flush_data(self.ev_store[msg['topic']]['data'])):
+                        if not self.flush_data(msg['topic'], self.ev_store[msg['topic']]['date'], self.flush_data(self.ev_store[msg['topic']]['data'])):
                             self.log.error(f"Flushing cache failed: {msg}")
                     self.ev_store[msg['topic']] = {'date': date, 'data': []}
                 self.ev_store[msg['topic']]['data'].append((msg['time'], msg['msg']))
-                if self.flush_data(self.ev_store[msg['topic']], self.ev_store[msg['topic']]['date'], self.ev_store[msg['topic']]['data']):
+                if self.flush_data(msg['topic'], self.ev_store[msg['topic']]['date'], self.ev_store[msg['topic']]['data']):
                     self.ev_store[msg['topic']]['data'] = []
         return

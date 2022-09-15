@@ -43,7 +43,7 @@ class EventProcessor:
         return self.active
 
     async def server_task(self):
-        self.log.info("Starting websockets server...")
+        self.log.debug("Starting websockets server...")
         stop = asyncio.Future()
         await self.start_server
         self.log.info("Websockets server started.")
@@ -69,7 +69,7 @@ class EventProcessor:
         self.log.debug("Waiting for recv()...")
         req = await websocket.recv()
 
-        self.log.info(f"WS: {req}")
+        self.log.debug(f"WS: {req}")
         await websocket.send("OK")
         await websocket.close()
         self.req_queue.put_nowait(req)
@@ -82,14 +82,14 @@ class EventProcessor:
             self.log.error("websockets are not enabled (failed to init?) and receive get()")
             return {}
         if self.active is False:
-            self.log.warning("WS-get before active!")
+            self.log.debug("WS-get before active!")
             await self.online_future
-            self.log.info("WS got active, continuing!")
-        self.log.info("Q-get")
+            self.log.debug("WS got active, continuing!")
+        self.log.debug("Q-get")
         req = await self.req_queue.get()
-        self.log.info("Q-got")
+        self.log.debug("Q-got")
         self.req_queue.task_done()
-        self.log.info(f"WSTR: {req}")
+        self.log.debug(f"WSTR: {req}")
         default_toks = {'cmd':'ping', 'origin':self.name, 'time': datetime.now(tz=ZoneInfo('UTC')), 'topic': 'ws', 'body': ''} 
         if req and len(req)>0 and req[0]=='{':
             try:
