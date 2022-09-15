@@ -139,8 +139,8 @@ class AsyncMqtt:
 
     def on_message(self, client, userdata, msg):
         self.log.debug(f"Received: {msg.topic} - {msg.payload}")
-        if self.got_message is None:
-            self.log.debug(f"Got unexpected message: {msg.topic}, queueing")
+        if self.got_message is None or self.got_message.done() is True:
+            self.log.debug(f"Got message too fast: {msg.topic}, queueing")
             self.que.put((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
         else:
             self.got_message.set_result((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
