@@ -59,7 +59,7 @@ class EventProcessor:
         fn = os.path.join(filepath, filename)
         if os.path.isfile(fn) is False:
             with open(fn, 'w') as f:
-                f.write('time,msg\n')
+                f.write('time,msg,uuid\n')
         with open(fn, 'a') as f:
             for row in data:
                 try:
@@ -83,7 +83,7 @@ class EventProcessor:
                         if not self.flush_data(msg['topic'], self.ev_store[msg['topic']]['date'], self.flush_data(self.ev_store[msg['topic']]['data'])):
                             self.log.error(f"Flushing cache failed: {msg}")
                     self.ev_store[msg['topic']] = {'date': date, 'data': []}
-                self.ev_store[msg['topic']]['data'].append((msg['time'], msg['msg']))
+                self.ev_store[msg['topic']]['data'].append((msg['time'], msg['msg'], msg['uuid']))
                 if self.flush_data(msg['topic'], self.ev_store[msg['topic']]['date'], self.ev_store[msg['topic']]['data']):
                     self.ev_store[msg['topic']]['data'] = []
         return
