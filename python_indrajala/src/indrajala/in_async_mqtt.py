@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import logging
+import queue
 
 
 class AsyncMqttHelper:
@@ -87,6 +88,8 @@ class AsyncMqtt:
 
         self.aioh = AsyncMqttHelper(self.log, self.loop, self.client)
 
+        self.que = queue.Queue()
+
     def last_will(self, last_will_topic, last_will_message, qos=0, retain=True):
         self.client.will_set(last_will_topic, last_will_message, qos, retain)
 
@@ -136,14 +139,20 @@ class AsyncMqtt:
     def on_message(self, client, userdata, msg):
         self.log.debug(f"Received: {msg.topic} - {msg.payload}")
         if not self.got_message:
-            self.log.debug(f"Got unexpected message: {msg}")
+            self.log.debug(f"Got unexpected message: {msg.topic}, queueing")
+            self.que.put((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
         else:
             self.got_message.set_result((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
 
     async def message(self):
-        self.got_message = self.loop.create_future()
-        topic, payload, utctimestamp = await self.got_message
-        self.got_message = None
+        if not self.que.empty():
+            topic, payload, utctimestamp = self.que.get()
+            self.log.debug(f"Unque msg {topic}")
+            self.que.task_done()
+        else:
+            self.got_message = self.loop.create_future()
+            topic, payload, utctimestamp = await self.got_message
+            self.got_message = None
         return topic, payload, utctimestamp
 
     def on_disconnect(self, client, userdata, rc):
@@ -170,7 +179,8 @@ class EventProcessor:
         self.active = False
         self.startup_time = time.time()
         self.startup_delay_sec = self.toml_data[self.name]['startup_delay_sec']
-        self.log.warning(f"Startup-delay: {self.startup_delay_sec}")
+        self.log.debug(f"Startup-delay: {self.startup_delay_sec}")
+        self.first_msg = False
         return
 
     def isActive(self):
@@ -187,6 +197,7 @@ class EventProcessor:
         for topic in self.toml_data[self.name]['topics']:
             self.async_mqtt.subscribe(topic)
         self.active = True
+        self.log.info(f"MQTT connection active, waiting for {self.startup_delay_sec} secs before routing messages.")
         return []
 
     async def get(self):
@@ -195,16 +206,22 @@ class EventProcessor:
         # that_msg = await self.msg
         if self.active is True:
             tp, ms, ut = await self.async_mqtt.message()
-            self.log.info(f"MQ: {tp}-{ms}")
-            that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'time': ut, 'origin': self.name}
+            self.log.debug(f"MQ: {tp}-{ms}")
+            that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'time': ut.isoformat(), 'origin': self.name}
             if time.time()-self.startup_time > self.startup_delay_sec:
+                if self.first_msg is False:
+                    self.first_msg = True
+                    self.log.info("MQTT receive activated, routing received messages.")
                 that_msg['time'] = datetime.now(tz=ZoneInfo('UTC')).isoformat()
                 self.log.debug(f"{self.name}: Sending message {that_msg}")
                 return that_msg
             else:
-                return {'topic': None, 'msg': None, 'name': self.name}
+                that_msg['cmd']='ping'
+                that_msg['topic']=None
+                that_msg['msg']=None
+                return that_msg
         else:
-            return {'topic': None, 'msg': None, 'name': self.name}
+            return {'cmd': 'ping', 'topic': None, 'msg': None, 'time': time.now(tz=ZoneInfo('UTC')).isoformat(), 'origin': self.name}
 
     async def put(self, msg):
         if self.active is True:

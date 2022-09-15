@@ -59,7 +59,7 @@ async def main_runner(main_logger, modules, toml_data, args):
         m_op = getattr(modules[module], "server_task", None)
         if callable(m_op) is True:
             tasks.append(asyncio.create_task(modules[module].server_task()))
-            main_logger.info(f"Task {module} has separate server_task(), started module-specific background server")
+            main_logger.debug(f"Task {module} has separate server_task(), started module-specific background server")
         main_logger.debug(f"adding task from {module}")
         tasks.append(asyncio.create_task(modules[module].get()))
 
@@ -75,11 +75,17 @@ async def main_runner(main_logger, modules, toml_data, args):
             res = task.result()
             if res is None or 'topic' not in res or 'origin' not in res:
                 main_logger.warning(f"Invalid empty msg {res}")
-                continue
+                if res is None:
+                    main_logger.warning(f"Result should never be None, task {task}")
+                    res = {}
+                if 'origin' not in res:
+                    main_logger.warning(f"Origin not set in task {task}")
+                    res['origin'] = task
+                # continue
             main_logger.debug(f"Finished: {res}")
             origin_module = res['origin']
             main_logger.debug(f"adding task from {origin_module}")
-            main_logger.info(f"Getting {origin_module}")
+            main_logger.debug(f"Getting {origin_module}")
             if len(active_tasks) == 0:
                 active_tasks = [asyncio.create_task(modules[origin_module].get())]
             else:
@@ -102,7 +108,7 @@ async def main_runner(main_logger, modules, toml_data, args):
                             terminate_main_runner = True
                             continue
             elif res['cmd']=='ping':
-                main_logger.info(f"Received and ignored ping {res}")
+                main_logger.debug(f"Received and ignored ping {res}")
             else:
                 main_logger.error(f"Unknown cmd {res['cmd']} in {res}")
     main_logger.info("All done, terminating indrajala.")
@@ -163,22 +169,22 @@ def read_config_arguments():
     args = parser.parse_args()
 
     main_logger = logging.getLogger('indrajala_core')
-    main_logger.setLevel(logging.DEBUG)
+    main_logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
 
     msh = logging.StreamHandler()
-    msh.setLevel(logging.DEBUG)
+    msh.setLevel(logging.INFO)
     msh.setFormatter(formatter)
     main_logger.addHandler(msh)
 
     log_file = os.path.join(args.log_dir, 'indrajala.log')
-    print(log_file)
     try:
         mfh = logging.FileHandler(log_file, mode='w')
-        mfh.setLevel(logging.DEBUG)
+        mfh.setLevel(logging.INFO)
         mfh.setFormatter(formatter)
         main_logger.addHandler(mfh)
     except Exception as e:
+        mfh = None
         print(f"FATAL: failed to create file-handler for logging at {log_file}")
 
     config_dir = args.config_dir
@@ -194,8 +200,21 @@ def read_config_arguments():
         toml_data['in_signal_server']['kill_daemon'] = True
     else:
         toml_data['in_signal_server']['kill_daemon'] = False
-
     toml_data['indrajala']['config_dir'] = str(config_dir)
+
+    loglevel_console = toml_data['indrajala'].get('loglevel_console', 'info').lower()
+    loglevel_file = toml_data['indrajala'].get('loglevel_logfile', 'debug').lower()
+    levels={'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR}
+    if loglevel_console not in levels:
+        loglevel_console = 'info'
+    if loglevel_file not in levels:
+        loglevel_file = 'debug'
+    llc=levels[loglevel_console]
+    llf=levels[loglevel_file]
+    main_logger.setLevel(llc)
+    msh.setLevel(llc)
+    if mfh is not None:
+        mfh.setLevel(llf)
     return main_logger, toml_data, args
 
 
