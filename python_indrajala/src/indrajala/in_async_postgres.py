@@ -22,13 +22,12 @@ class EventProcessor:
         return self.active
     
     async def async_init(self, loop):
-        self.log.info("Async init start")
         if self.active is False:
             self.log.error("Async_init called even so database is not active!")
             return []
         self.loop = loop
         self.aconn = await psycopg.AsyncConnection.connect(self.toml_data[self.name]['connection'])
-        self.log.info(f"aconn {self.aconn}")
+        self.log.debug(f"aconn {self.aconn}")
         cmd = f"""
         CREATE TABLE {self.table} (
             timestamp double precision,
@@ -70,4 +69,10 @@ class EventProcessor:
         if self.active is False:
             return
         self.log.debug(f"{self.name}: Received message {msg}")
+        async with self.aconn.cursor() as acur:
+            tm=datetime.fromisoformat(msg['time']).timestamp()
+            ins_cmd=f"INSERT INTO {self.table} (timestamp, uuid, topic, msg) VALUES (%s, %s, %s, %s)"
+            await acur.execute(ins_cmd, (tm, msg['uuid'], msg['topic'], msg['msg'] ))
+        await self.aconn.commit() 
+        self.log.debug(f"DB-write-commit {msg}")
         return
