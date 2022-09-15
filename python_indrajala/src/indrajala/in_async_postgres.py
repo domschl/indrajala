@@ -1,6 +1,7 @@
 import asyncio
 import psycopg
 import logging
+import signal
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -8,6 +9,11 @@ class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
         self.log = main_logger
         self.toml_data = toml_data
+        try:
+            self.disable_sync = toml_data[name]['disable_synchronous_commits']
+        except:
+            self.log.error(f"disable_synchronous_commits not defined in {name}")
+            self.disable_sync = False
         self.name = name
         self.table = 'prelim_events_v1'
         try:
@@ -28,6 +34,10 @@ class EventProcessor:
         self.loop = loop
         self.aconn = await psycopg.AsyncConnection.connect(self.toml_data[self.name]['connection'])
         self.log.debug(f"aconn {self.aconn}")
+        if self.disable_sync is True:
+            await self.aconn.execute("SET synchronous_commit TO OFF")
+        # Handle Ctrl-C:
+        loop.add_signal_handler(signal.SIGINT, self.aconn.cancel)
         cmd = f"""
         CREATE TABLE {self.table} (
             timestamp double precision,
