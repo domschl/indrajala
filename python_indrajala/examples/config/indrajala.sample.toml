@@ -4,7 +4,8 @@
 [indrajala]
 application="default"
 systemd=false
-loglevel='info'
+loglevel_console="info"
+loglevel_logfile="debug"
 modules=["in_async_mqtt","in_postgresql","in_signal_server","in_async_websockets", "in_csv_tree"]
 
 # Signal server makes sure that only one instance of indrajala
