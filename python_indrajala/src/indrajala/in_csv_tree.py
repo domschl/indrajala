@@ -51,7 +51,9 @@ class EventProcessor:
     def get_utc_date(self):
         return datetime.now(tz=ZoneInfo('UTC')).strftime("%Y-%m-%d")
 
-    def flush_data(self, filepath, filename, data):
+    def flush_data(self, topic, date, data):
+        filepath = os.path.join(self.toml_data[self.name]['rootpath'], topic)
+        filename = date + '.csv'
         if os.path.isdir(filepath) is False:
             os.makedirs(filepath)
         fn = os.path.join(filepath, filename)
@@ -73,12 +75,15 @@ class EventProcessor:
         self.log.debug(f"{self.name}: Received message {msg}")
         if 'time' in msg:
             if 'topic' in msg:
-                if msg['topic'] not in self.ev_store:
-                    date = self.get_utc_date()
+                date = self.get_utc_date()
+                if msg['topic'] not in self.ev_store or date!=self.current_date:
+                    self.current_date = date
+                    # XXX: if actual caching is used, flush here:
+                    if msg['topic'] in self.ev_store and len(self.ev_store[msg['topic']]['data'])>0:
+                        if not self.flush_data(self.ev_store[msg['topic']], self.ev_store[msg['topic']]['date'], self.flush_data(self.ev_store[msg['topic']]['data'])):
+                            self.log.error(f"Flushing cache failed: {msg}")
                     self.ev_store[msg['topic']] = {'date': date, 'data': []}
                 self.ev_store[msg['topic']]['data'].append((msg['time'], msg['msg']))
-                filepath = os.path.join(self.toml_data[self.name]['rootpath'], msg['topic'])
-                filename = self.ev_store[msg['topic']]['date'] + '.csv'
-                if (self.flush_data(filepath, filename, self.ev_store[msg['topic']]['data'])):
+                if self.flush_data(self.ev_store[msg['topic']], self.ev_store[msg['topic']]['date'], self.ev_store[msg['topic']]['data']):
                     self.ev_store[msg['topic']]['data'] = []
         return
