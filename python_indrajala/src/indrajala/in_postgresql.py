@@ -6,15 +6,42 @@ from zoneinfo import ZoneInfo
 
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
-        self.log = logging.getLogger('indra.postgresql')  # main_logger
+        self.log = main_logger
         self.toml_data = toml_data
         self.name = name
+        self.table = 'prelim_events_v1'
         try:
             self.conn = psycopg.connect(self.toml_data[self.name]['connection'])
             self.active = True
         except Exception as e:
             self.log.error(f"Connecting to database failed: {e}")
             self.active = False
+        if self.active is True:
+            cur=self.conn.cursor()
+            cur.execute("select * from information_schema.tables where table_name=%s", (self.table,))
+            if cur.rowcount > 0:
+                self.log.info(f"Connected to database table {self.table}")
+            else:
+                cmd = f"""
+                CREATE TABLE {self.table} (
+                    timestamp double precision,
+                    uuid UUID,
+                    topic VARCHAR(256),
+                    msg VARCHAR(512),
+                    PRIMARY KEY (topic, timestamp)
+                )
+                """
+                self.log.info(f"executing create table {cmd}")
+                cur.execute(cmd)
+                cur.execute("select * from information_schema.tables where table_name=%s", (self.table,))
+                if cur.rowcount == 0:
+                    self.log.error(f"Creating the table went wrong!")
+                else:
+                    self.log.info(f"Created new database table {self.table}")
+            cur.close()
+            self.conn.commit()
+
+
         return
 
     def isActive(self):
