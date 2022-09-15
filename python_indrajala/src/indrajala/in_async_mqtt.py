@@ -20,6 +20,7 @@ class AsyncMqttHelper:
         self.client.on_socket_close = self.on_socket_close
         self.client.on_socket_register_write = self.on_socket_register_write
         self.client.on_socket_unregister_write = self.on_socket_unregister_write
+        self.got_message = None
 
     def on_socket_open(self, client, userdata, sock):
         self.log.debug("Socket opened")
@@ -138,7 +139,7 @@ class AsyncMqtt:
 
     def on_message(self, client, userdata, msg):
         self.log.debug(f"Received: {msg.topic} - {msg.payload}")
-        if not self.got_message:
+        if self.got_message is None:
             self.log.debug(f"Got unexpected message: {msg.topic}, queueing")
             self.que.put((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
         else:
@@ -212,7 +213,7 @@ class EventProcessor:
                 if self.first_msg is False:
                     self.first_msg = True
                     self.log.info("MQTT receive activated, routing received messages.")
-                that_msg['time'] = datetime.now(tz=ZoneInfo('UTC')).isoformat()
+                # that_msg['time'] = datetime.now(tz=ZoneInfo('UTC')).isoformat()
                 self.log.debug(f"{self.name}: Sending message {that_msg}")
                 return that_msg
             else:
