@@ -60,7 +60,10 @@ class EventProcessor:
                 f.write('time,msg\n')
         with open(fn, 'a') as f:
             for row in data:
-                f.write(row[0]+',' + row[1] + '\n')
+                try:
+                    f.write(row[0]+',' + row[1] + '\n')
+                except Exception as e:
+                    self.log.error(f"Failed to serialize {data} to {fn}, {e}")
         return True
 
     async def put(self, msg):
