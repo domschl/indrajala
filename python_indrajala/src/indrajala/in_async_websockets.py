@@ -49,7 +49,7 @@ class EventProcessor:
         self.log.info("Websockets server started.")
         self.online_future.set_result(0)
         self.active = True
-        self.log.debug(f"server_task websockets: serving.")
+        self.log.debug("server_task websockets: serving.")
         await stop
         self.log.info("Websockets: Terminated")
 
@@ -90,16 +90,16 @@ class EventProcessor:
         self.log.debug("Q-got")
         self.req_queue.task_done()
         self.log.debug(f"WSTR: {req}")
-        default_toks = {'cmd':'ping', 'origin':self.name, 'time': datetime.now(tz=ZoneInfo('UTC')), 'topic': 'ws', 'body': ''} 
-        if req and len(req)>0 and req[0]=='{':
+        default_toks = {'cmd': 'ping', 'origin': self.name, 'time': datetime.now(tz=ZoneInfo('UTC')), 'topic': 'ws', 'body': ''}
+        if req and len(req) > 0 and req[0] == '{':
             try:
                 msg = json.loads(req)
-            except:
+            except Exception:
                 msg = {}
         for tok in default_toks:
             if tok not in msg:
                 self.log.warning(f"Required token {tok} not in msg obj {msg}, setting {tok}={default_toks[tok]}")
-                msg[tok]=default_toks[tok]
+                msg[tok] = default_toks[tok]
         return msg
 
     async def put(self, msg):
