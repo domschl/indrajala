@@ -78,6 +78,10 @@ class EventProcessor:
     async def put(self, msg):
         if self.active is False:
             return
+        # XXX: bad solution:
+        if len(msg)>511:
+            self.log.error(f"msg too long for DB-layout: {msg}")
+            return
         self.log.debug(f"{self.name}: Received message {msg}")
         async with self.aconn.cursor() as acur:
             tm = datetime.fromisoformat(msg['time']).timestamp()
