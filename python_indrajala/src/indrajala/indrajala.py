@@ -1,18 +1,24 @@
+"""
+Main indrajala process
+"""
+
 import os
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import argparse
 import pathlib
-import tomlkit
 import asyncio
 import importlib
 import uuid
+import tomlkit
 
 
-indrajala_version = '0.0.1'
+INDRAJALA_VERSION = "0.0.1"
 
 
 def mqcmp(pub, sub):
-    for c in ['+', '#']:
+    ''' MQTT-style wildcard compare '''
+    for c in ["+", "#"]:
         if pub.find(c) != -1:
             print(f"Illegal char '{c}' in pub in mqcmp!")
             return False
@@ -20,7 +26,7 @@ def mqcmp(pub, sub):
     wcs = False
     for indp in range(len(pub)):
         if wcs is True:
-            if pub[indp] == '/':
+            if pub[indp] == "/":
                 inds += 1
                 wcs = False
             continue
@@ -29,9 +35,9 @@ def mqcmp(pub, sub):
         if pub[indp] == sub[inds]:
             inds += 1
             continue
-        if sub[inds] == '#':
+        if sub[inds] == "#":
             return True
-        if sub[inds] == '+':
+        if sub[inds] == "+":
             wcs = True
             inds += 1
             continue
@@ -41,7 +47,7 @@ def mqcmp(pub, sub):
     if len(sub[inds:]) == 0:
         return True
     if len(sub[inds:]) == 1:
-        if sub[inds] == '+' or sub[inds] == '#':
+        if sub[inds] == "+" or sub[inds] == "#":
             return True
     return False
 
@@ -54,13 +60,14 @@ async def main_runner(main_logger, modules, toml_data, args):
         main_logger.debug(f"async_init of {module}")
         subs[module] = await modules[module].async_init(loop)
 
-
     tasks = []
     for module in modules:
         m_op = getattr(modules[module], "server_task", None)
         if callable(m_op) is True:
             tasks.append(asyncio.create_task(modules[module].server_task()))
-            main_logger.debug(f"Task {module} has separate server_task(), started module-specific background server")
+            main_logger.debug(
+                f"Task {module} has separate server_task(), started module-specific background server"
+            )
         main_logger.debug(f"adding task from {module}")
         tasks.append(asyncio.create_task(modules[module].get()))
 
@@ -70,48 +77,52 @@ async def main_runner(main_logger, modules, toml_data, args):
     active_tasks = tasks
     while terminate_main_runner is False:
         main_logger.debug(f"Active tasks1: {len(active_tasks)}")
-        finished_tasks, active_tasks = await asyncio.wait(active_tasks, return_when=asyncio.FIRST_COMPLETED)
+        finished_tasks, active_tasks = await asyncio.wait(
+            active_tasks, return_when=asyncio.FIRST_COMPLETED
+        )
         main_logger.debug(f"Active tasks2: {len(active_tasks)}")
         for task in finished_tasks:
             res = task.result()
-            if res is None or 'topic' not in res or 'origin' not in res:
+            if res is None or "topic" not in res or "origin" not in res:
                 main_logger.warning(f"Invalid empty msg {res}")
                 if res is None:
                     main_logger.warning(f"Result should never be None, task {task}")
                     res = {}
-                if 'origin' not in res:
+                if "origin" not in res:
                     main_logger.error(f"Origin not set in task {task}")
                     # res['origin'] = task
                 # continue
             main_logger.debug(f"Finished: {res}")
-            origin_module = res['origin']
+            origin_module = res["origin"]
             main_logger.debug(f"adding task from {origin_module}")
             main_logger.debug(f"Getting {origin_module}")
             if len(active_tasks) == 0:
                 active_tasks = [asyncio.create_task(modules[origin_module].get())]
             else:
-                active_tasks = active_tasks.union((asyncio.create_task(modules[origin_module].get()),))
-            if 'cmd' not in res:
+                active_tasks = active_tasks.union(
+                    (asyncio.create_task(modules[origin_module].get()),)
+                )
+            if "cmd" not in res:
                 main_logger.error(f"Invalid result without 'cmd' field: {res}")
                 continue
-            if res['cmd']=='event':
-                if 'uuid' not in res:
-                    main_logger.warning(f'Missing uuid in event {res}')
-                    res['uuid']=str(uuid.uuid4())
-                if 'topic' in res and res['topic'] is not None:
+            if res["cmd"] == "event":
+                if "uuid" not in res:
+                    main_logger.warning(f"Missing uuid in event {res}")
+                    res["uuid"] = str(uuid.uuid4())
+                if "topic" in res and res["topic"] is not None:
                     for module in modules:
                         if module != origin_module:
                             for sub in subs[module]:
-                                if mqcmp(res['topic'], sub) is True:
+                                if mqcmp(res["topic"], sub) is True:
                                     await modules[module].put(res)
                                     break
-            elif res['cmd']=='system':
-                if 'topic' in res and res['topic'] is not None:
-                    if res['topic'] == "$SYS/PROCESS":
-                        if 'msg' in res and res['msg'] == 'QUIT':
+            elif res["cmd"] == "system":
+                if "topic" in res and res["topic"] is not None:
+                    if res["topic"] == "$SYS/PROCESS":
+                        if "msg" in res and res["msg"] == "QUIT":
                             terminate_main_runner = True
                             continue
-            elif res['cmd']=='ping':
+            elif res["cmd"] == "ping":
                 main_logger.debug(f"Received and ignored ping {res}")
             else:
                 main_logger.error(f"Unknown cmd {res['cmd']} in {res}")
@@ -120,43 +131,55 @@ async def main_runner(main_logger, modules, toml_data, args):
 
 def load_modules(main_logger, toml_data, args):
     modules = {}
-    if 'indrajala' not in toml_data:
-        main_logger.error(f'The toml_file {args.toml_file} needs to contain a section [indrajala], cannot continue with invalid configuration.')
+    if "indrajala" not in toml_data:
+        main_logger.error(
+            f"The toml_file {args.toml_file} needs to contain a section [indrajala], cannot continue with invalid configuration."
+        )
         return {}
-    if 'modules' not in toml_data['indrajala']:
-        main_logger.warning(f'In toml_file {args.toml_file}, [indrajala] has no list of modules, add: modules=[..]')
+    if "modules" not in toml_data["indrajala"]:
+        main_logger.warning(
+            f"In toml_file {args.toml_file}, [indrajala] has no list of modules, add: modules=[..]"
+        )
         return {}
-    for module in toml_data['indrajala']['modules']:
+    for module in toml_data["indrajala"]["modules"]:
         if module not in toml_data:
-            main_logger.warning(f'In toml_file {args.toml_file}, no configuration section [{module}] found, skipping this module')
+            main_logger.warning(
+                f"In toml_file {args.toml_file}, no configuration section [{module}] found, skipping this module"
+            )
         else:
-            if 'active' not in toml_data[module]:
-                main_logger.warning(f'In toml_file {args.toml_file}, section [{module}] has no entry active=true|false, skipping this module')
+            if "active" not in toml_data[module]:
+                main_logger.warning(
+                    f"In toml_file {args.toml_file}, section [{module}] has no entry active=true|false, skipping this module"
+                )
             else:
-                if toml_data[module]['active'] is True:
-                    main_logger.info(f'Activating module [{module}]')
+                if toml_data[module]["active"] is True:
+                    main_logger.info(f"Activating module [{module}]")
                     try:
                         main_logger.debug(f"Importing {module}...")
                         m = importlib.import_module(module)
                     except Exception as e:
-                        main_logger.error(f'Failed to import module {module}: {e}')
-                        toml_data[module]['active'] = False
+                        main_logger.error(f"Failed to import module {module}: {e}")
+                        toml_data[module]["active"] = False
                         continue
                     try:
                         ev_proc = m.EventProcessor(module, main_logger, toml_data)
                     except Exception as e:
-                        main_logger.error(f'Failed to import EventProcessor from module {module}: {e}')
+                        main_logger.error(
+                            f"Failed to import EventProcessor from module {module}: {e}"
+                        )
                         continue
-                    methods = ['get', 'put']
+                    methods = ["get", "put"]
                     for method in methods:
                         m_op = getattr(ev_proc, method, None)
                         if callable(m_op) is False:
-                            main_logger.error(f'Failed to import EventProcessor from module {module} has no {method} function')
+                            main_logger.error(
+                                f"Failed to import EventProcessor from module {module} has no {method} function"
+                            )
                             continue
                     modules[module] = ev_proc
                     main_logger.debug(f"Import {module} success.")
                 else:
-                    main_logger.debug(f'Module [{module}] is not active.')
+                    main_logger.debug(f"Module [{module}] is not active.")
     return modules
 
 
@@ -166,55 +189,82 @@ def read_config_arguments():
     os.chdir(dname)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config-dir', action='store', dest="config_dir", type=pathlib.Path, default='config', help="path to config_dir that contains indrajala.toml and other config files.")
-    parser.add_argument('-l', '--log-dir', action='store', dest="log_dir", type=pathlib.Path, default='log', help='filepath to log directory')
-    parser.add_argument('-k', action='store_true', dest='kill_daemon', help='Kill existing instance and terminate.')
+    parser.add_argument(
+        "-c",
+        "--config-dir",
+        action="store",
+        dest="config_dir",
+        type=pathlib.Path,
+        default="config",
+        help="path to config_dir that contains indrajala.toml and other config files.",
+    )
+    parser.add_argument(
+        "-l",
+        "--log-dir",
+        action="store",
+        dest="log_dir",
+        type=pathlib.Path,
+        default="log",
+        help="filepath to log directory",
+    )
+    parser.add_argument(
+        "-k",
+        action="store_true",
+        dest="kill_daemon",
+        help="Kill existing instance and terminate.",
+    )
 
     args = parser.parse_args()
 
-    main_logger = logging.getLogger('indrajala_core')
+    main_logger = logging.getLogger("indrajala_core")
     main_logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
 
     msh = logging.StreamHandler()
     msh.setLevel(logging.INFO)
     msh.setFormatter(formatter)
     main_logger.addHandler(msh)
 
-    log_file = os.path.join(args.log_dir, 'indrajala.log')
+    log_file = os.path.join(args.log_dir, "indrajala.log")
     try:
-        mfh = logging.FileHandler(log_file, mode='w')
+        # mfh = logging.FileHandler(log_file, mode='w')
+        mfh = TimedRotatingFileHandler(log_file, when="midnight", backupCount=2)
         mfh.setLevel(logging.INFO)
         mfh.setFormatter(formatter)
         main_logger.addHandler(mfh)
     except Exception as e:
         mfh = None
-        print(f"FATAL: failed to create file-handler for logging at {log_file}")
+        print(f"FATAL: failed to create file-handler for logging at {log_file}: {e}")
 
     config_dir = args.config_dir
-    toml_file = os.path.join(config_dir, 'indrajala.toml')
+    toml_file = os.path.join(config_dir, "indrajala.toml")
 
     try:
-        with open(toml_file, 'r') as f:
+        with open(toml_file, "r") as f:
             toml_data = tomlkit.parse(f.read())
     except Exception as e:
         main_logger.warning(f"Couldn't read {toml_file}, {e}")
         exit(0)
     if args.kill_daemon is True:
-        toml_data['in_signal_server']['kill_daemon'] = True
+        toml_data["in_signal_server"]["kill_daemon"] = True
     else:
-        toml_data['in_signal_server']['kill_daemon'] = False
-    toml_data['indrajala']['config_dir'] = str(config_dir)
+        toml_data["in_signal_server"]["kill_daemon"] = False
+    toml_data["indrajala"]["config_dir"] = str(config_dir)
 
-    loglevel_console = toml_data['indrajala'].get('loglevel_console', 'info').lower()
-    loglevel_file = toml_data['indrajala'].get('loglevel_logfile', 'debug').lower()
-    levels={'debug':logging.DEBUG, 'info':logging.INFO, 'warning':logging.WARNING, 'error':logging.ERROR}
+    loglevel_console = toml_data["indrajala"].get("loglevel_console", "info").lower()
+    loglevel_file = toml_data["indrajala"].get("loglevel_logfile", "debug").lower()
+    levels = {
+        "debug": logging.DEBUG,
+        "info": logging.INFO,
+        "warning": logging.WARNING,
+        "error": logging.ERROR,
+    }
     if loglevel_console not in levels:
-        loglevel_console = 'info'
+        loglevel_console = "info"
     if loglevel_file not in levels:
-        loglevel_file = 'debug'
-    llc=levels[loglevel_console]
-    llf=levels[loglevel_file]
+        loglevel_file = "debug"
+    llc = levels[loglevel_console]
+    llf = levels[loglevel_file]
     main_logger.setLevel(llc)
     msh.setLevel(llc)
     if mfh is not None:
@@ -223,11 +273,22 @@ def read_config_arguments():
 
 
 def test_mqcmp():
-    td = [('abc', 'abc', True), ('ab', 'abc', False), ('ab', 'ab+', True),
-          ('abcd/dfew', 'abcd', False), ('ba', 'bdc/ds', False), ('abc/def', 'abc/+', True),
-          ('abc/def', 'asdf/+/asdf', False), ('abc/def/asdf', 'abc/+/asdf', True),
-          ('abc/def/ghi', '+/+/+', True), ('abc/def/ghi', '+/+/', False), ('abc/def/ghi', '+/+/+/+', False),
-          ('abc/def/ghi', '+/#', True), ('abc/def/ghi', '+/+/#', True), ('abc/def/ghi', '+/+/+/#', False)]
+    td = [
+        ("abc", "abc", True),
+        ("ab", "abc", False),
+        ("ab", "ab+", True),
+        ("abcd/dfew", "abcd", False),
+        ("ba", "bdc/ds", False),
+        ("abc/def", "abc/+", True),
+        ("abc/def", "asdf/+/asdf", False),
+        ("abc/def/asdf", "abc/+/asdf", True),
+        ("abc/def/ghi", "+/+/+", True),
+        ("abc/def/ghi", "+/+/", False),
+        ("abc/def/ghi", "+/+/+/+", False),
+        ("abc/def/ghi", "+/#", True),
+        ("abc/def/ghi", "+/+/#", True),
+        ("abc/def/ghi", "+/+/+/#", False),
+    ]
     for t in td:
         pub = t[0]
         sub = t[1]
@@ -239,7 +300,7 @@ def test_mqcmp():
 
 test_mqcmp()
 main_logger, toml_data, args = read_config_arguments()
-main_logger.info(f"indrajala: starting version {indrajala_version}")
+main_logger.info(f"indrajala: starting version {INDRAJALA_VERSION}")
 modules = load_modules(main_logger, toml_data, args)
 
 terminate_main_runner = False

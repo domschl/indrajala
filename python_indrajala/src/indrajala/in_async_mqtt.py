@@ -217,9 +217,9 @@ class EventProcessor:
                 self.log.debug(f"{self.name}: Sending message {that_msg}")
                 return that_msg
             else:
-                that_msg['cmd']='ping'
-                that_msg['topic']=None
-                that_msg['msg']=None
+                that_msg['cmd'] = 'ping'
+                that_msg['topic'] = None
+                that_msg['msg'] = None
                 return that_msg
         else:
             return {'cmd': 'ping', 'topic': None, 'msg': None, 'time': time.now(tz=ZoneInfo('UTC')).isoformat(), 'origin': self.name}

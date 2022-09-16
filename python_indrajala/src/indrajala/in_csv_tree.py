@@ -1,6 +1,5 @@
 import asyncio
 import os
-import logging
 from zoneinfo import ZoneInfo
 from datetime import datetime
 
@@ -71,15 +70,14 @@ class EventProcessor:
     async def put(self, msg):
         if self.active is False:
             return
-        filename = str
         self.log.debug(f"{self.name}: Received message {msg}")
         if 'time' in msg:
             if 'topic' in msg:
                 date = self.get_utc_date()
-                if msg['topic'] not in self.ev_store or date!=self.current_date:
+                if msg['topic'] not in self.ev_store or date != self.current_date:
                     self.current_date = date
                     # XXX: if actual caching is used, flush here:
-                    if msg['topic'] in self.ev_store and len(self.ev_store[msg['topic']]['data'])>0:
+                    if msg['topic'] in self.ev_store and len(self.ev_store[msg['topic']]['data']) > 0:
                         if not self.flush_data(msg['topic'], self.ev_store[msg['topic']]['date'], self.flush_data(self.ev_store[msg['topic']]['data'])):
                             self.log.error(f"Flushing cache failed: {msg}")
                     self.ev_store[msg['topic']] = {'date': date, 'data': []}

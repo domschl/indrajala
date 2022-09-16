@@ -1,9 +1,9 @@
 import asyncio
 import psycopg
-import logging
 import signal
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
 
 class EventProcessor:
     def __init__(self, name, main_logger, toml_data):
@@ -11,7 +11,7 @@ class EventProcessor:
         self.toml_data = toml_data
         try:
             self.disable_sync = toml_data[name]['disable_synchronous_commits']
-        except:
+        except Exception:
             self.log.error(f"disable_synchronous_commits not defined in {name}")
             self.disable_sync = False
         self.name = name
@@ -26,7 +26,7 @@ class EventProcessor:
 
     def isActive(self):
         return self.active
-    
+
     async def async_init(self, loop):
         if self.active is False:
             self.log.error("Async_init called even so database is not active!")
@@ -49,7 +49,7 @@ class EventProcessor:
         """
         async with self.aconn.cursor() as acur:
             await acur.execute("select * from information_schema.tables where table_name=%s", (self.table,))
-            rows = acur.rowcount 
+            rows = acur.rowcount
             if rows == 0:
                 await acur.execute(cmd)
                 await acur.execute("select * from information_schema.tables where table_name=%s", (self.table,))
@@ -80,9 +80,9 @@ class EventProcessor:
             return
         self.log.debug(f"{self.name}: Received message {msg}")
         async with self.aconn.cursor() as acur:
-            tm=datetime.fromisoformat(msg['time']).timestamp()
-            ins_cmd=f"INSERT INTO {self.table} (timestamp, uuid, topic, msg) VALUES (%s, %s, %s, %s)"
-            await acur.execute(ins_cmd, (tm, msg['uuid'], msg['topic'], msg['msg'] ))
-        await self.aconn.commit() 
+            tm = datetime.fromisoformat(msg['time']).timestamp()
+            ins_cmd = f"INSERT INTO {self.table} (timestamp, uuid, topic, msg) VALUES (%s, %s, %s, %s)"
+            await acur.execute(ins_cmd, (tm, msg['uuid'], msg['topic'], msg['msg']))
+        await self.aconn.commit()
         self.log.debug(f"DB-write-commit {msg}")
         return
