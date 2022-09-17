@@ -3,6 +3,7 @@ import asyncio
 import ssl
 import websockets
 import json
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -20,6 +21,8 @@ class EventProcessor:
         cert_dir = os.path.join(config_dir, 'certs')
         self.active = False
         self.enabled = False
+        self.sessions = []
+        self.session_id = 0
         if self.use_ssl is True:
             cf = os.path.join(cert_dir, toml_data['in_async_websockets']['ssl_certfile'])
             kf = os.path.join(cert_dir, toml_data['in_async_websockets']['ssl_keyfile'])
@@ -65,14 +68,31 @@ class EventProcessor:
         self.start_server = websockets.serve(self.get_request, self.bind_address, self.port, ssl=self.ssl_context)
         return ['#']
 
+    def _create_session(self, websocket, path):
+        session = {'id': self.session_id, 'path': path, 'websocket': websocket, 'time': time.time()}
+        self.session_id += 1
+        self.sessions.append(session)
+        return session
+
+    def _session_by_id(self, id):
+        for session in self.sessions:
+            if session['id'] == id:
+                return session
+        return None
+
+    def _close_session(self, id):
+        session = self._session_by_id(id)
+        if session is None:
+            self.log.warning(f"Tried to close nonexisting session {id}")
+        else:
+            await session['websocket'].close()
+                        
     async def get_request(self, websocket, path):
         self.log.debug("Waiting for recv()...")
         req = await websocket.recv()
-
-        self.log.debug(f"WS: {req}")
-        await websocket.send("OK")
-        await websocket.close()
-        self.req_queue.put_nowait(req)
+        session = self._create_session(websocket, path)
+        self.log.debug(f"WS: {req}, id: {session['id']}")
+        self.req_queue.put_nowait((req, id))
         self.log.info("WS: queued")
         # await self.req_queue.put(req)
         # await websocket.send(greeting)
@@ -94,7 +114,8 @@ class EventProcessor:
         if req and len(req) > 0 and req[0] == '{':
             try:
                 msg = json.loads(req)
-            except Exception:
+            except Exception as e:
+                self.log.error(f"WS-recv: Couldn't decode json of {req}, {e}")
                 msg = {}
         for tok in default_toks:
             if tok not in msg:
