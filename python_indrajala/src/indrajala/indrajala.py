@@ -184,9 +184,9 @@ def load_modules(main_logger, toml_data, args):
 
 
 def read_config_arguments():
-    abspath = os.path.abspath(__file__)
-    dname = os.path.dirname(abspath)
-    os.chdir(dname)
+    # abspath = os.path.abspath(__file__)
+    # dname = os.path.dirname(abspath)
+    # os.chdir(dname)
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -198,15 +198,15 @@ def read_config_arguments():
         default="config",
         help="path to config_dir that contains indrajala.toml and other config files.",
     )
-    parser.add_argument(
-        "-l",
-        "--log-dir",
-        action="store",
-        dest="log_dir",
-        type=pathlib.Path,
-        default="log",
-        help="filepath to log directory",
-    )
+    # parser.add_argument(
+    #     "-l",
+    #     "--log-dir",
+    #     action="store",
+    #     dest="log_dir",
+    #     type=pathlib.Path,
+    #     default="log",
+    #     help="filepath to log directory",
+    # )
     parser.add_argument(
         "-k",
         action="store_true",
@@ -215,26 +215,6 @@ def read_config_arguments():
     )
 
     args = parser.parse_args()
-
-    main_logger = logging.getLogger("indrajala_core")
-    main_logger.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
-
-    msh = logging.StreamHandler()
-    msh.setLevel(logging.INFO)
-    msh.setFormatter(formatter)
-    main_logger.addHandler(msh)
-
-    log_file = os.path.join(args.log_dir, "indrajala.log")
-    try:
-        # mfh = logging.FileHandler(log_file, mode='w')
-        mfh = TimedRotatingFileHandler(log_file, when="midnight", backupCount=2)
-        mfh.setLevel(logging.INFO)
-        mfh.setFormatter(formatter)
-        main_logger.addHandler(mfh)
-    except Exception as e:
-        mfh = None
-        print(f"FATAL: failed to create file-handler for logging at {log_file}: {e}")
 
     config_dir = args.config_dir
     toml_file = os.path.join(config_dir, "indrajala.toml")
@@ -250,6 +230,29 @@ def read_config_arguments():
     else:
         toml_data["in_signal_server"]["kill_daemon"] = False
     toml_data["indrajala"]["config_dir"] = str(config_dir)
+
+    main_logger = logging.getLogger("indrajala_core")
+    main_logger.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+
+    msh = logging.StreamHandler()
+    msh.setLevel(logging.INFO)
+    msh.setFormatter(formatter)
+    main_logger.addHandler(msh)
+
+    log_dir = toml_data['indrajala']['logdir']
+    if '{configdir}' in log_dir:
+        log_dir = log_dir.replace('{configdir}', str(config_dir))
+    log_file = os.path.join(log_dir, "indrajala.log")
+    try:
+        # mfh = logging.FileHandler(log_file, mode='w')
+        mfh = TimedRotatingFileHandler(log_file, when="midnight", backupCount=2)
+        mfh.setLevel(logging.INFO)
+        mfh.setFormatter(formatter)
+        main_logger.addHandler(mfh)
+    except Exception as e:
+        mfh = None
+        print(f"FATAL: failed to create file-handler for logging at {log_file}: {e}")
 
     loglevel_console = toml_data["indrajala"].get("loglevel_console", "info").lower()
     loglevel_file = toml_data["indrajala"].get("loglevel_logfile", "debug").lower()
