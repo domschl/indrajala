@@ -1,8 +1,8 @@
 import sys
+import logging
 import signal
 import atexit
 import asyncio
-import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -11,8 +11,14 @@ class EventProcessor:
     """ Check if another instance is already running using a socket server. Terminate old instance and
     start new instance (if kill option was not set.) """
 
-    def __init__(self, name, main_logger, toml_data):
-        self.log = logging.getLogger('indra.signal_server')  # main_logger
+    def __init__(self, name, toml_data):
+        self.log = logging.getLogger('IndraSignalServer')
+        try:
+            self.loglevel = toml_data[name]['loglevel'].upper()
+        except Exception as e:
+            self.loglevel = logging.INFO
+            logging.error(f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}")
+        self.log.setLevel(self.loglevel)
         self.port = int(toml_data[name]['signal_port'])
         self.toml_data = toml_data
         self.name = name

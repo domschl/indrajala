@@ -1,4 +1,5 @@
 import os
+import logging
 import asyncio
 import ssl
 import websockets
@@ -9,8 +10,14 @@ from zoneinfo import ZoneInfo
 
 
 class EventProcessor:
-    def __init__(self, name, main_logger, toml_data):
-        self.log = main_logger
+    def __init__(self, name, toml_data):
+        self.log = logging.getLogger('IndraWebsockets')
+        try:
+            self.loglevel = toml_data[name]['loglevel'].upper()
+        except Exception as e:
+            self.loglevel = logging.INFO
+            logging.error(f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}")
+        self.log.setLevel(self.loglevel)
         self.toml_data = toml_data
         self.name = name
         self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)

@@ -162,7 +162,7 @@ def load_modules(main_logger, toml_data, args):
                         toml_data[module]["active"] = False
                         continue
                     try:
-                        ev_proc = m.EventProcessor(module, main_logger, toml_data)
+                        ev_proc = m.EventProcessor(module, toml_data)
                     except Exception as e:
                         main_logger.error(
                             f"Failed to import EventProcessor from module {module}: {e}"
@@ -223,7 +223,7 @@ def read_config_arguments():
         with open(toml_file, "r") as f:
             toml_data = tomlkit.parse(f.read())
     except Exception as e:
-        main_logger.warning(f"Couldn't read {toml_file}, {e}")
+        print(f"Couldn't read {toml_file}, {e}")
         exit(0)
     if args.kill_daemon is True:
         toml_data["in_signal_server"]["kill_daemon"] = True
@@ -231,14 +231,21 @@ def read_config_arguments():
         toml_data["in_signal_server"]["kill_daemon"] = False
     toml_data["indrajala"]["config_dir"] = str(config_dir)
 
-    main_logger = logging.getLogger("indrajala_core")
-    main_logger.setLevel(logging.INFO)
+    loglevel_console = toml_data["indrajala"].get("max_loglevel_console", "info").upper()
+    loglevel_file = toml_data["indrajala"].get("max_loglevel_logfile", "debug").upper()
+    main_loglevel = toml_data["indrajala"].get("loglevel", "info").upper()
+    llc = logging.getLevelName(loglevel_console)
+    llf = logging.getLevelName(loglevel_file)
+
+    # logging.basicConfig(level=logging.DEBUG)
+    root_logger = logging.getLogger()
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+    # root_logger.setLevel(logging.DEBUG)
 
     msh = logging.StreamHandler()
-    msh.setLevel(logging.INFO)
+    msh.setLevel(llc)
     msh.setFormatter(formatter)
-    main_logger.addHandler(msh)
+    root_logger.addHandler(msh)
 
     log_dir = toml_data['indrajala']['logdir']
     if '{configdir}' in log_dir:
@@ -247,31 +254,15 @@ def read_config_arguments():
     try:
         # mfh = logging.FileHandler(log_file, mode='w')
         mfh = TimedRotatingFileHandler(log_file, when="midnight", backupCount=2)
-        mfh.setLevel(logging.INFO)
+        mfh.setLevel(llf)
         mfh.setFormatter(formatter)
-        main_logger.addHandler(mfh)
+        root_logger.addHandler(mfh)
     except Exception as e:
         mfh = None
         print(f"FATAL: failed to create file-handler for logging at {log_file}: {e}")
 
-    loglevel_console = toml_data["indrajala"].get("loglevel_console", "info").lower()
-    loglevel_file = toml_data["indrajala"].get("loglevel_logfile", "debug").lower()
-    levels = {
-        "debug": logging.DEBUG,
-        "info": logging.INFO,
-        "warning": logging.WARNING,
-        "error": logging.ERROR,
-    }
-    if loglevel_console not in levels:
-        loglevel_console = "info"
-    if loglevel_file not in levels:
-        loglevel_file = "debug"
-    llc = levels[loglevel_console]
-    llf = levels[loglevel_file]
-    main_logger.setLevel(llc)
-    msh.setLevel(llc)
-    if mfh is not None:
-        mfh.setLevel(llf)
+    main_logger = logging.getLogger("IndraMain")
+    main_logger.setLevel(main_loglevel)
     return main_logger, toml_data, args
 
 

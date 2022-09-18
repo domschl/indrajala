@@ -4,6 +4,10 @@
 Description=Indrajala service
 After=network.target
 After=network-online.target
+# if local database is used:
+# After=postgresql.target
+# if local mosquitto is used:
+# After=mosquitto.target
 
 [Service]
 Type=simple
