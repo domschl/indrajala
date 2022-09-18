@@ -19,7 +19,7 @@ signal_port=17417
 [in_async_postgres]
 active=true
 connection="host='database-hostname' dbname='testdb' user='some-user'"
-disable_synchronous_commits=true
+disable_synchronous_commits=false
 
 # Alternative storage backend based on files
 [in_indrajala]
