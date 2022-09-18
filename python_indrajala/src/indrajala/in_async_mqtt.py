@@ -7,13 +7,15 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import logging
 import queue
+import logging
 
 
 class AsyncMqttHelper:
     '''Helper module for async wrapper for paho mqtt'''
 
-    def __init__(self, log, loop, client):
-        self.log = log
+    def __init__(self, loop, client, loglevel):
+        self.log = logging.getLogger("MqttHelper")
+        self.log.setLevel(loglevel)
         self.loop = loop
         self.client = client
         self.client.on_socket_open = self.on_socket_open
@@ -21,6 +23,7 @@ class AsyncMqttHelper:
         self.client.on_socket_register_write = self.on_socket_register_write
         self.client.on_socket_unregister_write = self.on_socket_unregister_write
         self.got_message = None
+        self.log.info("Instantiated MQTT module.")
 
     def on_socket_open(self, client, userdata, sock):
         self.log.debug("Socket opened")
@@ -73,8 +76,9 @@ class AsyncMqttHelper:
 class AsyncMqtt:
     '''Async wrapper for paho_mqtt'''
 
-    def __init__(self, loop, logger, mqtt_server, reconnect_delay=1):
-        self.log = logger
+    def __init__(self, loop, mqtt_server, loglevel, reconnect_delay=1):
+        self.log = logging.getLogger('AsyncMqtt')
+        self.log.setLevel(loglevel)
         self.loop = loop
         self.mqtt_server = mqtt_server
         self.reconnect_delay = reconnect_delay
@@ -82,12 +86,12 @@ class AsyncMqtt:
 
         self.client_id = hex(uuid.getnode()) + "-" + str(uuid.uuid4())
         self.client = mqtt.Client(client_id=self.client_id)
-        self.client.enable_logger(logger)
+        self.client.enable_logger(self.log)
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
 
-        self.aioh = AsyncMqttHelper(self.log, self.loop, self.client)
+        self.aioh = AsyncMqttHelper(self.loop, self.client, loglevel)
 
         self.que = queue.Queue()
 
@@ -171,10 +175,14 @@ class AsyncMqtt:
 
 
 class EventProcessor:
-    def __init__(self, name, main_logger, toml_data):
-        self.log = main_logger  # logging.getLogger('indramqtt') # main_logger
-        self.log.setLevel(logging.DEBUG)
-        self.log.debug("Start MQTT EventProcessor")
+    def __init__(self, name, toml_data):
+        self.log = logging.getLogger('IndraMqtt')
+        try:
+            self.loglevel = logging.getLevelName(toml_data[name]['loglevel'].upper())
+        except Exception as e:
+            self.loglevel = logging.DEBUG
+            logging.error(f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}")
+        self.log.setLevel(self.loglevel)
         self.toml_data = toml_data
         self.name = name
         self.active = False
@@ -189,7 +197,7 @@ class EventProcessor:
 
     async def async_init(self, loop):
         self.loop = loop
-        self.async_mqtt = AsyncMqtt(loop, self.log, self.toml_data[self.name]['broker'])
+        self.async_mqtt = AsyncMqtt(loop, self.toml_data[self.name]['broker'], self.loglevel)
         if 'last_will_topic' in self.toml_data[self.name] and 'last_will_message' in self.toml_data[self.name]:
             lwt = self.toml_data[self.name]['last_will_topic']
             lwm = self.toml_data[self.name]['last_will_message']
@@ -202,9 +210,6 @@ class EventProcessor:
         return []
 
     async def get(self):
-        # self.msg=self.loop.create_future()
-        # self.msg.set_result({'topic': 'hello', 'msg':'world', 'origin': self.name})
-        # that_msg = await self.msg
         if self.active is True:
             tp, ms, ut = await self.async_mqtt.message()
             self.log.debug(f"MQ: {tp}-{ms}")

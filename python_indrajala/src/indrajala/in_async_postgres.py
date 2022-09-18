@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import psycopg
 import signal
@@ -6,8 +7,15 @@ from zoneinfo import ZoneInfo
 
 
 class EventProcessor:
-    def __init__(self, name, main_logger, toml_data):
-        self.log = main_logger
+    def __init__(self, name, toml_data):
+        self.log = logging.getLogger('IndraPostgres')
+        try:
+            self.loglevel = toml_data[name]['loglevel'].upper()
+        except Exception as e:
+            self.loglevel = logging.INFO
+            logging.error(f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}")
+        self.log.setLevel(self.loglevel)
+        self.log.info("Postgres starting!")
         self.toml_data = toml_data
         try:
             self.disable_sync = toml_data[name]['disable_synchronous_commits']

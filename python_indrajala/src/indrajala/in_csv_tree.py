@@ -1,18 +1,19 @@
-import asyncio
+import logging
 import os
+import asyncio
 from zoneinfo import ZoneInfo
 from datetime import datetime
 
 
 class EventProcessor:
-    def __init__(self, name, main_logger, toml_data):
-        self.log = main_logger  # logging.getLogger("CSV")
-        # self.log.setLevel(logging.DEBUG)
-        #  self.msh = logging.StreamHandler()
-        # self.msh.setLevel(logging.DEBUG)
-        # self.formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
-        # self.msh.setFormatter(self.formatter)
-        # self.log.addHandler(self.msh)
+    def __init__(self, name, toml_data):
+        self.log = logging.getLogger("IndraCSV")
+        try:
+            self.loglevel = toml_data[name]['loglevel'].upper()
+        except Exception as e:
+            self.loglevel = logging.INFO
+            logging.error(f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}")
+        self.log.setLevel(self.loglevel)
         self.toml_data = toml_data
         self.name = name
         self.ev_store = {}
