@@ -35,6 +35,7 @@ class EventProcessor:
         self.aconn = await psycopg.AsyncConnection.connect(self.toml_data[self.name]['connection'])
         self.log.debug(f"aconn {self.aconn}")
         if self.disable_sync is True:
+            self.log.warning("Synchronous commit is disabled, data corruption possible!")
             await self.aconn.execute("SET synchronous_commit TO OFF")
         # Handle Ctrl-C:
         loop.add_signal_handler(signal.SIGINT, self.aconn.cancel)
@@ -43,8 +44,8 @@ class EventProcessor:
             timestamp double precision,
             uuid UUID,
             topic VARCHAR(256),
-            msg VARCHAR(512),
-            PRIMARY KEY (topic, timestamp)
+            msg TEXT,
+            PRIMARY KEY (topic, timestamp, uuid)
         )
         """
         async with self.aconn.cursor() as acur:
@@ -77,10 +78,6 @@ class EventProcessor:
 
     async def put(self, msg):
         if self.active is False:
-            return
-        # XXX: bad solution:
-        if len(msg)>511:
-            self.log.error(f"msg too long for DB-layout: {msg}")
             return
         self.log.debug(f"{self.name}: Received message {msg}")
         async with self.aconn.cursor() as acur:
