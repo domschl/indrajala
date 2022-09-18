@@ -85,7 +85,8 @@ class EventProcessor:
         if session is None:
             self.log.warning(f"Tried to close nonexisting session {id}")
         else:
-            await session['websocket'].close()
+            # await session['websocket'].close()
+            session['websocket'].close()
                         
     async def get_request(self, websocket, path):
         self.log.debug("Waiting for recv()...")
