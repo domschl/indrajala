@@ -1,0 +1,1 @@
+Default location for log files
