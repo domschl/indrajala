@@ -64,12 +64,12 @@ async def main_runner(main_logger, modules, toml_data, args):
     for module in modules:
         m_op = getattr(modules[module], "server_task", None)
         if callable(m_op) is True:
-            tasks.append(asyncio.create_task(modules[module].server_task()))
+            tasks.append(asyncio.create_task(modules[module].server_task(), name=module+'_server_task'))
             main_logger.debug(
                 f"Task {module} has separate server_task(), started module-specific background server"
             )
         main_logger.debug(f"adding task from {module}")
-        tasks.append(asyncio.create_task(modules[module].get()))
+        tasks.append(asyncio.create_task(modules[module].get(), name=module))
 
     global terminate_main_runner
     terminate_main_runner = False
@@ -92,10 +92,10 @@ async def main_runner(main_logger, modules, toml_data, args):
                 # continue
             origin_module = res["origin"]
             if len(active_tasks) == 0:
-                active_tasks = [asyncio.create_task(modules[origin_module].get())]
+                active_tasks = [asyncio.create_task(modules[origin_module].get(), name=origin_module)]
             else:
                 active_tasks = active_tasks.union(
-                    (asyncio.create_task(modules[origin_module].get()),)
+                    (asyncio.create_task(modules[origin_module].get(), name=origin_module),)
                 )
             if "cmd" not in res:
                 main_logger.error(f"Invalid result without 'cmd' field: {res}")
