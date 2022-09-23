@@ -33,7 +33,6 @@ class EventProcessor:
         request = ""
         while request != 'quit':
             request = (await reader.read(255)).decode('utf8').strip()
-            self.log.debug(f"got socket [{request}]")
             if request == 'quit':
                 response = 'quitting!\n'
             elif request == 'help':
