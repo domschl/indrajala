@@ -44,7 +44,6 @@ class EventProcessor:
             return None
         await asyncio.sleep(60.0)
         msg = {'cmd': 'ping', 'time': datetime.now(tz=ZoneInfo('UTC')), 'topic': 'hello', 'msg': 'world', 'origin': self.name}
-        self.log.debug(f"{self.name}: Sending message {msg}")
         # return {'topic': None, 'msg': None, 'origin': self.name}
         return msg
 
@@ -71,7 +70,6 @@ class EventProcessor:
     async def put(self, msg):
         if self.active is False:
             return
-        self.log.debug(f"{self.name}: Received message {msg}")
         if 'time' in msg:
             if 'topic' in msg:
                 date = self.get_utc_date()

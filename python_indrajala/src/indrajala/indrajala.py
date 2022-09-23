@@ -76,11 +76,9 @@ async def main_runner(main_logger, modules, toml_data, args):
 
     active_tasks = tasks
     while terminate_main_runner is False:
-        main_logger.debug(f"Active tasks1: {len(active_tasks)}")
         finished_tasks, active_tasks = await asyncio.wait(
             active_tasks, return_when=asyncio.FIRST_COMPLETED
         )
-        main_logger.debug(f"Active tasks2: {len(active_tasks)}")
         for task in finished_tasks:
             res = task.result()
             if res is None or "topic" not in res or "origin" not in res:
@@ -92,10 +90,7 @@ async def main_runner(main_logger, modules, toml_data, args):
                     main_logger.error(f"Origin not set in task {task}")
                     # res['origin'] = task
                 # continue
-            main_logger.debug(f"Finished: {res}")
             origin_module = res["origin"]
-            main_logger.debug(f"adding task from {origin_module}")
-            main_logger.debug(f"Getting {origin_module}")
             if len(active_tasks) == 0:
                 active_tasks = [asyncio.create_task(modules[origin_module].get())]
             else:
@@ -184,10 +179,6 @@ def load_modules(main_logger, toml_data, args):
 
 
 def read_config_arguments():
-    # abspath = os.path.abspath(__file__)
-    # dname = os.path.dirname(abspath)
-    # os.chdir(dname)
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c",
@@ -198,15 +189,6 @@ def read_config_arguments():
         default="config",
         help="path to config_dir that contains indrajala.toml and other config files.",
     )
-    # parser.add_argument(
-    #     "-l",
-    #     "--log-dir",
-    #     action="store",
-    #     dest="log_dir",
-    #     type=pathlib.Path,
-    #     default="log",
-    #     help="filepath to log directory",
-    # )
     parser.add_argument(
         "-k",
         action="store_true",

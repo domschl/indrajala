@@ -53,15 +53,13 @@ class EventProcessor:
         return self.active
 
     async def server_task(self):
-        self.log.debug("Starting websockets server...")
         stop = asyncio.Future()
         await self.start_server
-        self.log.info("Websockets server started.")
+        self.log.debug("Websockets server started.")
         self.online_future.set_result(0)
         self.active = True
-        self.log.debug("server_task websockets: serving.")
         await stop
-        self.log.info("Websockets: Terminated")
+        self.log.debug("Websockets: Terminated")
 
     async def async_init(self, loop):
         if self.enabled is False:
@@ -96,28 +94,18 @@ class EventProcessor:
             session['websocket'].close()
                         
     async def get_request(self, websocket, path):
-        self.log.debug("Waiting for recv()...")
         req = await websocket.recv()
         session = self._create_session(websocket, path)
-        self.log.debug(f"WS: {req}, id: {session['id']}")
         self.req_queue.put_nowait((req, id))
-        self.log.info("WS: queued")
-        # await self.req_queue.put(req)
-        # await websocket.send(greeting)
 
     async def get(self):
         if self.enabled is False:
             self.log.error("websockets are not enabled (failed to init?) and receive get()")
             return {}
         if self.active is False:
-            self.log.debug("WS-get before active!")
             await self.online_future
-            self.log.debug("WS got active, continuing!")
-        self.log.debug("Q-get")
         req = await self.req_queue.get()
-        self.log.debug("Q-got")
         self.req_queue.task_done()
-        self.log.debug(f"WSTR: {req}")
         default_toks = {'cmd': 'ping', 'origin': self.name, 'time': datetime.now(tz=ZoneInfo('UTC')), 'topic': 'ws', 'body': ''}
         if req and len(req) > 0 and req[0] == '{':
             try:
@@ -134,5 +122,4 @@ class EventProcessor:
     async def put(self, msg):
         if self.active is False:
             return
-        self.log.debug(f"{self.name}: Received message {msg}")
         return

@@ -15,7 +15,6 @@ class EventProcessor:
             self.loglevel = logging.INFO
             logging.error(f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}")
         self.log.setLevel(self.loglevel)
-        self.log.info("Postgres starting!")
         self.toml_data = toml_data
         try:
             self.disable_sync = toml_data[name]['disable_synchronous_commits']
@@ -41,7 +40,6 @@ class EventProcessor:
             return []
         self.loop = loop
         self.aconn = await psycopg.AsyncConnection.connect(self.toml_data[self.name]['connection'])
-        self.log.debug(f"aconn {self.aconn}")
         if self.disable_sync is True:
             self.log.warning("Synchronous commit is disabled, data corruption possible!")
             await self.aconn.execute("SET synchronous_commit TO OFF")
@@ -80,8 +78,6 @@ class EventProcessor:
             return None
         await asyncio.sleep(60.0)
         msg = {'cmd': 'ping', 'topic': 'hello', 'msg': 'world', 'time': datetime.now(tz=ZoneInfo('UTC')), 'origin': self.name}
-        self.log.debug(f"{self.name}: Sending message {msg}")
-        # return {'topic': None, 'msg': None, 'origin': self.name}
         return msg
 
     async def put(self, msg):

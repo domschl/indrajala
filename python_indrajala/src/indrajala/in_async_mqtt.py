@@ -23,40 +23,27 @@ class AsyncMqttHelper:
         self.client.on_socket_register_write = self.on_socket_register_write
         self.client.on_socket_unregister_write = self.on_socket_unregister_write
         self.got_message = None
-        self.log.info("Instantiated MQTT module.")
 
     def on_socket_open(self, client, userdata, sock):
-        self.log.debug("Socket opened")
-
         def cb():
-            self.log.debug("Socket is readable, calling loop_read")
             client.loop_read()
-        self.log.debug("add_reader:")
         self.loop.add_reader(sock, cb)
-        self.log.debug("create helper task:")
-        # self.misc = self.loop.create_task(self.misc_loop())
         self.misc = asyncio.create_task(self.misc_loop())
 
     def on_socket_close(self, client, userdata, sock):
-        self.log.debug("Socket closed")
         self.loop.remove_reader(sock)
         self.misc.cancel()
 
     def on_socket_register_write(self, client, userdata, sock):
-        self.log.debug("Watching socket for writability.")
-
         def cb():
-            self.log.debug("Socket is writable, calling loop_write")
             client.loop_write()
 
         self.loop.add_writer(sock, cb)
 
     def on_socket_unregister_write(self, client, userdata, sock):
-        self.log.debug("Stop watching socket for writability.")
         self.loop.remove_writer(sock)
 
     async def misc_loop(self):
-        self.log.debug("misc_loop started")
         state = True
         while state is True:
             if self.client.loop_misc() != mqtt.MQTT_ERR_SUCCESS:
@@ -68,9 +55,7 @@ class AsyncMqttHelper:
             try:
                 await asyncio.sleep(0.1)
             except asyncio.CancelledError:
-                self.log.debug("Misc_loop cancelled")
                 break
-        self.log.debug("misc_loop finished")
 
 
 class AsyncMqtt:
@@ -132,7 +117,6 @@ class AsyncMqtt:
 
     def on_connect(self, client, userdata, flags, rc):
         self.disconnected = self.loop.create_future()
-        self.log.debug("on_connect")
 
     def subscribe(self, topic):
         self.client.subscribe(topic)
@@ -144,7 +128,7 @@ class AsyncMqtt:
     def on_message(self, client, userdata, msg):
         self.log.debug(f"Received: {msg.topic} - {msg.payload}")
         if self.got_message is None or self.got_message.done() is True:
-            self.log.debug(f"Got message too fast: {msg.topic}, queueing")
+            self.log.debug(f"Future unavailable: {msg.topic}, queueing")
             self.que.put((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
         else:
             self.got_message.set_result((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
@@ -152,7 +136,7 @@ class AsyncMqtt:
     async def message(self):
         if not self.que.empty():
             topic, payload, utctimestamp = self.que.get()
-            self.log.debug(f"Unque msg {topic}")
+            self.log.debug(f"Unqueuing msg {topic}")
             self.que.task_done()
         else:
             self.got_message = self.loop.create_future()
@@ -161,7 +145,6 @@ class AsyncMqtt:
         return topic, payload, utctimestamp
 
     def on_disconnect(self, client, userdata, rc):
-        self.log.debug("on_disconnect")
         self.disconnected.set_result(rc)
         if self.active_disconnect is not True and self.reconnect_delay and self.reconnect_delay > 0:
             self.log.debug("Trying to reconnect...")
@@ -188,7 +171,6 @@ class EventProcessor:
         self.active = False
         self.startup_time = time.time()
         self.startup_delay_sec = self.toml_data[self.name]['startup_delay_sec']
-        self.log.debug(f"Startup-delay: {self.startup_delay_sec}")
         self.first_msg = False
         return
 
@@ -212,14 +194,12 @@ class EventProcessor:
     async def get(self):
         if self.active is True:
             tp, ms, ut = await self.async_mqtt.message()
-            self.log.debug(f"MQ: {tp}-{ms}")
             that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'uuid': str(uuid.uuid4()), 'time': ut.isoformat(), 'origin': self.name}
             if time.time()-self.startup_time > self.startup_delay_sec:
                 if self.first_msg is False:
                     self.first_msg = True
                     self.log.info("MQTT receive activated, routing received messages.")
                 # that_msg['time'] = datetime.now(tz=ZoneInfo('UTC')).isoformat()
-                self.log.debug(f"{self.name}: Sending message {that_msg}")
                 return that_msg
             else:
                 that_msg['cmd'] = 'ping'
