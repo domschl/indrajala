@@ -253,7 +253,7 @@ def read_config_arguments():
     log_file = os.path.join(log_dir, "indrajala.log")
     try:
         # mfh = logging.FileHandler(log_file, mode='w')
-        mfh = TimedRotatingFileHandler(log_file, when="midnight", backupCount=2)
+        mfh = TimedRotatingFileHandler(log_file, when="midnight", backupCount=toml_data['indrajala'].get('log_rotate_days',1))
         mfh.setLevel(llf)
         mfh.setFormatter(formatter)
         root_logger.addHandler(mfh)
