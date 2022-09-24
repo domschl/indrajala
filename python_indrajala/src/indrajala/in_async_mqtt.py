@@ -168,10 +168,11 @@ class EventProcessor:
         self.log.setLevel(self.loglevel)
         self.toml_data = toml_data
         self.name = name
-        self.active = False
+        self.enabled = False
         self.startup_time = time.time()
         self.startup_delay_sec = self.toml_data[self.name]['startup_delay_sec']
         self.first_msg = False
+        self.active = True
         return
 
     def isActive(self):
@@ -187,12 +188,12 @@ class EventProcessor:
         await self.async_mqtt.initial_connect()  # Needs to happen after last_will is set.
         for topic in self.toml_data[self.name]['topics']:
             self.async_mqtt.subscribe(topic)
-        self.active = True
-        self.log.info(f"MQTT connection active, waiting for {self.startup_delay_sec} secs before routing messages.")
+        self.enabled = True
+        self.log.info(f"MQTT connection active and enabled, waiting for {self.startup_delay_sec} secs before routing messages.")
         return []
 
     async def get(self):
-        if self.active is True:
+        if self.enabled is True:
             tp, ms, ut = await self.async_mqtt.message()
             that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'uuid': str(uuid.uuid4()), 'time': ut.isoformat(), 'origin': self.name}
             if time.time()-self.startup_time > self.startup_delay_sec:
@@ -210,6 +211,6 @@ class EventProcessor:
             return {'cmd': 'ping', 'topic': None, 'msg': None, 'time': time.now(tz=ZoneInfo('UTC')).isoformat(), 'origin': self.name}
 
     async def put(self, msg):
-        if self.active is True:
+        if self.enabled is True:
             self.log.debug(f"{self.name}: Received message {msg}")
         return
