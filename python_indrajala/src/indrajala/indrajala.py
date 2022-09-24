@@ -86,7 +86,9 @@ async def main_runner(main_logger, modules, toml_data, args):
             active_tasks, return_when=asyncio.FIRST_COMPLETED
         )
         for task in finished_tasks:
-            main_logger.debug(f"Task {task.get_name()} finished after {time.time()-t0}s")
+            main_logger.debug(
+                f"Task {task.get_name()} finished after {time.time()-t0}s"
+            )
         for task in finished_tasks:
             res = task.result()
             if res is None or "topic" not in res or "origin" not in res:
@@ -131,7 +133,9 @@ async def main_runner(main_logger, modules, toml_data, args):
                             for sub in subs[module]:
                                 if mqcmp(res["topic"], sub) is True:
                                     # await modules[module].put(res)
-                                    asyncio.create_task(modules[module].put(res), name=origin_module+'.put')
+                                    asyncio.create_task(
+                                        modules[module].put(res), name=module + ".put"
+                                    )
                                     break
             elif res["cmd"] == "system":
                 if "topic" in res and res["topic"] is not None:
