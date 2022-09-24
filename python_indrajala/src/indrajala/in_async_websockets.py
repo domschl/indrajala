@@ -2,7 +2,7 @@ import os
 import logging
 import asyncio
 import ssl
-import websockets
+# import websockets
 import json
 import time
 from datetime import datetime
@@ -107,12 +107,12 @@ class EventProcessor:
         req = await self.req_queue.get()
         self.req_queue.task_done()
         default_toks = {'cmd': 'ping', 'origin': self.name, 'time': datetime.now(tz=ZoneInfo('UTC')), 'topic': 'ws', 'body': ''}
+        msg = {}
         if req and len(req) > 0 and req[0] == '{':
             try:
                 msg = json.loads(req)
             except Exception as e:
                 self.log.error(f"WS-recv: Couldn't decode json of {req}, {e}")
-                msg = {}
         for tok in default_toks:
             if tok not in msg:
                 self.log.warning(f"Required token {tok} not in msg obj {msg}, setting {tok}={default_toks[tok]}")
