@@ -118,7 +118,8 @@ async def main_runner(main_logger, modules, toml_data, args):
                         if module != origin_module:
                             for sub in subs[module]:
                                 if mqcmp(res["topic"], sub) is True:
-                                    await modules[module].put(res)
+                                    # await modules[module].put(res)
+                                    asyncio.create_task(modules[module].put(res), name=origin_module+'.put')
                                     break
             elif res["cmd"] == "system":
                 if "topic" in res and res["topic"] is not None:
