@@ -11,6 +11,7 @@ import asyncio
 import importlib
 import uuid
 import tomlkit
+import time
 
 
 INDRAJALA_VERSION = "0.0.1"
@@ -76,9 +77,12 @@ async def main_runner(main_logger, modules, toml_data, args):
 
     active_tasks = tasks
     while terminate_main_runner is False:
+        t0 = time.time()
         finished_tasks, active_tasks = await asyncio.wait(
             active_tasks, return_when=asyncio.FIRST_COMPLETED
         )
+        for task in finished_tasks:
+            main_logger.debug(f"Task {task['name']} finished after {time.time()-t0}s")
         for task in finished_tasks:
             res = task.result()
             if res is None or "topic" not in res or "origin" not in res:
@@ -90,13 +94,18 @@ async def main_runner(main_logger, modules, toml_data, args):
                     main_logger.error(f"Origin not set in task {task}")
                     # res['origin'] = task
                 # continue
+
             origin_module = res["origin"]
-            if len(active_tasks) == 0:
-                active_tasks = [asyncio.create_task(modules[origin_module].get(), name=origin_module)]
+            if modules[origin_modules].isActive() is True:
+                if len(active_tasks) == 0:
+                    active_tasks = [asyncio.create_task(modules[origin_module].get(), name=origin_module)]
+                else:
+                    active_tasks = active_tasks.union(
+                        (asyncio.create_task(modules[origin_module].get(), name=origin_module),)
+                    )
             else:
-                active_tasks = active_tasks.union(
-                    (asyncio.create_task(modules[origin_module].get(), name=origin_module),)
-                )
+                main_logger.error(f"Task {origin_module} got disabled!")
+                continue
             if "cmd" not in res:
                 main_logger.error(f"Invalid result without 'cmd' field: {res}")
                 continue
