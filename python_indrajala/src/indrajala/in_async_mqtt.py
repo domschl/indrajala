@@ -208,7 +208,7 @@ class EventProcessor:
                 that_msg['msg'] = None
                 return that_msg
         else:
-            return {'cmd': 'ping', 'topic': None, 'msg': None, 'time': time.now(tz=ZoneInfo('UTC')).isoformat(), 'origin': self.name}
+            return {'cmd': 'ping', 'topic': None, 'msg': None, 'time': datetime.now(tz=ZoneInfo('UTC')).isoformat(), 'origin': self.name}
 
     async def put(self, msg):
         if self.enabled is True:
