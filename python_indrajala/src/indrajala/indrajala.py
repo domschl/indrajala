@@ -82,7 +82,7 @@ async def main_runner(main_logger, modules, toml_data, args):
             active_tasks, return_when=asyncio.FIRST_COMPLETED
         )
         for task in finished_tasks:
-            main_logger.debug(f"Task {task['name']} finished after {time.time()-t0}s")
+            main_logger.debug(f"Task {task.get_name()} finished after {time.time()-t0}s")
         for task in finished_tasks:
             res = task.result()
             if res is None or "topic" not in res or "origin" not in res:
@@ -95,8 +95,8 @@ async def main_runner(main_logger, modules, toml_data, args):
                     # res['origin'] = task
                 # continue
 
-            origin_module = res["origin"]
-            if modules[origin_modules].isActive() is True:
+            origin_module = res["origin"]  # task.get_name() !
+            if modules[origin_module].isActive() is True:
                 if len(active_tasks) == 0:
                     active_tasks = [asyncio.create_task(modules[origin_module].get(), name=origin_module)]
                 else:
