@@ -87,7 +87,12 @@ class EventProcessor:
         async with self.aconn.cursor() as acur:
             tm = datetime.fromisoformat(msg['time']).timestamp()
             ins_cmd = f"INSERT INTO {self.table} (timestamp, uuid, topic, msg) VALUES (%s, %s, %s, %s)"
-            await acur.execute(ins_cmd, (tm, msg['uuid'], msg['topic'], msg['msg']))
+            try:
+                await acur.execute(ins_cmd, (tm, msg['uuid'], msg['topic'], msg['msg']))
+            except Exception as e:
+                self.log.error(f"Executing INSERT of {msg} failed with {e}, DISABLING database!")
+                self.active = False
+                return
         await self.aconn.commit()
         self.log.debug(f"DB-write-commit {msg}")
         return
