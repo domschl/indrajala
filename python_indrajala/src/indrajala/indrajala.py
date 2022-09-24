@@ -18,7 +18,7 @@ INDRAJALA_VERSION = "0.0.1"
 
 
 def mqcmp(pub, sub):
-    ''' MQTT-style wildcard compare '''
+    """MQTT-style wildcard compare"""
     for c in ["+", "#"]:
         if pub.find(c) != -1:
             print(f"Illegal char '{c}' in pub in mqcmp!")
@@ -65,7 +65,11 @@ async def main_runner(main_logger, modules, toml_data, args):
     for module in modules:
         m_op = getattr(modules[module], "server_task", None)
         if callable(m_op) is True:
-            tasks.append(asyncio.create_task(modules[module].server_task(), name=module+'_server_task'))
+            tasks.append(
+                asyncio.create_task(
+                    modules[module].server_task(), name=module + "_server_task"
+                )
+            )
             main_logger.debug(
                 f"Task {module} has separate server_task(), started module-specific background server"
             )
@@ -98,10 +102,18 @@ async def main_runner(main_logger, modules, toml_data, args):
             origin_module = res["origin"]
             if modules[origin_modules].isActive() is True:
                 if len(active_tasks) == 0:
-                    active_tasks = [asyncio.create_task(modules[origin_module].get(), name=origin_module)]
+                    active_tasks = [
+                        asyncio.create_task(
+                            modules[origin_module].get(), name=origin_module
+                        )
+                    ]
                 else:
                     active_tasks = active_tasks.union(
-                        (asyncio.create_task(modules[origin_module].get(), name=origin_module),)
+                        (
+                            asyncio.create_task(
+                                modules[origin_module].get(), name=origin_module
+                            ),
+                        )
                     )
             else:
                 main_logger.error(f"Task {origin_module} got disabled!")
@@ -178,7 +190,9 @@ def load_modules(main_logger, toml_data, args):
                             main_logger.error(f"Failed to initialize module {module}")
                             continue
                     except Exception as e:
-                        main_logger.error(f"Failed to detect activity-state of module {module}: {e}")
+                        main_logger.error(
+                            f"Failed to detect activity-state of module {module}: {e}"
+                        )
                         continue
                     methods = ["get", "put"]
                     for method in methods:
@@ -230,7 +244,9 @@ def read_config_arguments():
         toml_data["in_signal_server"]["kill_daemon"] = False
     toml_data["indrajala"]["config_dir"] = str(config_dir)
 
-    loglevel_console = toml_data["indrajala"].get("max_loglevel_console", "info").upper()
+    loglevel_console = (
+        toml_data["indrajala"].get("max_loglevel_console", "info").upper()
+    )
     loglevel_file = toml_data["indrajala"].get("max_loglevel_logfile", "debug").upper()
     main_loglevel = toml_data["indrajala"].get("loglevel", "info").upper()
     llc = logging.getLevelName(loglevel_console)
@@ -246,13 +262,17 @@ def read_config_arguments():
     msh.setFormatter(formatter)
     root_logger.addHandler(msh)
 
-    log_dir = toml_data['indrajala']['logdir']
-    if '{configdir}' in log_dir:
-        log_dir = log_dir.replace('{configdir}', str(config_dir))
+    log_dir = toml_data["indrajala"]["logdir"]
+    if "{configdir}" in log_dir:
+        log_dir = log_dir.replace("{configdir}", str(config_dir))
     log_file = os.path.join(log_dir, "indrajala.log")
     try:
         # mfh = logging.FileHandler(log_file, mode='w')
-        mfh = TimedRotatingFileHandler(log_file, when="midnight", backupCount=toml_data['indrajala'].get('log_rotate_days',1))
+        mfh = TimedRotatingFileHandler(
+            log_file,
+            when="midnight",
+            backupCount=toml_data["indrajala"].get("log_rotate_days", 1),
+        )
         mfh.setLevel(llf)
         mfh.setFormatter(formatter)
         root_logger.addHandler(mfh)
@@ -263,7 +283,9 @@ def read_config_arguments():
     main_logger = logging.getLogger("IndraMain")
     main_logger.setLevel(main_loglevel)
 
-    main_logger.info("--------------------------------------------------------------------------------------")
+    main_logger.info(
+        "--------------------------------------------------------------------------------------"
+    )
     main_logger.info(f"   Starting Indrajala server {INDRAJALA_VERSION}")
 
     return main_logger, toml_data, args
