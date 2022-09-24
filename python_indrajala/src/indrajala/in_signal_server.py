@@ -38,6 +38,7 @@ class EventProcessor:
         while request != 'quit':
             request = (await reader.read(255)).decode('utf8').strip()
             if request == 'quit':
+                self.log.info("Quit command received")
                 response = 'quitting!\n'
             elif request == 'help':
                 response = "help: this help\nquit: stop this daemon.\n"
@@ -52,13 +53,16 @@ class EventProcessor:
 
     async def get_command(self):
         ret = await self.exit_future
+        self.log.info("exit future set True")
         return {'cmd': 'quit', 'retstate': ret}
 
     def close_daemon(self):
         pass
 
-    def signal_handler(self, sig, frame):
-        sys.exit(0)  # this will implicitly call atexit() handler close_daemon()
+    async def signal_handler(self):
+        self.log.info("QUIT signal received")
+        # sys.exit(0)  # this will implicitly call atexit() handler close_daemon()
+        self.exit_future.set_result(True)
 
     async def check_register_socket(self):
         try:
@@ -87,8 +91,10 @@ class EventProcessor:
             return None
 
         atexit.register(self.close_daemon)
-        signal.signal(signal.SIGINT, self.signal_handler)
-        signal.signal(signal.SIGTERM, self.signal_handler)
+        self.loop.add_signal_handler(signal.SIGINT, lambda: asyncio.create_task(self.signal_handler()))
+        self.loop.add_signal_handler(signal.SIGTERM, lambda: asyncio.create_task(self.signal_handler()))
+        # signal.signal(signal.SIGINT, self.signal_handler)
+        # signal.signal(signal.SIGTERM, self.signal_handler)
         return self.server
 
     async def get(self):

@@ -115,6 +115,7 @@ async def main_runner(main_logger, modules, toml_data, args):
                 if "topic" in res and res["topic"] is not None:
                     if res["topic"] == "$SYS/PROCESS":
                         if "msg" in res and res["msg"] == "QUIT":
+                            main_logger.info("QUIT message received, terminating...")
                             terminate_main_runner = True
                             continue
             elif res["cmd"] == "ping":
@@ -252,6 +253,10 @@ def read_config_arguments():
 
     main_logger = logging.getLogger("IndraMain")
     main_logger.setLevel(main_loglevel)
+
+    main_logger.info("--------------------------------------------------------------------------------------")
+    main_logger.info(f"   Starting Indrajala server {INDRAJALA_VERSION}")
+
     return main_logger, toml_data, args
 
 
