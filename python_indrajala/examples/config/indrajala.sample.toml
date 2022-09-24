@@ -35,7 +35,7 @@ rootpath=""
 [in_csv_tree]
 active=true
 loglevel="INFO"
-rootpath="<some-path>/indrajala/python_indrajala/examples/csv_tree"
+rootpath="{config_dir}/csv_tree"
 
 # MQTT interface based on PAHO MQTT
 [in_async_mqtt]
@@ -52,6 +52,6 @@ loglevel="INFO"
 port=23577
 bind_address="0.0.0.0"
 ssl=true
-ssl_certfile="certs/certfile.pem"
-ssl_keyfile="certs/keyfile.pem"
+ssl_certfile="{configdir}/certs/certfile.pem"
+ssl_keyfile="{configdir}/certs/keyfile.pem"
 

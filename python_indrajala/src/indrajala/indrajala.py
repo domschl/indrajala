@@ -163,6 +163,13 @@ def load_modules(main_logger, toml_data, args):
                             f"Failed to import EventProcessor from module {module}: {e}"
                         )
                         continue
+                    try:
+                        if ev_proc.isActive() is False:
+                            main_logger.error(f"Failed to initialize module {module}")
+                            continue
+                    except Exception as e:
+                        main_logger.error(f"Failed to detect activity-state of module {module}: {e}")
+                        continue
                     methods = ["get", "put"]
                     for method in methods:
                         m_op = getattr(ev_proc, method, None)
