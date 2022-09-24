@@ -29,7 +29,7 @@ class AsyncMqttHelper:
             client.loop_read()
 
         self.loop.add_reader(sock, cb)
-        self.misc = asyncio.create_task(self.misc_loop())
+        self.misc = asyncio.create_task(self.misc_loop(), name="AsyncMqttHelper")
 
     def on_socket_close(self, client, userdata, sock):
         self.loop.remove_reader(sock)
@@ -155,7 +155,7 @@ class AsyncMqtt:
             and self.reconnect_delay > 0
         ):
             self.log.debug("Trying to reconnect...")
-            asyncio.create_task(self.reconnect())
+            asyncio.create_task(self.reconnect(), name="MQTT.reconnect")
 
     async def disconnect(self):
         self.active_disconnect = True
@@ -235,7 +235,7 @@ class EventProcessor:
                 "cmd": "ping",
                 "topic": None,
                 "msg": None,
-                "time": time.now(tz=ZoneInfo("UTC")).isoformat(),
+                "time": datetime.now(tz=ZoneInfo("UTC")).isoformat(),
                 "origin": self.name,
             }
 
