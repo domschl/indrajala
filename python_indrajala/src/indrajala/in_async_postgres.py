@@ -8,23 +8,25 @@ from zoneinfo import ZoneInfo
 
 class EventProcessor:
     def __init__(self, name, toml_data):
-        self.log = logging.getLogger('IndraPostgres')
+        self.log = logging.getLogger("IndraPostgres")
         try:
-            self.loglevel = toml_data[name]['loglevel'].upper()
+            self.loglevel = toml_data[name]["loglevel"].upper()
         except Exception as e:
             self.loglevel = logging.INFO
-            logging.error(f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}")
+            logging.error(
+                f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}"
+            )
         self.log.setLevel(self.loglevel)
         self.toml_data = toml_data
         try:
-            self.disable_sync = toml_data[name]['disable_synchronous_commits']
+            self.disable_sync = toml_data[name]["disable_synchronous_commits"]
         except Exception:
             self.log.error(f"disable_synchronous_commits not defined in {name}")
             self.disable_sync = False
         self.name = name
-        self.table = 'prelim_events_v1'
+        self.table = "prelim_events_v1"
         try:
-            conn = psycopg.connect(self.toml_data[self.name]['connection'])
+            conn = psycopg.connect(self.toml_data[self.name]["connection"])
             conn.close()
             self.active = True
         except Exception as e:
@@ -39,9 +41,13 @@ class EventProcessor:
             self.log.error("Async_init called even so database is not active!")
             return []
         self.loop = loop
-        self.aconn = await psycopg.AsyncConnection.connect(self.toml_data[self.name]['connection'])
+        self.aconn = await psycopg.AsyncConnection.connect(
+            self.toml_data[self.name]["connection"]
+        )
         if self.disable_sync is True:
-            self.log.warning("Synchronous commit is disabled, data corruption possible!")
+            self.log.warning(
+                "Synchronous commit is disabled, data corruption possible!"
+            )
             await self.aconn.execute("SET synchronous_commit TO OFF")
         # Handle Ctrl-C:
         loop.add_signal_handler(signal.SIGINT, self.aconn.cancel)
@@ -55,11 +61,17 @@ class EventProcessor:
         )
         """
         async with self.aconn.cursor() as acur:
-            await acur.execute("select * from information_schema.tables where table_name=%s", (self.table,))
+            await acur.execute(
+                "select * from information_schema.tables where table_name=%s",
+                (self.table,),
+            )
             rows = acur.rowcount
             if rows == 0:
                 await acur.execute(cmd)
-                await acur.execute("select * from information_schema.tables where table_name=%s", (self.table,))
+                await acur.execute(
+                    "select * from information_schema.tables where table_name=%s",
+                    (self.table,),
+                )
                 if acur.rowcount == 0:
                     self.log.error(f"Failed to create table {self.table}")
                     self.active = False
@@ -71,13 +83,19 @@ class EventProcessor:
             else:
                 self.log.info(f"Using existing database table {self.table}")
                 await acur.close()
-        return ['#']
+        return ["#"]
 
     async def get(self):
         if self.active is False:
             return None
         await asyncio.sleep(60.0)
-        msg = {'cmd': 'ping', 'topic': 'hello', 'msg': 'world', 'time': datetime.now(tz=ZoneInfo('UTC')), 'origin': self.name}
+        msg = {
+            "cmd": "ping",
+            "topic": "hello",
+            "msg": "world",
+            "time": datetime.now(tz=ZoneInfo("UTC")),
+            "origin": self.name,
+        }
         return msg
 
     async def put(self, msg):
@@ -85,12 +103,14 @@ class EventProcessor:
             return
         self.log.debug(f"{self.name}: Received message {msg}")
         async with self.aconn.cursor() as acur:
-            tm = datetime.fromisoformat(msg['time']).timestamp()
+            tm = datetime.fromisoformat(msg["time"]).timestamp()
             ins_cmd = f"INSERT INTO {self.table} (timestamp, uuid, topic, msg) VALUES (%s, %s, %s, %s)"
             try:
-                await acur.execute(ins_cmd, (tm, msg['uuid'], msg['topic'], msg['msg']))
+                await acur.execute(ins_cmd, (tm, msg["uuid"], msg["topic"], msg["msg"]))
             except Exception as e:
-                self.log.error(f"Executing INSERT of {msg} failed with {e}, DISABLING database!")
+                self.log.error(
+                    f"Executing INSERT of {msg} failed with {e}, DISABLING database!"
+                )
                 self.active = False
                 return
         await self.aconn.commit()

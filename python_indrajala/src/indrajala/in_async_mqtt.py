@@ -1,17 +1,17 @@
-import uuid
 import asyncio
-import socket
-import paho.mqtt.client as mqtt
-import time
-from datetime import datetime
-from zoneinfo import ZoneInfo
 import logging
 import queue
-import logging
+import socket
+import time
+import uuid
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+import paho.mqtt.client as mqtt
 
 
 class AsyncMqttHelper:
-    '''Helper module for async wrapper for paho mqtt'''
+    """Helper module for async wrapper for paho mqtt"""
 
     def __init__(self, loop, client, loglevel):
         self.log = logging.getLogger("MqttHelper")
@@ -27,6 +27,7 @@ class AsyncMqttHelper:
     def on_socket_open(self, client, userdata, sock):
         def cb():
             client.loop_read()
+
         self.loop.add_reader(sock, cb)
         self.misc = asyncio.create_task(self.misc_loop())
 
@@ -59,10 +60,10 @@ class AsyncMqttHelper:
 
 
 class AsyncMqtt:
-    '''Async wrapper for paho_mqtt'''
+    """Async wrapper for paho_mqtt"""
 
     def __init__(self, loop, mqtt_server, loglevel, reconnect_delay=1):
-        self.log = logging.getLogger('AsyncMqtt')
+        self.log = logging.getLogger("AsyncMqtt")
         self.log.setLevel(loglevel)
         self.loop = loop
         self.mqtt_server = mqtt_server
@@ -121,7 +122,7 @@ class AsyncMqtt:
     def subscribe(self, topic):
         self.client.subscribe(topic)
 
-    def publish(self, topic, payload,  retain=False, qos=0):
+    def publish(self, topic, payload, retain=False, qos=0):
         self.log.debug(f"PUB: topic: [{topic}] payload: [{payload}]")
         self.client.publish(topic, payload, retain=retain, qos=qos)
 
@@ -129,9 +130,11 @@ class AsyncMqtt:
         self.log.debug(f"Received: {msg.topic} - {msg.payload}")
         if self.got_message is None or self.got_message.done() is True:
             self.log.debug(f"Future unavailable: {msg.topic}, queueing")
-            self.que.put((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
+            self.que.put((msg.topic, msg.payload, datetime.now(tz=ZoneInfo("UTC"))))
         else:
-            self.got_message.set_result((msg.topic, msg.payload, datetime.now(tz=ZoneInfo('UTC'))))
+            self.got_message.set_result(
+                (msg.topic, msg.payload, datetime.now(tz=ZoneInfo("UTC")))
+            )
 
     async def message(self):
         if not self.que.empty():
@@ -146,7 +149,11 @@ class AsyncMqtt:
 
     def on_disconnect(self, client, userdata, rc):
         self.disconnected.set_result(rc)
-        if self.active_disconnect is not True and self.reconnect_delay and self.reconnect_delay > 0:
+        if (
+            self.active_disconnect is not True
+            and self.reconnect_delay
+            and self.reconnect_delay > 0
+        ):
             self.log.debug("Trying to reconnect...")
             asyncio.create_task(self.reconnect())
 
@@ -159,18 +166,20 @@ class AsyncMqtt:
 
 class EventProcessor:
     def __init__(self, name, toml_data):
-        self.log = logging.getLogger('IndraMqtt')
+        self.log = logging.getLogger("IndraMqtt")
         try:
-            self.loglevel = logging.getLevelName(toml_data[name]['loglevel'].upper())
+            self.loglevel = logging.getLevelName(toml_data[name]["loglevel"].upper())
         except Exception as e:
             self.loglevel = logging.DEBUG
-            logging.error(f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}")
+            logging.error(
+                f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}"
+            )
         self.log.setLevel(self.loglevel)
         self.toml_data = toml_data
         self.name = name
         self.enabled = False
         self.startup_time = time.time()
-        self.startup_delay_sec = self.toml_data[self.name]['startup_delay_sec']
+        self.startup_delay_sec = self.toml_data[self.name]["startup_delay_sec"]
         self.first_msg = False
         self.active = True
         return
@@ -180,35 +189,55 @@ class EventProcessor:
 
     async def async_init(self, loop):
         self.loop = loop
-        self.async_mqtt = AsyncMqtt(loop, self.toml_data[self.name]['broker'], self.loglevel)
-        if 'last_will_topic' in self.toml_data[self.name] and 'last_will_message' in self.toml_data[self.name]:
-            lwt = self.toml_data[self.name]['last_will_topic']
-            lwm = self.toml_data[self.name]['last_will_message']
+        self.async_mqtt = AsyncMqtt(
+            loop, self.toml_data[self.name]["broker"], self.loglevel
+        )
+        if (
+            "last_will_topic" in self.toml_data[self.name]
+            and "last_will_message" in self.toml_data[self.name]
+        ):
+            lwt = self.toml_data[self.name]["last_will_topic"]
+            lwm = self.toml_data[self.name]["last_will_message"]
             self.async_mqtt.last_will(lwt, lwm)
         await self.async_mqtt.initial_connect()  # Needs to happen after last_will is set.
-        for topic in self.toml_data[self.name]['topics']:
+        for topic in self.toml_data[self.name]["topics"]:
             self.async_mqtt.subscribe(topic)
         self.enabled = True
-        self.log.info(f"MQTT connection active and enabled, waiting for {self.startup_delay_sec} secs before routing messages.")
+        self.log.info(
+            f"MQTT connection active and enabled, waiting for {self.startup_delay_sec} secs before routing messages."
+        )
         return []
 
     async def get(self):
         if self.enabled is True:
             tp, ms, ut = await self.async_mqtt.message()
-            that_msg = {'cmd': 'event', 'topic': tp, 'msg': ms.decode('utf-8'), 'uuid': str(uuid.uuid4()), 'time': ut.isoformat(), 'origin': self.name}
-            if time.time()-self.startup_time > self.startup_delay_sec:
+            that_msg = {
+                "cmd": "event",
+                "topic": tp,
+                "msg": ms.decode("utf-8"),
+                "uuid": str(uuid.uuid4()),
+                "time": ut.isoformat(),
+                "origin": self.name,
+            }
+            if time.time() - self.startup_time > self.startup_delay_sec:
                 if self.first_msg is False:
                     self.first_msg = True
                     self.log.info("MQTT receive activated, routing received messages.")
                 # that_msg['time'] = datetime.now(tz=ZoneInfo('UTC')).isoformat()
                 return that_msg
             else:
-                that_msg['cmd'] = 'ping'
-                that_msg['topic'] = None
-                that_msg['msg'] = None
+                that_msg["cmd"] = "ping"
+                that_msg["topic"] = None
+                that_msg["msg"] = None
                 return that_msg
         else:
-            return {'cmd': 'ping', 'topic': None, 'msg': None, 'time': time.now(tz=ZoneInfo('UTC')).isoformat(), 'origin': self.name}
+            return {
+                "cmd": "ping",
+                "topic": None,
+                "msg": None,
+                "time": time.now(tz=ZoneInfo("UTC")).isoformat(),
+                "origin": self.name,
+            }
 
     async def put(self, msg):
         if self.enabled is True:
