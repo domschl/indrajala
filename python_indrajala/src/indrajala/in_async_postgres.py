@@ -63,7 +63,7 @@ class EventProcessor:
                 if acur.rowcount == 0:
                     self.log.error(f"Failed to create table {self.table}")
                     self.active = False
-                    self.acur.close()
+                    await acur.close()
                 else:
                     self.log.info(f"Database table {self.table} created.")
                     await acur.close()

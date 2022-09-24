@@ -22,8 +22,9 @@ class EventProcessor:
         try:
             if self.toml_data[self.name]['active'] is False:
                 return
-            if os.path.isdir(self.toml_data[self.name]['rootpath']) is False:
-                self.log.error(f"{self.name}: Root directory {self.toml_data[self.name]['rootpath']} does not exist")
+            self.rootpath =self.toml_data[self.name]['rootpath'].replace("{configdir}", self.toml_data['indrajala']['config_dir']) 
+            if os.path.isdir(self.rootpath) is False:
+                self.log.error(f"{self.name}: Root directory {self.rootpath} does not exist")
                 return
         except Exception as e:
             self.log.error(f"{self.name}: {e}")
@@ -51,7 +52,7 @@ class EventProcessor:
         return datetime.now(tz=ZoneInfo('UTC')).strftime("%Y-%m-%d")
 
     def flush_data(self, topic, date, data):
-        filepath = os.path.join(self.toml_data[self.name]['rootpath'], topic)
+        filepath = os.path.join(self.rootpath, topic)
         filename = date + '.csv'
         if os.path.isdir(filepath) is False:
             os.makedirs(filepath)

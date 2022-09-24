@@ -22,6 +22,10 @@ class EventProcessor:
         self.port = int(toml_data[name]['signal_port'])
         self.toml_data = toml_data
         self.name = name
+        self.active = True
+
+    def isActive(self):
+        return self.active
 
     async def async_init(self, loop):
         self.loop = loop
