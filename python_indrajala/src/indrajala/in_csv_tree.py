@@ -96,7 +96,7 @@ class EventProcessor:
                         if not self.flush_data(
                             msg["topic"],
                             self.ev_store[msg["topic"]]["date"],
-                            self.flush_data(self.ev_store[msg["topic"]]["data"]),
+                            self.ev_store[msg["topic"]]["data"],
                         ):
                             self.log.error(f"Flushing cache failed: {msg}")
                     self.ev_store[msg["topic"]] = {"date": date, "data": []}
