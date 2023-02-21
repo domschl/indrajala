@@ -1,11 +1,13 @@
 import json
 import datetime
+
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
     from backports.zoneinfo import ZoneInfo
 
 
+# XXX Duplicate of indra_time.py
 class IndraTime:
     def __init__(self, timespec: str):
         self.timepec = timespec
@@ -14,15 +16,30 @@ class IndraTime:
 
     def from_datetime(self, datetime_with_any_timezone):
         if datetime_with_any_timezone is None:
-            utcisotime = datetime.datetime.utcnow().replace(tzinfo=ZoneInfo('UTC')).isoformat()
+            utcisotime = (
+                datetime.datetime.utcnow().replace(tzinfo=ZoneInfo("UTC")).isoformat()
+            )
         else:
-            utcisotime = datetime_with_any_timezone.astimezone(ZoneInfo('UTC')).isoformat()
+            utcisotime = datetime_with_any_timezone.astimezone(
+                ZoneInfo("UTC")
+            ).isoformat()
         _ = utcisotime
 
 
 class IndraEvent:
-    def __init__(self, domain, from_instance, from_uuid4, to_scope, time_start, data_type, data, auth_hash=None, time_end=None):
-        """ Create an IndraEvent json object
+    def __init__(
+        self,
+        domain,
+        from_instance,
+        from_uuid4,
+        to_scope,
+        time_start,
+        data_type,
+        data,
+        auth_hash=None,
+        time_end=None,
+    ):
+        """Create an IndraEvent json object
 
         :param domain:        MQTT-like path
         :param from_instance: originator-path
