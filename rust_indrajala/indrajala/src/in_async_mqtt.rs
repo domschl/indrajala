@@ -1,5 +1,5 @@
-use paho_mqtt::{AsyncClient, CreateOptionsBuilder}; // , Message};
 use async_channel;
+use paho_mqtt::{AsyncClient, CreateOptionsBuilder}; // , Message};
 use std::time::Duration;
 //use async_std::task;
 use async_std::stream::StreamExt;
@@ -34,12 +34,14 @@ pub async fn mq(broker: String, sender: async_channel::Sender<Indra>) {
             if retained {
                 // ignore! println!("Received retained message on topic: {}", topic);
             } else {
-                sender.send((topic.to_string(), payload.to_string())).await.unwrap();
+                sender
+                    .send((topic.to_string(), payload.to_string()))
+                    .await
+                    .unwrap();
                 //println!("Received message on topic: {} with payload: {}", topic, payload);
             }
             // println!("{}", msg);
-        }
-        else {
+        } else {
             // A "None" means we were disconnected. Try to reconnect...
             println!("Lost connection. Attempting reconnect.");
             while let Err(err) = client.reconnect().await {
@@ -53,4 +55,3 @@ pub async fn mq(broker: String, sender: async_channel::Sender<Indra>) {
     // Explicit return type for the async block
     //Ok::<(), mqtt::Error>(())
 }
-

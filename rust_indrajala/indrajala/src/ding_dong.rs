@@ -1,5 +1,5 @@
-use std::time::Duration;
 use crate::Indra;
+use std::time::Duration;
 
 pub async fn ding_dong(sender: async_channel::Sender<Indra>) {
     loop {

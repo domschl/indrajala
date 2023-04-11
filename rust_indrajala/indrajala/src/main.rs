@@ -27,7 +27,7 @@ async fn router(receiver: async_channel::Receiver<Indra>) {
         let msg = receiver.recv().await;
         let (topic, message) = msg.unwrap();
         println!("{} {}", topic, message);
-    }       
+    }
 }
 
 fn main() {
@@ -56,5 +56,5 @@ fn main() {
         mq_task.await;
         router_task.await;
         ding_dong_task.await;
-    });    
+    });
 }
