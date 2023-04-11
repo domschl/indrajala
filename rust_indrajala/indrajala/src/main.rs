@@ -13,6 +13,52 @@ use ding_dong::ding_dong;
 
 type Indra = (String, String);
 
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
+
+#[derive(Serialize, Deserialize)]
+struct IndraEvent {
+    domain: String,
+    from_instance: String,
+    from_uuid4: String,
+    to_scope: String,
+    time_start: String,
+    data_type: String,
+    data: serde_json::Value,
+    auth_hash: Option<String>,
+    time_end: Option<String>,
+}
+
+impl IndraEvent {
+    fn new(
+        domain: String,
+        from_instance: String,
+        from_uuid4: String,
+        to_scope: String,
+        time_start: String,
+        data_type: String,
+        data: serde_json::Value,
+        auth_hash: Option<String>,
+        time_end: Option<String>,
+    ) -> IndraEvent {
+        IndraEvent {
+            domain,
+            from_instance,
+            from_uuid4,
+            to_scope,
+            auth_hash,
+            time_start,
+            time_end,
+            data_type,
+            data,
+        }
+    }
+
+    fn to_json(&self) -> Result<String> {
+        serde_json::to_string(self)
+    }
+}
+
 fn read_config(toml_file: &str) -> String {
     let toml_str = fs::read_to_string(toml_file).unwrap();
     let value = toml_str.parse::<Value>().unwrap();
