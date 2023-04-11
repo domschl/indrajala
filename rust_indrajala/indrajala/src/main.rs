@@ -1,6 +1,7 @@
 //use std::time::Duration;
 use async_channel;
 use async_std::task;
+use chrono::{DateTime, Utc};
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -38,13 +39,18 @@ impl IndraEvent {
         //auth_hash: Option<String>,
         //time_end: Option<String>,
     ) -> IndraEvent {
+        let now: DateTime<Utc> = Utc::now();
+        //Utc::now();
+        let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+        //let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        // println!("{}", iso_string);
         IndraEvent {
             domain: "".to_string(),
             from_instance: "".to_string(),
             from_uuid4: "".to_string(),
             to_scope: "".to_string(),
             auth_hash: Default::default(),
-            time_start: "".to_string(),
+            time_start: iso_string.to_string(),
             time_end: Default::default(),
             data_type: "".to_string(),
             data: serde_json::json!(""),
@@ -69,7 +75,7 @@ async fn router(receiver: async_channel::Receiver<IndraEvent>) {
     loop {
         let msg = receiver.recv().await;
         let ie = msg.unwrap();
-        println!("{} {}", ie.domain, ie.data);
+        println!("{} {} {}", ie.time_start, ie.domain, ie.data);
     }
 }
 
