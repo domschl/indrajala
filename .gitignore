@@ -1,4 +1,4 @@
 /config
 csv_tree/
-rust_indrajala/indrajala/target
-rust_indrajala/indrajala/Cargo.lock
+target
+Cargo.lock
