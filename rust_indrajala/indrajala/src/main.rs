@@ -11,13 +11,11 @@ use in_async_mqtt::mq;
 mod ding_dong;
 use ding_dong::ding_dong;
 
-type Indra = (String, String);
-
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
 #[derive(Serialize, Deserialize)]
-struct IndraEvent {
+pub struct IndraEvent {
     domain: String,
     from_instance: String,
     from_uuid4: String,
@@ -30,27 +28,26 @@ struct IndraEvent {
 }
 
 impl IndraEvent {
-    fn new(
-        domain: String,
-        from_instance: String,
-        from_uuid4: String,
-        to_scope: String,
-        time_start: String,
-        data_type: String,
-        data: serde_json::Value,
-        auth_hash: Option<String>,
-        time_end: Option<String>,
+    fn new(// domain: String,
+       // from_instance: String,
+        //from_uuid4: String,
+        //to_scope: String,
+        //time_start: String,
+        //data_type: String,
+        //data: serde_json::Value,
+        //auth_hash: Option<String>,
+        //time_end: Option<String>,
     ) -> IndraEvent {
         IndraEvent {
-            domain,
-            from_instance,
-            from_uuid4,
-            to_scope,
-            auth_hash,
-            time_start,
-            time_end,
-            data_type,
-            data,
+            domain: "".to_string(),
+            from_instance: "".to_string(),
+            from_uuid4: "".to_string(),
+            to_scope: "".to_string(),
+            auth_hash: Default::default(),
+            time_start: "".to_string(),
+            time_end: Default::default(),
+            data_type: "".to_string(),
+            data: serde_json::json!(""),
         }
     }
 
@@ -68,11 +65,11 @@ fn read_config(toml_file: &str) -> String {
     return server_uri;
 }
 
-async fn router(receiver: async_channel::Receiver<Indra>) {
+async fn router(receiver: async_channel::Receiver<IndraEvent>) {
     loop {
         let msg = receiver.recv().await;
-        let (topic, message) = msg.unwrap();
-        println!("{} {}", topic, message);
+        let ie = msg.unwrap();
+        println!("{} {}", ie.domain, ie.data);
     }
 }
 
@@ -90,7 +87,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    let (sender, receiver) = async_channel::unbounded::<Indra>();
+    let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
 
     let broker = read_config(&args[1]);
 

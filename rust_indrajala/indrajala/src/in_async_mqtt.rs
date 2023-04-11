@@ -4,9 +4,9 @@ use std::time::Duration;
 //use async_std::task;
 use async_std::stream::StreamExt;
 
-use crate::Indra;
+use crate::IndraEvent;
 
-pub async fn mq(broker: String, sender: async_channel::Sender<Indra>) {
+pub async fn mq(broker: String, sender: async_channel::Sender<IndraEvent>) {
     let create_opts = CreateOptionsBuilder::new()
         .server_uri(broker)
         .client_id("rust-mqtt")
@@ -34,11 +34,10 @@ pub async fn mq(broker: String, sender: async_channel::Sender<Indra>) {
             if retained {
                 // ignore! println!("Received retained message on topic: {}", topic);
             } else {
-                sender
-                    .send((topic.to_string(), payload.to_string()))
-                    .await
-                    .unwrap();
-                //println!("Received message on topic: {} with payload: {}", topic, payload);
+                let mut dd = IndraEvent::new();
+                dd.domain = topic.to_string();
+                dd.data = serde_json::json!(payload.to_string());
+                sender.send(dd).await.unwrap();
             }
             // println!("{}", msg);
         } else {
