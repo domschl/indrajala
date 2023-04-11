@@ -1,10 +1,21 @@
 //use std::time::Duration;
 use async_std::task;
 use paho_mqtt::{AsyncClient, CreateOptionsBuilder}; // , Message};
+use std::fs;
+use toml::Value;
 
-async fn mq() {
+fn read_config(toml_file: &str) -> String {
+    let toml_str = fs::read_to_string(toml_file).unwrap();
+    let value = toml_str.parse::<Value>().unwrap();
+    let server = value["in_async_mqtt"]["broker"].as_str().unwrap();
+    // convert server hostname to uri of type tpc://hostname:1883
+    let server_uri = format!("tcp://{}:1883", server);
+    return server_uri;
+}
+
+async fn mq(broker: String) {
     let create_opts = CreateOptionsBuilder::new()
-        .server_uri("tcp://nalanda.fritz.box:1883")
+        .server_uri(broker)
         .client_id("rust-mqtt")
         .finalize();
 
@@ -37,5 +48,6 @@ async fn mq() {
 }
 
 fn main() {
-    task::block_on(mq());
+    let broker = read_config("../../config/indrajala.toml");
+    task::block_on(mq(broker));
 }
