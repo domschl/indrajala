@@ -8,6 +8,10 @@ use toml::Value;
 
 mod in_async_mqtt;
 use in_async_mqtt::mq;
+mod ding_dong;
+use ding_dong::ding_dong;
+
+type Indra = (String, String);
 
 fn read_config(toml_file: &str) -> String {
     let toml_str = fs::read_to_string(toml_file).unwrap();
@@ -18,11 +22,12 @@ fn read_config(toml_file: &str) -> String {
     return server_uri;
 }
 
-async fn router(receiver: async_channel::Receiver<String>) {
+async fn router(receiver: async_channel::Receiver<Indra>) {
     loop {
         let msg = receiver.recv().await;
-        println!("Received message: {}", msg.unwrap());
-    }
+        let (topic, message) = msg.unwrap();
+        println!("{} {}", topic, message);
+    }       
 }
 
 fn main() {
@@ -39,15 +44,17 @@ fn main() {
         std::process::exit(1);
     }
 
-    let (sender, receiver) = async_channel::unbounded();
+    let (sender, receiver) = async_channel::unbounded::<Indra>();
 
     let broker = read_config(&args[1]);
 
     // Start both tasks: mq and router:
     task::block_on(async {
-        let mq_task = task::spawn(mq(broker, sender));
+        let mq_task = task::spawn(mq(broker, sender.clone()));
         let router_task = task::spawn(router(receiver));
+        let ding_dong_task = task::spawn(ding_dong(sender.clone()));
         mq_task.await;
         router_task.await;
+        ding_dong_task.await;
     });    
 }

@@ -1,10 +1,12 @@
 use paho_mqtt::{AsyncClient, CreateOptionsBuilder}; // , Message};
 use async_channel;
 use std::time::Duration;
-use async_std::task;
+//use async_std::task;
 use async_std::stream::StreamExt;
 
-pub async fn mq(broker: String, sender: async_channel::Sender<String>) {
+use crate::Indra;
+
+pub async fn mq(broker: String, sender: async_channel::Sender<Indra>) {
     let create_opts = CreateOptionsBuilder::new()
         .server_uri(broker)
         .client_id("rust-mqtt")
@@ -32,9 +34,8 @@ pub async fn mq(broker: String, sender: async_channel::Sender<String>) {
             if retained {
                 // ignore! println!("Received retained message on topic: {}", topic);
             } else {
-                sender.send(payload.to_string()).await;
-                // task::block_on(sender.send(payload.to_string())); // .await;
-                println!("Received message on topic: {} with payload: {}", topic, payload);
+                sender.send((topic.to_string(), payload.to_string())).await.unwrap();
+                //println!("Received message on topic: {} with payload: {}", topic, payload);
             }
             // println!("{}", msg);
         }
@@ -53,31 +54,3 @@ pub async fn mq(broker: String, sender: async_channel::Sender<String>) {
     //Ok::<(), mqtt::Error>(())
 }
 
-
-
-
-/* 
-
-
-    loop {
-        client.set_message_callback(|_client, msg| {
-            if let Some(msg) = msg {
-                // get topic
-                let topic = msg.topic();
-                // get payload
-                let payload = msg.payload_str();
-                // check if message was retained:
-                let retained = msg.retained();
-                if retained {
-                    // ignore! println!("Received retained message on topic: {}", topic);
-                } else {
-                    //sender.try_send(payload.unwrap().to_string());
-                    // task::block_on(sender.send(payload.to_string())); // .await;
-                    println!("Received message on topic: {} with payload: {}", topic, payload);
-                }
-            }
-        });
-    }
-}
-
-*/
