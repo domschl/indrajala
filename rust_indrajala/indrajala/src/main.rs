@@ -3,6 +3,8 @@ use async_std::task;
 use paho_mqtt::{AsyncClient, CreateOptionsBuilder}; // , Message};
 use std::fs;
 use toml::Value;
+use std::path::Path;
+use std::env;
 
 fn read_config(toml_file: &str) -> String {
     let toml_str = fs::read_to_string(toml_file).unwrap();
@@ -49,6 +51,19 @@ async fn mq(broker: String) {
 }
 
 fn main() {
-    let broker = read_config("../../config/indrajala.toml");
+    // read command line arguments
+    let args: Vec<String> = env::args().collect();
+    // Check if at least one argument is passed
+    if args.len() < 2 {
+        println!("Usage: {} <config_file>", args[0]);
+        std::process::exit(1);
+    }   
+    // Check if the file exists
+    if !Path::new(&args[1]).exists() {
+        println!("File {} does not exist, it should be a TOML file", args[1]);
+        std::process::exit(1);
+    }
+
+    let broker = read_config(&args[1]);
     task::block_on(mq(broker));
 }
