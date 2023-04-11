@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 async-std = "1.9"
 paho-mqtt = "0.12"
+toml = "0.7"
