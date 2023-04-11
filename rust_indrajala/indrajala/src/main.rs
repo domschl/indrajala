@@ -36,15 +36,16 @@ async fn mq(broker: String) {
                 let topic = msg.topic();
                 // get payload
                 let payload = msg.payload_str();
-                println!("Received message on topic: {} with payload: {}", topic, payload);
+                // check if message was retained:
+                let retained = msg.retained();
+                if retained {
+                    // ignore! println!("Received retained message on topic: {}", topic);
+                } else {
+                    println!("Received message on topic: {} with payload: {}", topic, payload);
+                }
             }
         });
     }
-    //loop {
-    //    if let Some(msg) = client.try_receive(Duration::from_millis(100)).unwrap() {
-    //        println!("Received message {:?}", msg);
-    //    }
-    // }
 }
 
 fn main() {
