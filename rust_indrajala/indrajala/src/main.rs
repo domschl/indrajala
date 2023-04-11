@@ -1,4 +1,5 @@
 //use std::time::Duration;
+use async_channel;
 use async_std::task;
 use std::env;
 use std::fs;
@@ -17,6 +18,13 @@ fn read_config(toml_file: &str) -> String {
     return server_uri;
 }
 
+async fn router(receiver: async_channel::Receiver<String>) {
+    loop {
+        let msg = receiver.recv().await;
+        println!("Received message: {}", msg.unwrap());
+    }
+}
+
 fn main() {
     // read command line arguments
     let args: Vec<String> = env::args().collect();
@@ -31,6 +39,15 @@ fn main() {
         std::process::exit(1);
     }
 
+    let (sender, receiver) = async_channel::unbounded();
+
     let broker = read_config(&args[1]);
-    task::block_on(mq(broker));
+
+    // Start both tasks: mq and router:
+    task::block_on(async {
+        let mq_task = task::spawn(mq(broker, sender));
+        let router_task = task::spawn(router(receiver));
+        mq_task.await;
+        router_task.await;
+    });    
 }
