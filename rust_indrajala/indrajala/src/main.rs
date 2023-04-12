@@ -2,26 +2,17 @@
 use async_channel;
 use async_std::task;
 use std::env;
-use std::fs;
 use std::path::Path;
-use toml::Value;
 
 mod indra_event;
 use indra_event::IndraEvent;
+mod indra_config;
+use indra_config::IndraConfig;
 
 mod in_async_mqtt;
 use in_async_mqtt::mq;
 mod ding_dong;
 use ding_dong::ding_dong;
-
-fn read_config(toml_file: &str) -> String {
-    let toml_str = fs::read_to_string(toml_file).unwrap();
-    let value = toml_str.parse::<Value>().unwrap();
-    let server = value["in_async_mqtt"]["broker"].as_str().unwrap();
-    // convert server hostname to uri of type tpc://hostname:1883
-    let server_uri = format!("tcp://{}:1883", server);
-    return server_uri;
-}
 
 async fn router(receiver: async_channel::Receiver<IndraEvent>) {
     loop {
@@ -45,13 +36,16 @@ fn main() {
         std::process::exit(1);
     }
 
+    let config = IndraConfig::new(&args[1]);
+
     let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
 
-    let broker = read_config(&args[1]);
+    let server = config.get_value("in_async_mqtt", "broker");
+    let server_uri = format!("tcp://{}:1883", server);
 
     // Start both tasks: mq and router:
     task::block_on(async {
-        let mq_task = task::spawn(mq(broker, sender.clone()));
+        let mq_task = task::spawn(mq(server_uri, sender.clone()));
         let router_task = task::spawn(router(receiver));
         let ding_dong_task = task::spawn(ding_dong(sender.clone()));
         mq_task.await;
