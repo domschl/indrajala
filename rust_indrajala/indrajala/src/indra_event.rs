@@ -1,7 +1,8 @@
 use chrono::{DateTime, Utc};
-use chrono_tz::Tz;
-use chrono_tz::UTC;
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
 
+/*
 struct IndraTime {
     repr: String,
     dt: DateTime<Utc>,
@@ -12,9 +13,10 @@ struct IndraTime {
     max_bc_age: i32,
     bc_max: f64,
 }
-
+*/
+/*
 impl IndraTime {
-    fn new() -> IndraTime {
+    pub fn new() -> IndraTime {
         let bp0 = Utc.ymd(1950, 1, 1).and_hms(0, 0, 0).timestamp();
         let dt0 = Utc.ymd(1, 1, 1).and_hms(0, 0, 0).timestamp();
         let year_solar_days = 365.24217;
@@ -77,5 +79,52 @@ impl IndraTime {
     fn set_ybc(&mut self, ybc: i32) -> f64 {
         //self.it = (-1 * (ybc - 1) * (self.len_year as i32)) + (self.dt0 as i32);
         return (-1 * (ybc - 1) * (self.len_year as i32)) as f64 + (self.dt0 as f64);
+    }
+}
+*/
+#[derive(Serialize, Deserialize)]
+pub struct IndraEvent {
+    pub domain: String,
+    pub from_instance: String,
+    pub from_uuid4: String,
+    pub to_scope: String,
+    pub time_start: String,
+    pub data_type: String,
+    pub data: serde_json::Value,
+    pub auth_hash: Option<String>,
+    pub time_end: Option<String>,
+}
+
+impl IndraEvent {
+    pub fn new(// domain: String,
+       // from_instance: String,
+        //from_uuid4: String,
+        //to_scope: String,
+        //time_start: String,
+        //data_type: String,
+        //data: serde_json::Value,
+        //auth_hash: Option<String>,
+        //time_end: Option<String>,
+    ) -> IndraEvent {
+        let now: DateTime<Utc> = Utc::now();
+        //Utc::now();
+        let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+        //let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        // println!("{}", iso_string);
+        IndraEvent {
+            domain: "".to_string(),
+            from_instance: "".to_string(),
+            from_uuid4: "".to_string(),
+            to_scope: "".to_string(),
+            auth_hash: Default::default(),
+            time_start: iso_string.to_string(),
+            time_end: Default::default(),
+            data_type: "".to_string(),
+            data: serde_json::json!(""),
+        }
+    }
+
+    fn to_json(&self) -> Result<String> {
+        serde_json::to_string(self)
     }
 }

@@ -1,66 +1,18 @@
 //use std::time::Duration;
 use async_channel;
 use async_std::task;
-use chrono::{DateTime, Utc};
 use std::env;
 use std::fs;
 use std::path::Path;
 use toml::Value;
 
+mod indra_event;
+use indra_event::IndraEvent;
+
 mod in_async_mqtt;
 use in_async_mqtt::mq;
 mod ding_dong;
 use ding_dong::ding_dong;
-
-use serde::{Deserialize, Serialize};
-use serde_json::Result;
-
-#[derive(Serialize, Deserialize)]
-pub struct IndraEvent {
-    domain: String,
-    from_instance: String,
-    from_uuid4: String,
-    to_scope: String,
-    time_start: String,
-    data_type: String,
-    data: serde_json::Value,
-    auth_hash: Option<String>,
-    time_end: Option<String>,
-}
-
-impl IndraEvent {
-    fn new(// domain: String,
-       // from_instance: String,
-        //from_uuid4: String,
-        //to_scope: String,
-        //time_start: String,
-        //data_type: String,
-        //data: serde_json::Value,
-        //auth_hash: Option<String>,
-        //time_end: Option<String>,
-    ) -> IndraEvent {
-        let now: DateTime<Utc> = Utc::now();
-        //Utc::now();
-        let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-        //let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-        // println!("{}", iso_string);
-        IndraEvent {
-            domain: "".to_string(),
-            from_instance: "".to_string(),
-            from_uuid4: "".to_string(),
-            to_scope: "".to_string(),
-            auth_hash: Default::default(),
-            time_start: iso_string.to_string(),
-            time_end: Default::default(),
-            data_type: "".to_string(),
-            data: serde_json::json!(""),
-        }
-    }
-
-    fn to_json(&self) -> Result<String> {
-        serde_json::to_string(self)
-    }
-}
 
 fn read_config(toml_file: &str) -> String {
     let toml_str = fs::read_to_string(toml_file).unwrap();
