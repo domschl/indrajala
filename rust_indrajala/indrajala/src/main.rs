@@ -1,8 +1,6 @@
 //use std::time::Duration;
 use async_channel;
 use async_std::task;
-use std::env;
-use std::path::Path;
 
 mod indra_event;
 use indra_event::IndraEvent;
@@ -23,20 +21,7 @@ async fn router(receiver: async_channel::Receiver<IndraEvent>) {
 }
 
 fn main() {
-    // read command line arguments
-    let args: Vec<String> = env::args().collect();
-    // Check if at least one argument is passed
-    if args.len() < 2 {
-        println!("Usage: {} <config_file>", args[0]);
-        std::process::exit(1);
-    }
-    // Check if the file exists
-    if !Path::new(&args[1]).exists() {
-        println!("File {} does not exist, it should be a TOML file", args[1]);
-        std::process::exit(1);
-    }
-
-    let config = IndraConfig::new(&args[1]);
+    let config = IndraConfig::new();
 
     let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
 
