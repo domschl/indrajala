@@ -1,12 +1,29 @@
+use serde::Deserialize;
 use std::env;
 use std::fs;
 use std::path::Path;
-use toml::Value;
 
+#[derive(Deserialize)]
 pub struct IndraConfig {
-    pub config_filename: String,
-    pub toml_str: String,
-    pub value: Value,
+    pub mqtt: MqttConfig,
+    pub dingdong: DingDongConfig,
+}
+
+#[derive(Deserialize)]
+pub struct MqttConfig {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+    pub client_id: String,
+    pub topics: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub struct DingDongConfig {
+    pub timer: u32,
+    pub topic: String,
+    pub message: String,
 }
 
 impl IndraConfig {
@@ -26,17 +43,7 @@ impl IndraConfig {
         }
 
         let toml_str = fs::read_to_string(&config_filename).unwrap();
-        let value = toml_str.parse::<Value>().unwrap();
-        let indra_config = IndraConfig {
-            config_filename: config_filename,
-            toml_str,
-            value,
-        };
-        return indra_config;
-    }
-
-    pub fn get_value(self, topic: &str, field: &str) -> String {
-        let f = self.value[topic][field].as_str().unwrap();
-        return f.to_string();
+        let config: IndraConfig = toml::from_str(&toml_str).unwrap();
+        return config;
     }
 }

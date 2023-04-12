@@ -1,27 +1,40 @@
 use async_channel;
-use paho_mqtt::{AsyncClient, CreateOptionsBuilder}; // , Message};
+use paho_mqtt::{AsyncClient, ConnectOptionsBuilder, CreateOptionsBuilder}; // , Message};
 use std::time::Duration;
 //use async_std::task;
 use async_std::stream::StreamExt;
 
+use crate::indra_config::MqttConfig;
 use crate::IndraEvent;
 
-pub async fn mq(broker: String, sender: async_channel::Sender<IndraEvent>) {
+pub async fn mq(mqtt_config: MqttConfig, sender: async_channel::Sender<IndraEvent>) {
+    let server_uri = format!("tcp://{}:{}", mqtt_config.host, mqtt_config.port);
+
     let create_opts = CreateOptionsBuilder::new()
-        .server_uri(broker)
-        .client_id("rust-mqtt")
+        .server_uri(server_uri)
+        .client_id(mqtt_config.client_id)
         .finalize();
 
     let mut client = AsyncClient::new(create_opts).unwrap_or_else(|err| {
         println!("Error creating the client: {:?}", err);
         std::process::exit(1);
     });
+
     let mut strm = client.get_stream(25);
-    client.connect(None).await.unwrap_or_else(|err| {
+    let conn_opts = ConnectOptionsBuilder::new()
+        .user_name(mqtt_config.username)
+        .password(mqtt_config.password)
+        .finalize();
+
+    client.connect(conn_opts).await.unwrap_or_else(|err| {
         println!("Error connecting: {:?}", err);
         std::process::exit(1);
     });
-    client.subscribe("#", 0).await.unwrap();
+    let qos = vec![0; mqtt_config.topics.len()];
+    client
+        .subscribe_many(&mqtt_config.topics, &qos)
+        .await
+        .unwrap();
 
     while let Some(msg_opt) = strm.next().await {
         if let Some(msg) = msg_opt {

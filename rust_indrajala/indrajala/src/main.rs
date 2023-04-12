@@ -25,12 +25,9 @@ fn main() {
 
     let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
 
-    let server = config.get_value("in_async_mqtt", "broker");
-    let server_uri = format!("tcp://{}:1883", server);
-
     // Start both tasks: mq and router:
     task::block_on(async {
-        let mq_task = task::spawn(mq(server_uri, sender.clone()));
+        let mq_task = task::spawn(mq(config.mqtt, sender.clone()));
         let router_task = task::spawn(router(receiver));
         let ding_dong_task = task::spawn(ding_dong(sender.clone()));
         mq_task.await;
