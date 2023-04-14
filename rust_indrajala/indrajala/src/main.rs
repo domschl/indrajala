@@ -28,15 +28,6 @@ trait AsyncTaskReceiver {
     async fn async_sender(self);
 }
 
-/*
-trait TaskInit {
-    fn init(self, config: IndraConfig, task: IndraTask) -> bool;
-}
-
-trait AsyncTaskInit {
-    async fn async_init(self, config: IndraConfig, task: IndraTask) -> bool;
-}
-*/
 fn mqcmp(pub_str: &str, sub: &str) -> bool {
     for c in ["+", "#"] {
         if pub_str.contains(c) {
@@ -111,44 +102,25 @@ fn main() {
     // DingDong
     let d = DingDong::new(indra_config.dingdong.clone());
     tsk.push(d.clone().task.clone());
-    /*
-    let (dd_sender, dd_receiver) = async_channel::unbounded::<IndraEvent>();
-    let d = DingDong {
-        config: indra_config.dingdong.clone(),
-        receiver: dd_receiver,
-    };
-    let t1 = IndraTask {
-        name: "DingDong".to_string(),
-        active: indra_config.dingdong.active,
-        out_topics: indra_config.dingdong.out_topics.clone(),
-        out_channel: dd_sender.clone(),
-    };
-    tsk.push(t1.clone());
-    */
 
     // Mqtt
-    let (mq_sender, mq_receiver) = async_channel::unbounded::<IndraEvent>();
-    let m = Mqtt {
-        config: indra_config.mqtt.clone(),
-        receiver: mq_receiver,
-    };
-    let t2 = IndraTask {
-        name: "Mqtt".to_string(),
-        active: indra_config.mqtt.active,
-        out_topics: indra_config.mqtt.out_topics.clone(),
-        out_channel: mq_sender.clone(),
-    };
-    tsk.push(t2.clone());
+    let m = Mqtt::new(indra_config.mqtt.clone());
+    tsk.push(m.clone().task.clone());
 
     task::block_on(async {
         let router_task = task::spawn(router(tsk.clone(), d.clone(), receiver));
+
         let ding_dong_task = task::spawn(d.clone().async_receiver(sender.clone()));
         let ding_dong_task_s = task::spawn(d.clone().async_sender());
+
         let mqtt_task = task::spawn(m.clone().async_receiver(sender.clone()));
         let mqtt_task_s = task::spawn(m.clone().async_sender());
+
         router_task.await;
+
         ding_dong_task.await;
         ding_dong_task_s.await;
+
         mqtt_task.await;
         mqtt_task_s.await;
     });

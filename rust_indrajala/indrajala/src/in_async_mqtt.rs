@@ -6,17 +6,35 @@ use async_std::stream::StreamExt;
 
 use crate::indra_config::MqttConfig;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
+use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
 
 #[derive(Clone)]
 pub struct Mqtt {
     pub config: MqttConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
+    pub task: IndraTask,
+}
+
+impl Mqtt {
+    pub fn new(config: MqttConfig) -> Self {
+        let s1: async_channel::Sender<IndraEvent>;
+        let r1: async_channel::Receiver<IndraEvent>;
+        (s1, r1) = async_channel::unbounded();
+        Mqtt {
+            config: config.clone(),
+            receiver: r1,
+            task: IndraTask {
+                name: "Mqtt".to_string(),
+                active: config.active,
+                out_topics: config.clone().out_topics.clone(),
+                out_channel: s1,
+            },
+        }
+    }
 }
 
 impl AsyncTaskSender for Mqtt {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
-        //let mqtt_config = &indra_config.mqtt;
         let server_uri = format!("tcp://{}:{}", self.config.host, self.config.port);
 
         let create_opts = CreateOptionsBuilder::new()
