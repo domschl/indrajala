@@ -40,16 +40,6 @@ trait AsyncTaskInit {
     async fn async_init(self, config: IndraConfig, task: IndraTask) -> bool;
 }
 */
-/*x
-where
-    S: Future,
-    T: Future,
-{
-    receiver: fn(mqtt_config: IndraConfig, sender: async_channel::Sender<IndraEvent>) -> S,
-    sender: fn(IndraEvent) -> T,
-    out_topics: Vec<String>,
-}
-*/
 fn mqcmp(pub_str: &str, sub: &str) -> bool {
     for c in ["+", "#"] {
         if pub_str.contains(c) {
@@ -112,29 +102,9 @@ async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Rece
                 }
             }
         }
-
-        println!("{} {} {}", ie.time_start, ie.domain, ie.data);
+        //println!("{} {} {}", ie.time_start, ie.domain, ie.data);
     }
 }
-/*
-impl<S, T> TaskEntry<S, T>
-where
-    S: Future,
-    T: Future,
-{
-    fn new(
-        receiver: fn(mqtt_config: IndraConfig, sender: async_channel::Sender<IndraEvent>) -> S,
-        sender: fn(IndraEvent) -> T,
-        out_topics: Vec<String>,
-    ) -> Self {
-        Self {
-            receiver,
-            sender,
-            out_topics,
-        }
-    }
-}
-*/
 
 fn main() {
     let indra_config: IndraConfig = IndraConfig::new();
