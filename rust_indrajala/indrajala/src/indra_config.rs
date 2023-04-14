@@ -3,13 +3,13 @@ use std::env;
 use std::fs;
 use std::path::Path;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct IndraConfig {
     pub mqtt: MqttConfig,
     pub dingdong: DingDongConfig,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct MqttConfig {
     pub host: String,
     pub port: u16,
@@ -17,13 +17,15 @@ pub struct MqttConfig {
     pub password: String,
     pub client_id: String,
     pub topics: Vec<String>,
+    pub out_topics: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct DingDongConfig {
-    pub timer: u32,
+    pub timer: u64,
     pub topic: String,
     pub message: String,
+    pub out_topics: Vec<String>,
 }
 
 impl IndraConfig {
