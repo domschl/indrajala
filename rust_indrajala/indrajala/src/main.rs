@@ -14,7 +14,7 @@ mod in_async_mqtt;
 use in_async_mqtt::Mqtt;
 
 #[derive(Clone)]
-struct IndraTask {
+pub struct IndraTask {
     name: String,
     active: bool,
     out_topics: Vec<String>,
@@ -109,6 +109,9 @@ fn main() {
     let mut tsk: Vec<IndraTask> = vec![];
 
     // DingDong
+    let d = DingDong::new(indra_config.dingdong.clone());
+    tsk.push(d.clone().task.clone());
+    /*
     let (dd_sender, dd_receiver) = async_channel::unbounded::<IndraEvent>();
     let d = DingDong {
         config: indra_config.dingdong.clone(),
@@ -121,6 +124,7 @@ fn main() {
         out_channel: dd_sender.clone(),
     };
     tsk.push(t1.clone());
+    */
 
     // Mqtt
     let (mq_sender, mq_receiver) = async_channel::unbounded::<IndraEvent>();
