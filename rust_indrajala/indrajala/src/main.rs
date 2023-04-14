@@ -1,16 +1,13 @@
 #![feature(async_fn_in_trait)]
 
-//use std::time::Duration;
 use async_channel;
 use async_std::task;
-//use std::future::Future;
 
 mod indra_event;
 use indra_event::IndraEvent;
 mod indra_config;
 use indra_config::IndraConfig;
 
-//use in_async_mqtt::{mq, mq_send};
 mod ding_dong;
 use ding_dong::DingDong;
 mod in_async_mqtt;
