@@ -19,6 +19,7 @@ pub struct MqttConfig {
     pub client_id: String,
     pub topics: Vec<String>,
     pub out_topics: Vec<String>,
+    pub out_blocks: Vec<String>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -28,6 +29,7 @@ pub struct DingDongConfig {
     pub topic: String,
     pub message: String,
     pub out_topics: Vec<String>,
+    pub out_blocks: Vec<String>,
 }
 
 impl IndraConfig {

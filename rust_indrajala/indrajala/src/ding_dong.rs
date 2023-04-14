@@ -43,7 +43,6 @@ impl AsyncTaskReceiver for DingDong {
 
 impl AsyncTaskSender for DingDong {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
-        //let dingdong_config = &indra_config.dingdong;
         loop {
             let a = &self.config.topic;
             let b = &self.config.message;
