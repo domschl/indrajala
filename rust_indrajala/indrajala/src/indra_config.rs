@@ -11,6 +11,7 @@ pub struct IndraConfig {
 
 #[derive(Deserialize, Clone)]
 pub struct MqttConfig {
+    pub active: bool,
     pub host: String,
     pub port: u16,
     pub username: String,
@@ -22,6 +23,7 @@ pub struct MqttConfig {
 
 #[derive(Deserialize, Clone)]
 pub struct DingDongConfig {
+    pub active: bool,
     pub timer: u64,
     pub topic: String,
     pub message: String,
