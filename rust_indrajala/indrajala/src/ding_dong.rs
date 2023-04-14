@@ -4,35 +4,32 @@ use crate::IndraEvent;
 use std::time::Duration;
 
 use crate::indra_config::DingDongConfig;
-use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
+use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
 
 #[derive(Clone)]
 pub struct DingDong {
     pub config: DingDongConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
+    pub task: IndraTask,
 }
 
-/*
-impl TaskInit for DingDong {
-    fn init(mut self, indra_config: IndraConfig, indra_task: IndraTask) -> bool {
-        println!("IndraTask::init");
-        self.topic = indra_config.dingdong.topic;
-        self.message = indra_config.dingdong.message;
-        self.timer = indra_config.dingdong.timer;
-        return true;
+impl DingDong {
+    pub fn new(config: DingDongConfig) -> Self {
+        let s1: async_channel::Sender<IndraEvent>;
+        let r1: async_channel::Receiver<IndraEvent>;
+        (s1, r1) = async_channel::unbounded();
+        DingDong {
+            config: config.clone(),
+            receiver: r1,
+            task: IndraTask {
+                name: "DingDong".to_string(),
+                active: config.active,
+                out_topics: config.clone().out_topics.clone(),
+                out_channel: s1,
+            },
+        }
     }
 }
-
-impl AsyncTaskInit for DingDong {
-    async fn async_init(self, indra_config: IndraConfig, indra_task: IndraTask) -> bool {
-        println!("DingDong::async_init");
-        //self.topic = indra_config.dingdong.topic;
-        //self.message = indra_config.dingdong.message;
-        //self.timer = indra_config.dingdong.timer;
-        return true;
-    }
-}
-*/
 
 impl AsyncTaskReceiver for DingDong {
     async fn async_sender(self) {
