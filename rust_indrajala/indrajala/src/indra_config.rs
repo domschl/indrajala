@@ -7,6 +7,7 @@ use std::path::Path;
 pub struct IndraConfig {
     pub mqtt: MqttConfig,
     pub dingdong: DingDongConfig,
+    pub rest: RestConfig,
 }
 
 #[derive(Deserialize, Clone)]
@@ -28,6 +29,18 @@ pub struct DingDongConfig {
     pub timer: u64,
     pub topic: String,
     pub message: String,
+    pub out_topics: Vec<String>,
+    pub out_blocks: Vec<String>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct RestConfig {
+    pub active: bool,
+    pub address: String,
+    pub url: String,
+    pub ssl: bool,
+    pub cert: String,
+    pub key: String,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
 }

@@ -12,6 +12,8 @@ mod ding_dong;
 use ding_dong::DingDong;
 mod in_async_mqtt;
 use in_async_mqtt::Mqtt;
+mod in_async_rest;
+use in_async_rest::Rest;
 
 #[derive(Clone)]
 pub struct IndraTask {
@@ -117,6 +119,9 @@ fn main() {
     let m = Mqtt::new(indra_config.mqtt.clone());
     tsk.push(m.clone().task.clone());
 
+    let r: Rest = Rest::new(indra_config.rest.clone());
+    tsk.push(r.clone().task.clone());
+
     task::block_on(async {
         let router_task = task::spawn(router(tsk.clone(), d.clone(), receiver));
 
@@ -126,6 +131,9 @@ fn main() {
         let mqtt_task = task::spawn(m.clone().async_receiver(sender.clone()));
         let mqtt_task_s = task::spawn(m.clone().async_sender());
 
+        let rest_task = task::spawn(r.clone().async_receiver(sender.clone()));
+        let rest_task_s = task::spawn(r.clone().async_sender());
+
         router_task.await;
 
         ding_dong_task.await;
@@ -133,5 +141,8 @@ fn main() {
 
         mqtt_task.await;
         mqtt_task_s.await;
+
+        rest_task.await;
+        rest_task_s.await;
     });
 }
