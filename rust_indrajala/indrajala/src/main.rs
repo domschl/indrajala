@@ -10,10 +10,11 @@ use indra_event::IndraEvent;
 mod indra_config;
 use indra_config::IndraConfig;
 
-mod in_async_mqtt;
-use in_async_mqtt::{mq, mq_send};
+//use in_async_mqtt::{mq, mq_send};
 mod ding_dong;
 use ding_dong::DingDong;
+mod in_async_mqtt;
+use in_async_mqtt::Mqtt;
 
 #[derive(Clone)]
 struct IndraTask {
@@ -21,24 +22,24 @@ struct IndraTask {
     active: bool,
     out_topics: Vec<String>,
     out_channel: async_channel::Sender<IndraEvent>,
-    in_channel: async_channel::Receiver<IndraEvent>,
 }
 
 trait AsyncTaskSender {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>);
 }
 trait AsyncTaskReceiver {
-    async fn async_sender(self, receiver: &IndraEvent);
+    async fn async_sender(self);
 }
 
+/*
 trait TaskInit {
-    fn init(self, config: IndraConfig, task: IndraTask) -> u32;
+    fn init(self, config: IndraConfig, task: IndraTask) -> bool;
 }
 
 trait AsyncTaskInit {
-    async fn async_init(self, config: IndraConfig, task: IndraTask) -> u32;
+    async fn async_init(self, config: IndraConfig, task: IndraTask) -> bool;
 }
-
+*/
 /*x
 where
     S: Future,
@@ -101,8 +102,14 @@ async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Rece
         let msg = receiver.recv().await;
         let ie = msg.unwrap();
         for task in &tsk {
+            if task.active == false {
+                continue;
+            }
             for topic in &task.out_topics {
-                if mqcmp(&ie.domain, &topic) {}
+                println!("router: {} {} {}", task.name, topic, ie.domain);
+                if mqcmp(&ie.domain, &topic) {
+                    let _ = task.out_channel.send(ie.clone()).await;
+                }
             }
         }
 
@@ -131,36 +138,47 @@ where
 
 fn main() {
     let indra_config: IndraConfig = IndraConfig::new();
-
     let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
-
     let mut tsk: Vec<IndraTask> = vec![];
 
-    let d = DingDong {
-        topic: indra_config.dingdong.topic.clone(),
-        message: indra_config.dingdong.message.clone(),
-        timer: indra_config.dingdong.timer,
-    };
-
+    // DingDong
     let (dd_sender, dd_receiver) = async_channel::unbounded::<IndraEvent>();
-
+    let d = DingDong {
+        config: indra_config.dingdong.clone(),
+        receiver: dd_receiver,
+    };
     let t1 = IndraTask {
         name: "DingDong".to_string(),
-        active: true,
-        out_topics: vec![indra_config.dingdong.topic.clone()],
+        active: indra_config.dingdong.active,
+        out_topics: indra_config.dingdong.out_topics.clone(),
         out_channel: dd_sender.clone(),
-        in_channel: dd_receiver.clone(),
     };
     tsk.push(t1.clone());
-    //d.init(indra_config.clone());
 
-    // Start both tasks: mq and router:
+    // Mqtt
+    let (mq_sender, mq_receiver) = async_channel::unbounded::<IndraEvent>();
+    let m = Mqtt {
+        config: indra_config.mqtt.clone(),
+        receiver: mq_receiver,
+    };
+    let t2 = IndraTask {
+        name: "Mqtt".to_string(),
+        active: indra_config.mqtt.active,
+        out_topics: indra_config.mqtt.out_topics.clone(),
+        out_channel: mq_sender.clone(),
+    };
+    tsk.push(t2.clone());
+
     task::block_on(async {
-        let mq_task = task::spawn(mq(indra_config.clone(), sender.clone()));
         let router_task = task::spawn(router(tsk.clone(), d.clone(), receiver));
-        let ding_dong_task = task::spawn(d.async_receiver(sender.clone()));
-        mq_task.await;
+        let ding_dong_task = task::spawn(d.clone().async_receiver(sender.clone()));
+        let ding_dong_task_s = task::spawn(d.clone().async_sender());
+        let mqtt_task = task::spawn(m.clone().async_receiver(sender.clone()));
+        let mqtt_task_s = task::spawn(m.clone().async_sender());
         router_task.await;
         ding_dong_task.await;
+        ding_dong_task_s.await;
+        mqtt_task.await;
+        mqtt_task_s.await;
     });
 }
