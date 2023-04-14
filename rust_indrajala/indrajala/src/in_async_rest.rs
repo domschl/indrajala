@@ -1,6 +1,6 @@
 use crate::indra_config::RestConfig;
 use crate::IndraEvent;
-use std::time::Duration;
+//་use std::time::Duration;
 
 use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
 use tide;
@@ -34,9 +34,42 @@ impl Rest {
 impl AsyncTaskReceiver for Rest {
     async fn async_sender(self) {
         println!("IndraTask Rest::sender");
-        let mut app = tide::new();
-        let pt = self.config.url.as_str();
-        app.at(&pt).get(|_| async { Ok("Hello TLS") });
+    }
+}
+
+#[derive(Clone)]
+struct RestState {
+    sender: async_channel::Sender<IndraEvent>,
+    ie: IndraEvent,
+}
+
+impl RestState {
+    fn new(sender: async_channel::Sender<IndraEvent>, ie: IndraEvent) -> Self {
+        RestState { sender, ie }
+    }
+}
+
+impl AsyncTaskSender for Rest {
+    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
+        let astate = RestState::new(sender.clone(), IndraEvent::new());
+        let mut app = tide::with_state(astate); //new();
+        let mut ie: IndraEvent = IndraEvent::new();
+        ie.domain = "rest".to_string();
+        ie.data = serde_json::json!("Indrajala!");
+        let pt = &self.config.url.as_str();
+        app.at(pt).get(|req: tide::Request<RestState>| async move {
+            let st = req.state();
+            let mut ie = st.ie.clone();
+            ie.data = serde_json::json!("Indrajala!");
+            ie.domain = "rest".to_string();
+            println!("SENDING: {:?}", ie);
+            st.sender.send(ie.clone()).await?;
+            Ok("Indrajala!".to_string())
+        });
+        //async {
+        //    return Ok("Indrajala!".to_string());
+        //});
+        //app.at(&pt).get(Rest::wget);
         if self.config.ssl {
             app.listen(
                 TlsListener::build()
@@ -48,15 +81,6 @@ impl AsyncTaskReceiver for Rest {
             .unwrap();
         } else {
             app.listen(self.config.address).await.unwrap();
-        }
-        // Ok(())
-    }
-}
-
-impl AsyncTaskSender for Rest {
-    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
-        loop {
-            async_std::task::sleep(Duration::from_millis(1000)).await;
         }
     }
 }
