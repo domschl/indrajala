@@ -37,14 +37,18 @@ impl AsyncTaskReceiver for Rest {
         let mut app = tide::new();
         let pt = self.config.url.as_str();
         app.at(&pt).get(|_| async { Ok("Hello TLS") });
-        app.listen(
-            TlsListener::build()
-                .addrs(self.config.address)
-                .cert(self.config.cert)
-                .key(self.config.key),
-        )
-        .await
-        .unwrap();
+        if self.config.ssl {
+            app.listen(
+                TlsListener::build()
+                    .addrs(self.config.address)
+                    .cert(self.config.cert)
+                    .key(self.config.key),
+            )
+            .await
+            .unwrap();
+        } else {
+            app.listen(self.config.address).await.unwrap();
+        }
         // Ok(())
     }
 }
