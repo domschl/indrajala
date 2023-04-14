@@ -4,15 +4,16 @@ use std::time::Duration;
 //use async_std::task;
 use async_std::stream::StreamExt;
 
-use crate::indra_config::MqttConfig;
+use crate::indra_config::IndraConfig;
 use crate::IndraEvent;
 
-pub async fn mq(mqtt_config: MqttConfig, sender: async_channel::Sender<IndraEvent>) {
+pub async fn mq(indra_config: IndraConfig, sender: async_channel::Sender<IndraEvent>) {
+    let mqtt_config = &indra_config.mqtt;
     let server_uri = format!("tcp://{}:{}", mqtt_config.host, mqtt_config.port);
 
     let create_opts = CreateOptionsBuilder::new()
         .server_uri(server_uri)
-        .client_id(mqtt_config.client_id)
+        .client_id(&mqtt_config.client_id)
         .finalize();
 
     let mut client = AsyncClient::new(create_opts).unwrap_or_else(|err| {
@@ -22,8 +23,8 @@ pub async fn mq(mqtt_config: MqttConfig, sender: async_channel::Sender<IndraEven
 
     let mut strm = client.get_stream(25);
     let conn_opts = ConnectOptionsBuilder::new()
-        .user_name(mqtt_config.username)
-        .password(mqtt_config.password)
+        .user_name(&mqtt_config.username)
+        .password(&mqtt_config.password)
         .finalize();
 
     client.connect(conn_opts).await.unwrap_or_else(|err| {
@@ -67,3 +68,5 @@ pub async fn mq(mqtt_config: MqttConfig, sender: async_channel::Sender<IndraEven
     // Explicit return type for the async block
     //Ok::<(), mqtt::Error>(())
 }
+
+pub async fn mq_send(_ie: IndraEvent) {}

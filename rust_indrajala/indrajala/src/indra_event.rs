@@ -82,7 +82,7 @@ impl IndraTime {
     }
 }
 */
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IndraEvent {
     pub domain: String,
     pub from_instance: String,
