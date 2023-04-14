@@ -86,6 +86,16 @@ async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Rece
             for topic in &task.out_topics {
                 println!("router: {} {} {}", task.name, topic, ie.domain);
                 if mqcmp(&ie.domain, &topic) {
+                    let mut blocked = false;
+                    for out_block in &dd.config.out_blocks {
+                        if mqcmp(&ie.domain, &out_block) {
+                            println!("router: {} {} {} blocked", task.name, topic, ie.domain);
+                            blocked = true;
+                        }
+                    }
+                    if blocked {
+                        continue;
+                    }
                     let _ = task.out_channel.send(ie.clone()).await;
                 }
             }
