@@ -66,6 +66,39 @@ impl AsyncTaskSender for Rest {
             st.sender.send(ie.clone()).await?;
             Ok("Indrajala!".to_string())
         });
+        app.at(pt)
+            .post(|mut req: tide::Request<RestState>| async move {
+                println!("-------------------POST---------------");
+                let st = req.state().clone();
+                let IndraEvent {
+                    domain,
+                    from_instance,
+                    from_uuid4,
+                    to_scope,
+                    time_start,
+                    data_type,
+                    data,
+                    auth_hash,
+                    time_end,
+                } = req.body_json().await.unwrap();
+                println!("-------------- After post --------------");
+                let ie = {
+                    let mut ie = st.ie.clone();
+                    ie.domain = domain;
+                    ie.from_instance = from_instance;
+                    ie.from_uuid4 = from_uuid4;
+                    ie.to_scope = to_scope;
+                    ie.time_start = time_start;
+                    ie.data_type = data_type;
+                    ie.data = data;
+                    ie.auth_hash = auth_hash;
+                    ie.time_end = time_end;
+                    ie
+                };
+                println!("SENDING POST: {:?}", ie);
+                st.sender.send(ie.clone()).await?;
+                Ok("Indrajala!".to_string())
+            });
         //async {
         //    return Ok("Indrajala!".to_string());
         //});
