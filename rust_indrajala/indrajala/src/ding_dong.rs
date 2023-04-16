@@ -34,7 +34,9 @@ impl AsyncTaskReceiver for DingDong {
         println!("IndraTask DingDong::sender");
         loop {
             let msg = self.receiver.recv().await;
-            println!("DingDong::sender: {:?}", msg);
+            if self.config.active {
+                println!("DingDong::sender: {:?}", msg);
+            }
         }
     }
 }
@@ -50,7 +52,9 @@ impl AsyncTaskSender for DingDong {
             dd.data = serde_json::json!(b);
             //dd.data = serde_json(b);
             async_std::task::sleep(Duration::from_millis(self.config.timer)).await;
-            sender.send(dd).await.unwrap();
+            if self.config.active {
+                sender.send(dd).await.unwrap();
+            }
         }
     }
 }

@@ -74,10 +74,12 @@ impl AsyncTaskSender for Mqtt {
                 if retained {
                     // ignore! println!("Received retained message on topic: {}", topic);
                 } else {
-                    let mut dd = IndraEvent::new();
-                    dd.domain = topic.to_string();
-                    dd.data = serde_json::json!(payload.to_string());
-                    sender.send(dd).await.unwrap();
+                    if self.config.active {
+                        let mut dd = IndraEvent::new();
+                        dd.domain = topic.to_string();
+                        dd.data = serde_json::json!(payload.to_string());
+                        sender.send(dd).await.unwrap();
+                    }
                 }
                 // println!("{}", msg);
             } else {
@@ -99,6 +101,8 @@ impl AsyncTaskSender for Mqtt {
 impl AsyncTaskReceiver for Mqtt {
     async fn async_sender(self) {
         let msg = self.receiver.recv().await;
-        println!("MQTT::sender (publisher): {:?}", msg);
+        if self.config.active {
+            println!("MQTT::sender (publisher): {:?}", msg);
+        }
     }
 }
