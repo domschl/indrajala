@@ -49,6 +49,9 @@ impl RestState {
     }
 }
 
+// Test with:
+// curl --cacert ~/Nextcloud/Security/Certs/ca-root.pem  https://pergamon:8081/api/v1/event/full -d '{"domain": "test/ok/XXXXXXXXXXXXXXXX", "from_instance":"world-wide-web", "from_uuid4":"ui324234234234", "to_scope":"to-all-my-friend", "time_start":"2023-04-15T11:28:00CET", "data_type":"test", "data":"lots-of-data", "auth_hash":"XXX", "time_end":"never"}'
+
 impl AsyncTaskSender for Rest {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
         let astate = RestState::new(sender.clone(), IndraEvent::new());
@@ -56,7 +59,11 @@ impl AsyncTaskSender for Rest {
         let mut ie: IndraEvent = IndraEvent::new();
         ie.domain = "rest".to_string();
         ie.data = serde_json::json!("Indrajala!");
-        let pt = &self.config.url.as_str();
+        let evpath = self.config.url.clone() + "/event/full";
+        let evpathsimple = self.config.url.clone() + "/event/simple";
+        let pt = &evpath.as_str();
+        let ptsimple = &evpathsimple.as_str();
+        /*
         app.at(pt).get(|req: tide::Request<RestState>| async move {
             let st = req.state();
             let mut ie = st.ie.clone();
@@ -66,7 +73,39 @@ impl AsyncTaskSender for Rest {
             st.sender.send(ie.clone()).await?;
             Ok("Indrajala!".to_string())
         });
+        */
         app.at(pt)
+            .post(|mut req: tide::Request<RestState>| async move {
+                let st = req.state().clone();
+                let IndraEvent {
+                    domain,
+                    from_instance,
+                    from_uuid4,
+                    to_scope,
+                    time_start,
+                    data_type,
+                    data,
+                    auth_hash,
+                    time_end,
+                } = req.body_json().await.unwrap();
+                let ie = {
+                    let mut ie = st.ie.clone();
+                    ie.domain = domain;
+                    ie.from_instance = from_instance;
+                    ie.from_uuid4 = from_uuid4;
+                    ie.to_scope = to_scope;
+                    ie.time_start = time_start;
+                    ie.data_type = data_type;
+                    ie.data = data;
+                    ie.auth_hash = auth_hash;
+                    ie.time_end = time_end;
+                    ie
+                };
+                println!("SENDING POST: {:?}", ie);
+                st.sender.send(ie.clone()).await?;
+                Ok("Indrajala!".to_string())
+            });
+        app.at(ptsimple)
             .post(|mut req: tide::Request<RestState>| async move {
                 println!("-------------------POST---------------");
                 let st = req.state().clone();
@@ -85,14 +124,14 @@ impl AsyncTaskSender for Rest {
                 let ie = {
                     let mut ie = st.ie.clone();
                     ie.domain = domain;
-                    ie.from_instance = from_instance;
-                    ie.from_uuid4 = from_uuid4;
-                    ie.to_scope = to_scope;
-                    ie.time_start = time_start;
-                    ie.data_type = data_type;
+                    //                    ie.from_instance = from_instance;
+                    //                    ie.from_uuid4 = from_uuid4;
+                    //                    ie.to_scope = to_scope;
+                    //                    ie.time_start = time_start;
+                    //                    ie.data_type = data_type;
                     ie.data = data;
-                    ie.auth_hash = auth_hash;
-                    ie.time_end = time_end;
+                    //                   ie.auth_hash = auth_hash;
+                    //                    ie.time_end = time_end;
                     ie
                 };
                 println!("SENDING POST: {:?}", ie);
