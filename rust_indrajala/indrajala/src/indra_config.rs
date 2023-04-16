@@ -8,6 +8,7 @@ pub struct IndraConfig {
     pub mqtt: MqttConfig,
     pub dingdong: DingDongConfig,
     pub rest: RestConfig,
+    pub sqlx: SQLxConfig,
 }
 
 #[derive(Deserialize, Clone)]
@@ -41,6 +42,14 @@ pub struct RestConfig {
     pub ssl: bool,
     pub cert: String,
     pub key: String,
+    pub out_topics: Vec<String>,
+    pub out_blocks: Vec<String>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct SQLxConfig {
+    pub active: bool,
+    pub database_url: String,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
 }

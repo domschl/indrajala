@@ -14,6 +14,8 @@ mod in_async_mqtt;
 use in_async_mqtt::Mqtt;
 mod in_async_rest;
 use in_async_rest::Rest;
+mod in_async_sqlx;
+use in_async_sqlx::SQLx;
 
 #[derive(Clone)]
 pub struct IndraTask {
@@ -122,6 +124,9 @@ fn main() {
     let r: Rest = Rest::new(indra_config.rest.clone());
     tsk.push(r.clone().task.clone());
 
+    let s: SQLx = SQLx::new(indra_config.sqlx.clone());
+    tsk.push(s.clone().task.clone());
+
     task::block_on(async {
         let router_task = task::spawn(router(tsk.clone(), d.clone(), receiver));
 
@@ -134,6 +139,9 @@ fn main() {
         let rest_task = task::spawn(r.clone().async_receiver(sender.clone()));
         let rest_task_s = task::spawn(r.clone().async_sender());
 
+        let sqlx_task = task::spawn(s.clone().async_receiver(sender.clone()));
+        let sqlx_task_s = task::spawn(s.clone().async_sender());
+
         router_task.await;
 
         ding_dong_task.await;
@@ -144,5 +152,8 @@ fn main() {
 
         rest_task.await;
         rest_task_s.await;
+
+        sqlx_task.await;
+        sqlx_task_s.await;
     });
 }
