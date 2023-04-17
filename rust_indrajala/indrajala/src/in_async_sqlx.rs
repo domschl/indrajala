@@ -1,15 +1,17 @@
 use crate::IndraEvent;
-use sqlx::sqlite::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
+use std::str::FromStr;
 use std::time::Duration;
 
 use crate::indra_config::SQLxConfig;
-use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
+use crate::{AsyncTaskInit, AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
 
 #[derive(Clone)]
 pub struct SQLx {
     pub config: SQLxConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub task: IndraTask,
+    pub pool: Option<SqlitePool>,
 }
 
 impl SQLx {
@@ -18,34 +20,46 @@ impl SQLx {
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
 
-        // Connect to the database
-        let pool = SqlitePool::connect(self.config.database_url).await?;
-
-        // Create a new table
-        sqlx::query(
-            r#"
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    age INTEGER NOT NULL
-                )
-                "#,
-        )
-        .execute(&pool)
-        .await?;
-
-        //Ok(())
-
-        return SQLx {
+        SQLx {
             config: config.clone(),
             receiver: r1,
+            pool: None,
             task: IndraTask {
                 name: "SQLx".to_string(),
                 active: config.active,
                 out_topics: config.clone().out_topics.clone(),
                 out_channel: s1,
             },
-        };
+        }
+    }
+}
+
+impl AsyncTaskInit for SQLx {
+    async fn async_init(mut self) -> bool {
+        // Connect to the database
+        //let pl: Option<SqlitePool> = None;
+        println!("SQLx::init: {:?}", self.config.database_url.as_str());
+        // Configure the connection options
+        let fnam = self.config.database_url.as_str();
+        let options = SqliteConnectOptions::new()
+            .filename(fnam)
+            .create_if_missing(true);
+        self.pool = Some(sqlx::SqlitePool::connect_with(options).await.unwrap());
+
+        // Create a new table
+        sqlx::query(
+            r#"
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        age INTEGER NOT NULL
+                    )
+                    "#,
+        )
+        .execute(&self.pool.unwrap())
+        .await
+        .unwrap();
+        return true;
     }
 }
 
@@ -64,7 +78,7 @@ impl AsyncTaskReceiver for SQLx {
 impl AsyncTaskSender for SQLx {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
         loop {
-            let mut dd: IndraEvent;
+            let dd: IndraEvent;
             dd = IndraEvent::new();
             //dd.data = serde_json(b);
             async_std::task::sleep(Duration::from_millis(1000)).await;
