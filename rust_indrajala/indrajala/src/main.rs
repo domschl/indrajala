@@ -25,6 +25,9 @@ pub struct IndraTask {
     out_channel: async_channel::Sender<IndraEvent>,
 }
 
+trait AsyncTaskInit {
+    async fn async_init(self) -> bool;
+}
 trait AsyncTaskSender {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>);
 }
@@ -124,8 +127,26 @@ fn main() {
     let r: Rest = Rest::new(indra_config.rest.clone());
     tsk.push(r.clone().task.clone());
 
-    let s: SQLx = SQLx::new(indra_config.sqlx.clone());
+    let mut s: SQLx = SQLx::new(indra_config.sqlx.clone());
     tsk.push(s.clone().task.clone());
+    let mut ret: Option<bool> = None;
+    task::block_on(async {
+        ret = Some(s.clone().async_init().await);
+    });
+    match ret {
+        Some(true) => {
+            println!("SQLx init success!");
+            s.config.active = true;
+        }
+        Some(false) => {
+            println!("SQLx init failed!");
+            s.config.active = false;
+        }
+        None => {
+            println!("SQLx init failed!");
+            s.config.active = false;
+        }
+    }
 
     task::block_on(async {
         let router_task = task::spawn(router(tsk.clone(), d.clone(), receiver));
