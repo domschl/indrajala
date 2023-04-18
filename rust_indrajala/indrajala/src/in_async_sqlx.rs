@@ -74,7 +74,9 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
                         data_type TEXT NOT NULL,
                         data JSON NOT NULL,
                         auth_hash TEXT,
-                        time_end ISO8601
+                        time_end ISO8601,
+                        epoch_start INTEGER,
+                        epoch_end INTEGER
                     )
                     "#,
     )
@@ -86,6 +88,29 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
         }
         Err(e) => {
             println!("SQLx::init: Error creating table: {:?}", e);
+            config.active = false;
+            pool = None;
+        }
+    }
+
+    let q_res2 = sqlx::query(
+        r#"
+                    CREATE INDEX IF NOT EXISTS indra_events_domain ON indra_events (domain);
+                    CREATE INDEX IF NOT EXISTS indra_events_time_start ON indra_events (time_start);
+                    CREATE INDEX IF NOT EXISTS indra_events_data_type ON indra_events (data_type);
+                    CREATE INDEX IF NOT EXISTS indra_events_time_end ON indra_events (time_end);
+                    CREATE INDEX IF NOT EXISTS indra_events_epoch_start ON indra_events (epoch_start, time_start);
+                    CREATE INDEX IF NOT EXISTS indra_events_epoch_end ON indra_events (epoch_end, time_end);
+                    "#,
+    )
+    .execute(&pool.clone().unwrap())
+    .await;
+    match q_res2 {
+        Ok(_) => {
+            println!("SQLx::init: Indices created");
+        }
+        Err(e) => {
+            println!("SQLx::init: Error creating indices: {:?}", e);
             config.active = false;
             pool = None;
         }
