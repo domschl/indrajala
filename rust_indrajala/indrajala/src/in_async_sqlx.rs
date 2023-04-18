@@ -1,22 +1,21 @@
 use crate::IndraEvent;
 use async_std::task;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
-use std::str::FromStr;
 use std::time::Duration;
 
 use crate::indra_config::SQLxConfig;
-use crate::{AsyncTaskInit, AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
+use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
 
 #[derive(Clone)]
 pub struct SQLx {
     pub config: SQLxConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub task: IndraTask,
-    pub pool: SqlitePool,
+    pub pool: Option<SqlitePool>,
 }
 
 impl SQLx {
-    pub fn new(config: SQLxConfig) -> Self {
+    pub fn new(mut config: SQLxConfig) -> Self {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
@@ -25,7 +24,7 @@ impl SQLx {
             SQLx {
                 config: config.clone(),
                 receiver: r1,
-                pool: async_init(config.clone()).await,
+                pool: async_init(&mut config).await,
                 task: IndraTask {
                     name: "SQLx".to_string(),
                     active: config.active,
@@ -37,7 +36,7 @@ impl SQLx {
     }
 }
 
-async fn async_init(config: SQLxConfig) -> SqlitePool {
+async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     // Connect to the database
     //let pl: Option<SqlitePool> = None;
     println!("SQLx::init: {:?}", config.database_url.as_str());
@@ -46,19 +45,20 @@ async fn async_init(config: SQLxConfig) -> SqlitePool {
     let options = SqliteConnectOptions::new()
         .filename(fnam)
         .create_if_missing(true);
-    let pool = sqlx::SqlitePool::connect_with(options).await.unwrap();
-    /* match conn_res {
-        Ok(conn) => {
+    let mut pool: Option<SqlitePool>;
+    let pool_res = sqlx::SqlitePool::connect_with(options).await;
+    match pool_res {
+        Ok(pool_res) => {
             println!("SQLx::init: Connected to database");
-            self.pool = Some(conn);
+            pool = Some(pool_res);
         }
         Err(e) => {
             println!("SQLx::init: Error connecting to database: {:?}", e);
-            self.pool = None;
-            return false;
+            config.active = false;
+            pool = None;
+            return pool;
         }
     }
-    */
     // let pool = self.pool.clone().unwrap();
 
     // Create a new table
@@ -78,7 +78,7 @@ async fn async_init(config: SQLxConfig) -> SqlitePool {
                     )
                     "#,
     )
-    .execute(&pool)
+    .execute(&pool.clone().unwrap())
     .await;
     match q_res {
         Ok(_) => {
@@ -86,6 +86,8 @@ async fn async_init(config: SQLxConfig) -> SqlitePool {
         }
         Err(e) => {
             println!("SQLx::init: Error creating table: {:?}", e);
+            config.active = false;
+            pool = None;
         }
     }
     return pool;
@@ -93,6 +95,9 @@ async fn async_init(config: SQLxConfig) -> SqlitePool {
 
 impl AsyncTaskReceiver for SQLx {
     async fn async_sender(self) {
+        if self.config.active == false {
+            return;
+        }
         println!("IndraTask SQLx::sender");
         let pool = self.pool;
         loop {
@@ -116,7 +121,7 @@ impl AsyncTaskReceiver for SQLx {
                     .bind(msg.data.to_string())
                     .bind(msg.auth_hash)
                     .bind(msg.time_end)
-                    .execute(&pool)
+                    .execute(&pool.clone().unwrap())
                     .await.unwrap()
                     .rows_affected();
 
