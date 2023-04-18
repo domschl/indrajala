@@ -25,9 +25,6 @@ pub struct IndraTask {
     out_channel: async_channel::Sender<IndraEvent>,
 }
 
-trait AsyncTaskInit {
-    async fn async_init(self) -> bool;
-}
 trait AsyncTaskSender {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>);
 }
@@ -104,6 +101,7 @@ async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Rece
                     if blocked {
                         continue;
                     }
+                    println!("sending route to {}, {}", task.name, ie.domain);
                     let _ = task.out_channel.send(ie.clone()).await;
                 }
             }
@@ -127,12 +125,13 @@ fn main() {
     let r: Rest = Rest::new(indra_config.rest.clone());
     tsk.push(r.clone().task.clone());
 
-    let mut s: SQLx = SQLx::new(indra_config.sqlx.clone());
-    tsk.push(s.clone().task.clone());
-    let mut ret: Option<bool> = None;
-    task::block_on(async {
-        ret = Some(s.clone().async_init().await);
+    let s: SQLx = SQLx::new(indra_config.sqlx.clone());
+    //let mut ret = false;
+    /* task::block_on(async {
+        ret = s.async_init().await;
     });
+    */
+    /*
     match ret {
         Some(true) => {
             println!("SQLx init success!");
@@ -147,6 +146,8 @@ fn main() {
             s.config.active = false;
         }
     }
+     */
+    tsk.push(s.task.clone());
 
     task::block_on(async {
         let router_task = task::spawn(router(tsk.clone(), d.clone(), receiver));
