@@ -134,7 +134,7 @@ impl AsyncTaskReceiver for SQLx {
                 let rows_affected = sqlx::query(
                         r#"
                             INSERT INTO indra_events (domain, from_instance, from_uuid4, to_scope, time_start, data_type, data, auth_hash, time_end)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             "#,
                     )
                     .bind(msg.domain)
@@ -146,6 +146,8 @@ impl AsyncTaskReceiver for SQLx {
                     .bind(msg.data.to_string())
                     .bind(msg.auth_hash)
                     .bind(msg.time_end)
+                    .bind(msg.epoch_start)
+                    .bind(msg.epoch_end)
                     .execute(&pool.clone().unwrap())
                     .await.unwrap()
                     .rows_affected();
