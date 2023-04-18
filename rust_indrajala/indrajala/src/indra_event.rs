@@ -93,6 +93,8 @@ pub struct IndraEvent {
     pub data: serde_json::Value,
     pub auth_hash: Option<String>,
     pub time_end: Option<String>,
+    pub epoch_start: Option<i64>,
+    pub epoch_end: Option<i64>,
 }
 
 impl IndraEvent {
@@ -121,6 +123,8 @@ impl IndraEvent {
             time_end: Default::default(),
             data_type: "".to_string(),
             data: serde_json::json!(""),
+            epoch_start: Default::default(),
+            epoch_end: Default::default(),
         }
     }
 
