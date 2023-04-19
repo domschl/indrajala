@@ -133,7 +133,7 @@ impl AsyncTaskReceiver for SQLx {
                 // Insert a new record into the table
                 let rows_affected = sqlx::query(
                         r#"
-                            INSERT INTO indra_events (domain, from_instance, from_uuid4, to_scope, time_start, data_type, data, auth_hash, time_end)
+                            INSERT INTO indra_events (domain, from_instance, from_uuid4, to_scope, time_start, data_type, data, auth_hash, time_end, epoch_start, epoch_end)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             "#,
                     )
