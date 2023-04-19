@@ -36,7 +36,7 @@ async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Rece
     loop {
         let msg = receiver.recv().await;
         let ie = msg.unwrap();
-        println!("{} {} {}", ie.time_start, ie.domain, ie.data);
+        println!("{} {} {}", ie.time_jd_start, ie.domain, ie.data);
         for task in &tsk {
             if task.active == false {
                 continue;

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
@@ -88,13 +88,11 @@ pub struct IndraEvent {
     pub from_instance: String,
     pub from_uuid4: String,
     pub to_scope: String,
-    pub time_start: String,
+    pub time_jd_start: f64,
     pub data_type: String,
     pub data: serde_json::Value,
     pub auth_hash: Option<String>,
-    pub time_end: Option<String>,
-    pub epoch_start: Option<i64>,
-    pub epoch_end: Option<i64>,
+    pub time_jd_end: Option<f64>,
 }
 
 impl IndraEvent {
@@ -119,17 +117,35 @@ impl IndraEvent {
             from_uuid4: "".to_string(),
             to_scope: "".to_string(),
             auth_hash: Default::default(),
-            time_start: iso_string.to_string(),
-            time_end: Default::default(),
+            time_jd_start: Self::datetime_to_julian(now),
+            time_jd_end: Default::default(),
             data_type: "".to_string(),
             data: serde_json::json!(""),
-            epoch_start: Default::default(),
-            epoch_end: Default::default(),
         }
     }
 
     fn to_json(&self) -> Result<String> {
         serde_json::to_string(self)
+    }
+
+    fn datetime_to_julian(dt: DateTime<Utc>) -> f64 {
+        let year = dt.year();
+        let month = dt.month() as i32;
+        let day = dt.day() as i32;
+
+        let a = (14 - month) / 12;
+        let y = year + 4800 - a;
+        let m = month + 12 * a - 3;
+
+        let julian_day_number =
+            day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045;
+        let julian_date = julian_day_number as f64
+            + (dt.hour() as f64 - 12.0) / 24.0
+            + dt.minute() as f64 / 1440.0
+            + dt.second() as f64 / 86400.0
+            + dt.timestamp_subsec_micros() as f64 / 86400000000.0;
+
+        julian_date
     }
 
     pub fn mqcmp(pub_str: &str, sub: &str) -> bool {

@@ -82,13 +82,11 @@ impl AsyncTaskSender for Rest {
                     from_instance,
                     from_uuid4,
                     to_scope,
-                    time_start,
+                    time_jd_start,
                     data_type,
                     data,
                     auth_hash,
-                    time_end,
-                    epoch_start,
-                    epoch_end,
+                    time_jd_end,
                 } = req.body_json().await.unwrap();
                 let ie = {
                     let mut ie = st.ie.clone();
@@ -96,13 +94,11 @@ impl AsyncTaskSender for Rest {
                     ie.from_instance = from_instance;
                     ie.from_uuid4 = from_uuid4;
                     ie.to_scope = to_scope;
-                    ie.time_start = time_start;
+                    ie.time_jd_start = time_jd_start;
                     ie.data_type = data_type;
                     ie.data = data;
                     ie.auth_hash = auth_hash;
-                    ie.time_end = time_end;
-                    ie.epoch_start = epoch_start;
-                    ie.epoch_end = epoch_end;
+                    ie.time_jd_end = time_jd_end;
                     ie
                 };
                 println!("SENDING POST: {:?}", ie);
@@ -118,13 +114,11 @@ impl AsyncTaskSender for Rest {
                     from_instance,
                     from_uuid4,
                     to_scope,
-                    time_start,
+                    time_jd_start,
                     data_type,
                     data,
                     auth_hash,
-                    time_end,
-                    epoch_start,
-                    epoch_end,
+                    time_jd_end,
                 } = req.body_json().await.unwrap();
                 println!("-------------- After post --------------");
                 let ie = {
@@ -133,11 +127,11 @@ impl AsyncTaskSender for Rest {
                     //                    ie.from_instance = from_instance;
                     //                    ie.from_uuid4 = from_uuid4;
                     //                    ie.to_scope = to_scope;
-                    //                    ie.time_start = time_start;
+                    //                    ie.time_jd_start = time_jd_start;
                     //                    ie.data_type = data_type;
                     ie.data = data;
                     //                   ie.auth_hash = auth_hash;
-                    //                    ie.time_end = time_end;
+                    //                    ie.time_jd_end = time_jd_end;
                     ie
                 };
                 println!("SENDING POST: {:?}", ie);
