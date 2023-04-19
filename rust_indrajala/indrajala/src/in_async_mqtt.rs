@@ -1,12 +1,12 @@
 use async_channel;
-use paho_mqtt::{AsyncClient, ConnectOptionsBuilder, CreateOptionsBuilder}; // , Message};
+use paho_mqtt::{AsyncClient, ConnectOptionsBuilder, CreateOptionsBuilder};
 use std::time::Duration;
 //use async_std::task;
 use async_std::stream::StreamExt;
 
 use crate::indra_config::MqttConfig;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
+use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask};
 
 #[derive(Clone)]
 pub struct Mqtt {
