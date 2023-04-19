@@ -32,53 +32,6 @@ trait AsyncTaskReceiver {
     async fn async_sender(self);
 }
 
-fn mqcmp(pub_str: &str, sub: &str) -> bool {
-    for c in ["+", "#"] {
-        if pub_str.contains(c) {
-            println!("Illegal char '{}' in pub in mqcmp!", c);
-            return false;
-        }
-    }
-    let mut inds = 0;
-    let mut wcs = false;
-    for (_indp, c) in pub_str.chars().enumerate() {
-        if wcs {
-            if c == '/' {
-                inds += 1;
-                wcs = false;
-            }
-            continue;
-        }
-        if inds >= sub.len() {
-            return false;
-        }
-        if c == sub.chars().nth(inds).unwrap() {
-            inds += 1;
-            continue;
-        }
-        if sub.chars().nth(inds).unwrap() == '#' {
-            return true;
-        }
-        if sub.chars().nth(inds).unwrap() == '+' {
-            wcs = true;
-            inds += 1;
-            continue;
-        }
-        if c != sub.chars().nth(inds).unwrap() {
-            return false;
-        }
-    }
-    if sub[inds..].len() == 0 {
-        return true;
-    }
-    if sub[inds..].len() == 1 {
-        if sub.chars().nth(inds).unwrap() == '+' || sub.chars().nth(inds).unwrap() == '#' {
-            return true;
-        }
-    }
-    false
-}
-
 async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Receiver<IndraEvent>) {
     loop {
         let msg = receiver.recv().await;
@@ -90,10 +43,10 @@ async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Rece
             }
             for topic in &task.out_topics {
                 println!("router: {} {} {}", task.name, topic, ie.domain);
-                if mqcmp(&ie.domain, &topic) {
+                if IndraEvent::mqcmp(&ie.domain, &topic) {
                     let mut blocked = false;
                     for out_block in &dd.config.out_blocks {
-                        if mqcmp(&ie.domain, &out_block) {
+                        if IndraEvent::mqcmp(&ie.domain, &out_block) {
                             println!("router: {} {} {} blocked", task.name, topic, ie.domain);
                             blocked = true;
                         }
