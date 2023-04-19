@@ -70,13 +70,11 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
                         from_instance TEXT NOT NULL,
                         from_uuid4 UUID NOT NULL,
                         to_scope TEXT NOT NULL,
-                        time_start ISO8601 NOT NULL,
+                        time_jd_start DOUBLE,
                         data_type TEXT NOT NULL,
                         data JSON NOT NULL,
                         auth_hash TEXT,
-                        time_end ISO8601,
-                        epoch_start INTEGER,
-                        epoch_end INTEGER
+                        time_jd_end DOUBLE
                     )
                     "#,
     )
@@ -96,11 +94,9 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     let q_res2 = sqlx::query(
         r#"
                     CREATE INDEX IF NOT EXISTS indra_events_domain ON indra_events (domain);
-                    CREATE INDEX IF NOT EXISTS indra_events_time_start ON indra_events (time_start);
+                    CREATE INDEX IF NOT EXISTS indra_events_time_start ON indra_events (time_jd_start);
                     CREATE INDEX IF NOT EXISTS indra_events_data_type ON indra_events (data_type);
-                    CREATE INDEX IF NOT EXISTS indra_events_time_end ON indra_events (time_end);
-                    CREATE INDEX IF NOT EXISTS indra_events_epoch_start ON indra_events (epoch_start, time_start);
-                    CREATE INDEX IF NOT EXISTS indra_events_epoch_end ON indra_events (epoch_end, time_end);
+                    CREATE INDEX IF NOT EXISTS indra_events_time_end ON indra_events (time_jd_end);
                     "#,
     )
     .execute(&pool.clone().unwrap())
