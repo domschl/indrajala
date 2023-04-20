@@ -26,7 +26,7 @@ impl SQLx {
                 receiver: r1,
                 pool: async_init(&mut config).await,
                 task: IndraTask {
-                    name: "SQLx".to_string(),
+                    name: config.clone().name,
                     active: config.active,
                     out_topics: config.clone().out_topics.clone(),
                     out_channel: s1,
