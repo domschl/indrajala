@@ -2,37 +2,34 @@ use serde::Deserialize;
 use std::env;
 use std::fs;
 use std::path::Path;
+use toml;
 
-//use std::collections::HashMap;
-use toml::Value;
-
-/* #[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct IndraConfig {
-    pub mqtt: MqttConfig,
-    pub dingdong: DingDongConfig,
-    pub rest: RestConfig,
-    pub sqlx: SQLxConfig,
-} */
-
-pub enum IndraTaskConfig {
-    MqttConfig,
-    DingDongConfig,
-    RestConfig,
-    SQLxConfig,
+    pub MQTT: Option<Vec<MqttConfig>>,
+    pub DingDong: Option<Vec<DingDongConfig>>,
+    pub Rest: Option<Vec<RestConfig>>,
+    pub SQLx: Option<Vec<SQLxConfig>>,
 }
 
-#[derive(Deserialize, Clone)]
+/*
+#[derive(Deserialize, Clone, Debug)]
+pub struct IndraTaskConfigs {
+    pub tasks: Vec<IndraTaskConfig>,
+}
+*/
+#[derive(Deserialize, Clone, Copy, Debug)]
 pub enum TaskCapability {
     Send,
     Receive,
     Request,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct MqttConfig {
     pub name: String,
     pub active: bool,
-    pub capa: TaskCapability,
+    pub capa: Vec<String>,
     pub host: String,
     pub port: u16,
     pub username: String,
@@ -43,11 +40,16 @@ pub struct MqttConfig {
     pub out_blocks: Vec<String>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
+pub struct MqttConfigs {
+    pub mqtt: Vec<MqttConfig>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
 pub struct DingDongConfig {
     pub name: String,
     pub active: bool,
-    pub capa: TaskCapability,
+    pub capa: Vec<String>,
     pub timer: u64,
     pub topic: String,
     pub message: String,
@@ -55,11 +57,11 @@ pub struct DingDongConfig {
     pub out_blocks: Vec<String>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct RestConfig {
     pub name: String,
     pub active: bool,
-    pub capa: TaskCapability,
+    pub capa: Vec<String>,
     pub address: String,
     pub url: String,
     pub ssl: bool,
@@ -76,18 +78,17 @@ pub enum DbType {
     SQLite,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub struct SQLxConfig {
     pub name: String,
     pub active: bool,
-    pub capa: TaskCapability,
-    pub db_type: DbType,
+    pub capa: Vec<String>,
+    pub db_type: String,
     pub database_url: String,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
 }
 
-/*
 impl IndraConfig {
     pub fn new() -> IndraConfig {
         // read command line arguments
@@ -104,41 +105,18 @@ impl IndraConfig {
             std::process::exit(1);
         }
 
-        let toml_str = fs::read_to_string(&config_filename).unwrap();
-        let config: IndraConfig = toml::from_str(&toml_str).unwrap();
-        return config;
-    }
- */
+        let toml_string = fs::read_to_string(config_filename).unwrap();
+        let toml_str = toml_string.as_str();
 
-impl IndraTaskConfig {
-    // pub fn new() -> IndraTaskConfig {}
-
-    pub fn read_tasks() -> Vec<IndraTaskConfig> {
-        let tasks: Vec<IndraTaskConfig> = Vec::new();
-        let toml_str = fs::read_to_string("config/indra_tasks.toml").unwrap();
-        let value = toml_str.parse::<Value>().unwrap();
-
-        if let Value::Table(table) = value {
-            for (section_name, section_value) in table {
-                println!("----------------------------------");
-                println!("[{}]", section_name);
-                // println!("section_table = {:#?}", section_value);
-                let task_entries = section_value.as_array();
-                if let Some(task_entries) = task_entries {
-                    // .as_table().unwrap();
-                    for section in task_entries {
-                        println!("---- {} -----", section["name"]);
-                        println!("{:#?}", section);
-                    }
+        let cfg: IndraConfig = toml::from_str(toml_str).unwrap();
+        match &cfg.MQTT {
+            Some(mqtt) => {
+                for m in mqtt {
+                    println!("Mqtt: {:?}", m);
                 }
-                /*
-                if let Value::Table(section_table) = section_value {
-                    for (key, value) in section_table {
-                        println!("{} = {}", key, value);
-                    }
-                } */
             }
+            None => {}
         }
-        tasks
+        cfg
     }
 }
