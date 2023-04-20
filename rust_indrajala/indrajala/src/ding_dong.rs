@@ -1,7 +1,7 @@
 use crate::IndraEvent;
 use std::time::Duration;
 
-use crate::indra_config::DingDongConfig;
+use crate::indra_config::DingDongConfig; //, IndraTaskConfig};
 use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
 
 #[derive(Clone)]
@@ -20,7 +20,7 @@ impl DingDong {
             config: config.clone(),
             receiver: r1,
             task: IndraTask {
-                name: "DingDong".to_string(),
+                name: config.clone().name,
                 active: config.active,
                 out_topics: config.clone().out_topics.clone(),
                 out_channel: s1,
