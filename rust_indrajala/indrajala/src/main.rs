@@ -50,30 +50,35 @@ async fn router(tsk: Vec<IndraSubTask>, receiver: async_channel::Receiver<IndraE
             let ob: Vec<String>;
             let act: bool;
             let acs: async_channel::Sender<IndraEvent>;
+            let name: String;
             match task {
                 IndraSubTask::DingDong(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.task.clone().out_channel;
+                    name = st.config.clone().name;
                 }
                 IndraSubTask::Mqtt(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.task.clone().out_channel;
+                    name = st.config.clone().name;
                 }
                 IndraSubTask::Rest(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.task.clone().out_channel;
+                    name = st.config.clone().name;
                 }
                 IndraSubTask::SQLx(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.task.clone().out_channel;
+                    name = st.config.clone().name;
                 }
             }
 
@@ -81,12 +86,12 @@ async fn router(tsk: Vec<IndraSubTask>, receiver: async_channel::Receiver<IndraE
                 continue;
             }
             for topic in &ot {
-                println!("router: {} {}", topic, ie.domain);
+                println!("router: {} {} {}", name, topic, ie.domain);
                 if IndraEvent::mqcmp(&ie.domain, &topic) {
                     let mut blocked = false;
                     for out_block in &ob {
                         if IndraEvent::mqcmp(&ie.domain, &out_block) {
-                            println!("router: {} {} blocked", topic, ie.domain);
+                            println!("router: {} {} {} blocked", name, topic, ie.domain);
                             blocked = true;
                         }
                     }
@@ -94,7 +99,7 @@ async fn router(tsk: Vec<IndraSubTask>, receiver: async_channel::Receiver<IndraE
                     if blocked {
                         continue;
                     }
-                    println!("sending route to {}", ie.domain);
+                    println!("sending route {} to {}", name, ie.domain);
                     let _ = acs.send(ie.clone()).await;
                 }
             }
@@ -160,74 +165,3 @@ fn main() {
         }
     });
 }
-/*
-
-let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
-let mut tsk: Vec<IndraTask> = vec![];
-
-// DingDong
-let d = DingDong::new(indra_config.dingdong.clone());
-tsk.push(d.clone().task.clone());
-
-// Mqtt
-let m = Mqtt::new(indra_config.mqtt.clone());
-tsk.push(m.clone().task.clone());
-
-let r: Rest = Rest::new(indra_config.rest.clone());
-tsk.push(r.clone().task.clone());
-
-let s: SQLx = SQLx::new(indra_config.sqlx.clone());
-//let mut ret = false;
-/* task::block_on(async {
-    ret = s.async_init().await;
-});
-*/
-/*
-match ret {
-    Some(true) => {
-        println!("SQLx init success!");
-        s.config.active = true;
-    }
-    Some(false) => {
-        println!("SQLx init failed!");
-        s.config.active = false;
-    }
-    None => {
-        println!("SQLx init failed!");
-        s.config.active = false;
-    }
-}
- */
-tsk.push(s.task.clone());
-
-task::block_on(async {
-    let router_task = task::spawn(router(tsk.clone(), d.clone(), receiver));
-
-    let ding_dong_task = task::spawn(d.clone().async_receiver(sender.clone()));
-    let ding_dong_task_s = task::spawn(d.clone().async_sender());
-
-    let mqtt_task = task::spawn(m.clone().async_receiver(sender.clone()));
-    let mqtt_task_s = task::spawn(m.clone().async_sender());
-
-    let rest_task = task::spawn(r.clone().async_receiver(sender.clone()));
-    let rest_task_s = task::spawn(r.clone().async_sender());
-
-    let sqlx_task = task::spawn(s.clone().async_receiver(sender.clone()));
-    let sqlx_task_s = task::spawn(s.clone().async_sender());
-
-    router_task.await;
-
-    ding_dong_task.await;
-    ding_dong_task_s.await;
-
-    mqtt_task.await;
-    mqtt_task_s.await;
-
-    rest_task.await;
-    rest_task_s.await;
-
-    sqlx_task.await;
-    sqlx_task_s.await;
-});
- */
-//}
