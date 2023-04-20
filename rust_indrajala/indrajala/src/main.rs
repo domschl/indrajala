@@ -6,7 +6,7 @@ use async_std::task;
 mod indra_event;
 use indra_event::IndraEvent;
 mod indra_config;
-use indra_config::IndraTaskConfig;
+use indra_config::IndraConfig;
 
 mod ding_dong;
 use ding_dong::DingDong;
@@ -66,7 +66,7 @@ async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Rece
 fn main() {
     //let indra_config: IndraConfig = IndraConfig::new();
 
-    IndraTaskConfig::read_tasks();
+    let indra_config = IndraConfig::new();
     /*
 
     let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
