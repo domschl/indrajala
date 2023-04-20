@@ -1,0 +1,56 @@
+[[MQTT]]
+name = "MQTT.1"
+active = true
+capa = ["send", "receive"]
+host = "nalanda"
+port = 1883
+username = ""
+password = ""
+client_id = "indrajala.1"
+topics = ["omu/enviro-master/BME280-1/sensor/temperature"]
+out_topics = ["test/#"]
+out_blocks = [""]
+
+[[MQTT]]
+name = "MQTT.2"
+active = true
+capa = ["send", "receive"]
+host = "nalanda"
+port = 1883
+username = ""
+password = ""
+client_id = "indrajala.2"
+topics = ["omu/enviro-master/BME280-1/sensor/temperature"]
+out_topics = ["test/#"]
+out_blocks = [""]
+
+[[DingDong]]
+name = "DingDong.1"
+active = true
+capa = ["send", "receive"]
+timer = 1000
+topic = "Ding"
+message = "Dong"
+out_topics = ["#"]
+out_blocks = []
+
+[[Rest]]
+name = "Rest.1"
+active = true
+capa = ["send"]
+address = "0.0.0.0:8081"
+url = "/api/v1"
+ssl = true
+cert = "config/certs/m2max.pem"
+key = "config/certs/m2max-key.pem"
+out_topics = []
+out_blocks = []
+
+[[SQLx]]
+name = "SQLx.1"
+capa = ["receive", "request"]
+db_type = "sqlite"
+active = true
+database_url = "config/db/indrajala.db"
+out_topics = ["#"]
+out_blocks = []
