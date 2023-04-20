@@ -6,7 +6,7 @@ use async_std::task;
 mod indra_event;
 use indra_event::IndraEvent;
 mod indra_config;
-use indra_config::IndraConfig;
+use indra_config::IndraTaskConfig;
 
 mod ding_dong;
 use ding_dong::DingDong;
@@ -45,12 +45,13 @@ async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Rece
                 println!("router: {} {} {}", task.name, topic, ie.domain);
                 if IndraEvent::mqcmp(&ie.domain, &topic) {
                     let mut blocked = false;
-                    for out_block in &dd.config.out_blocks {
+                    /* for out_block in &dd.config.out_blocks {
                         if IndraEvent::mqcmp(&ie.domain, &out_block) {
                             println!("router: {} {} {} blocked", task.name, topic, ie.domain);
                             blocked = true;
                         }
                     }
+                    */
                     if blocked {
                         continue;
                     }
@@ -63,7 +64,11 @@ async fn router(tsk: Vec<IndraTask>, dd: DingDong, receiver: async_channel::Rece
 }
 
 fn main() {
-    let indra_config: IndraConfig = IndraConfig::new();
+    //let indra_config: IndraConfig = IndraConfig::new();
+
+    IndraTaskConfig::read_tasks();
+    /*
+
     let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
     let mut tsk: Vec<IndraTask> = vec![];
 
@@ -131,4 +136,5 @@ fn main() {
         sqlx_task.await;
         sqlx_task_s.await;
     });
+     */
 }
