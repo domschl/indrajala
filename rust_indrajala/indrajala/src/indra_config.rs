@@ -109,14 +109,6 @@ impl IndraConfig {
         let toml_str = toml_string.as_str();
 
         let cfg: IndraConfig = toml::from_str(toml_str).unwrap();
-        match &cfg.MQTT {
-            Some(mqtt) => {
-                for m in mqtt {
-                    println!("Mqtt: {:?}", m);
-                }
-            }
-            None => {}
-        }
         cfg
     }
 }
