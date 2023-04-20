@@ -166,3 +166,47 @@ impl AsyncTaskSender for SQLx {
         }
     }
 }
+
+//use sqlx::sqlite::SqlitePool;
+use std::env;
+
+// Wildcard query on domain:
+
+//#[async_std::main]
+async fn main_searcher() -> Result<(), sqlx::Error> {
+    let db_url = "sqlite://test.db";
+    let pool = SqlitePool::connect(db_url).await?;
+
+    // Create table and index
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS items (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_items_name ON items(name);
+        "#,
+    )
+    .execute(&pool)
+    .await?;
+
+    // Insert some data
+    sqlx::query("INSERT INTO items (name) VALUES ('apple'), ('banana'), ('cherry')")
+        .execute(&pool)
+        .await?;
+
+    // Query using index
+    let prefix = "ba";
+    let rows: Vec<(i64, String)> =
+        sqlx::query_as("SELECT id, name FROM items WHERE name >= ? AND name < ? ORDER BY name")
+            .bind(prefix)
+            .bind(format!("{}{}", prefix, '\u{ffff}'))
+            .fetch_all(&pool)
+            .await?;
+
+    for row in rows {
+        println!("id: {}, name: {}", row.0, row.1);
+    }
+
+    Ok(())
+}
