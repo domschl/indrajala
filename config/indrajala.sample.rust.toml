@@ -20,7 +20,7 @@ port = 1883
 username = ""
 password = ""
 client_id = "indrajala.2"
-topics = ["omu/enviro-master/BME280-1/sensor/temperature"]
+topics = ["#"]
 out_topics = ["test/#"]
 out_blocks = [""]
 
@@ -32,14 +32,26 @@ timer = 1000
 topic = "Ding"
 message = "Dong"
 out_topics = ["#"]
-out_blocks = []
+out_blocks = ["DingDong.1"]
 
-[[rest]]
-name = "Rest.1"
+[[web]]
+name = "Web.1"
 active = true
 capa = ["Send"]
 address = "0.0.0.0:8081"
 url = "/api/v1"
+ssl = true
+cert = "config/certs/m2max.pem"
+key = "config/certs/m2max-key.pem"
+out_topics = []
+out_blocks = []
+
+[[ws]]
+name = "Ws.1"
+active = true
+capa = ["Send"]
+address = "0.0.0.0:8082"
+url = "/ws/v1"
 ssl = true
 cert = "config/certs/m2max.pem"
 key = "config/certs/m2max-key.pem"

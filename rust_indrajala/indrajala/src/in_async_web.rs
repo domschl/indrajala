@@ -1,8 +1,6 @@
 use crate::indra_config::WebConfig;
 use crate::IndraEvent;
-//་use std::time::Duration;
-
-use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
+use crate::{AsyncTaskReceiver, AsyncTaskSender};
 use tide;
 use tide_rustls::TlsListener;
 
@@ -56,19 +54,8 @@ impl AsyncTaskSender for Web {
         ie.data = serde_json::json!("Indrajala!");
         let evpath = self.config.url.clone() + "/event/full";
         let evpathsimple = self.config.url.clone() + "/event/simple";
-        let pt = &evpath.as_str();
-        let ptsimple = &evpathsimple.as_str();
-        /*
-        app.at(pt).get(|req: tide::Request<WebState>| async move {
-            let st = req.state();
-            let mut ie = st.ie.clone();
-            ie.data = serde_json::json!("Indrajala!");
-            ie.domain = "web".to_string();
-            println!("SENDING: {:?}", ie);
-            st.sender.send(ie.clone()).await?;
-            Ok("Indrajala!".to_string())
-        });
-        */
+        let pt = evpath.as_str();
+        let ptsimple = evpathsimple.as_str();
         app.at(pt)
             .post(|mut req: tide::Request<WebState>| async move {
                 let st = req.state().clone();
@@ -133,10 +120,6 @@ impl AsyncTaskSender for Web {
                 st.sender.send(ie.clone()).await?;
                 Ok("Indrajala!".to_string())
             });
-        //async {
-        //    return Ok("Indrajala!".to_string());
-        //});
-        //app.at(&pt).get(Web::wget);
         if self.config.ssl {
             app.listen(
                 TlsListener::build()
