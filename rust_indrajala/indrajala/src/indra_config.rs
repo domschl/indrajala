@@ -29,7 +29,7 @@ pub enum TaskCapability {
 pub struct MqttConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<String>,
+    pub capa: Vec<TaskCapability>,
     pub host: String,
     pub port: u16,
     pub username: String,
@@ -49,7 +49,7 @@ pub struct MqttConfigs {
 pub struct DingDongConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<String>,
+    pub capa: Vec<TaskCapability>,
     pub timer: u64,
     pub topic: String,
     pub message: String,
@@ -61,7 +61,7 @@ pub struct DingDongConfig {
 pub struct RestConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<String>,
+    pub capa: Vec<TaskCapability>,
     pub address: String,
     pub url: String,
     pub ssl: bool,
@@ -71,7 +71,7 @@ pub struct RestConfig {
     pub out_blocks: Vec<String>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub enum DbType {
     Postgres,
     MySQL,
@@ -82,8 +82,8 @@ pub enum DbType {
 pub struct SQLxConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<String>,
-    pub db_type: String,
+    pub capa: Vec<TaskCapability>,
+    pub db_type: DbType,
     pub database_url: String,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
