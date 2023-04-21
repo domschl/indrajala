@@ -2,13 +2,13 @@ use crate::IndraEvent;
 use std::time::Duration;
 
 use crate::indra_config::DingDongConfig; //, IndraTaskConfig};
-use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
+use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
 
 #[derive(Clone)]
 pub struct DingDong {
     pub config: DingDongConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
-    pub task: IndraTask,
+    pub sender: async_channel::Sender<IndraEvent>,
 }
 
 impl DingDong {
@@ -19,12 +19,7 @@ impl DingDong {
         DingDong {
             config: config.clone(),
             receiver: r1,
-            task: IndraTask {
-                // name: config.clone().name,
-                // active: config.active,
-                // out_topics: config.clone().out_topics.clone(),
-                out_channel: s1,
-            },
+            sender: s1,
         }
     }
 }

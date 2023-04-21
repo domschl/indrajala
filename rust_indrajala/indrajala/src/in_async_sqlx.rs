@@ -4,13 +4,13 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::time::Duration;
 
 use crate::indra_config::SQLxConfig;
-use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
+use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 #[derive(Clone)]
 pub struct SQLx {
     pub config: SQLxConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
-    pub task: IndraTask,
+    pub sender: async_channel::Sender<IndraEvent>,
     pub pool: Option<SqlitePool>,
 }
 
@@ -24,13 +24,8 @@ impl SQLx {
             SQLx {
                 config: config.clone(),
                 receiver: r1,
+                sender: s1,
                 pool: async_init(&mut config).await,
-                task: IndraTask {
-                    // name: config.clone().name,
-                    // active: config.active,
-                    // out_topics: config.clone().out_topics.clone(),
-                    out_channel: s1,
-                },
             }
         })
     }

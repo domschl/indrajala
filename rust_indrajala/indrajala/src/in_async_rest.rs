@@ -2,7 +2,7 @@ use crate::indra_config::RestConfig;
 use crate::IndraEvent;
 //་use std::time::Duration;
 
-use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask}; // , IndraTask} //, TaskInit};
+use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
 use tide;
 use tide_rustls::TlsListener;
 
@@ -10,7 +10,7 @@ use tide_rustls::TlsListener;
 pub struct Rest {
     pub config: RestConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
-    pub task: IndraTask,
+    pub sender: async_channel::Sender<IndraEvent>,
 }
 
 impl Rest {
@@ -21,12 +21,7 @@ impl Rest {
         Rest {
             config: config.clone(),
             receiver: r1,
-            task: IndraTask {
-                // name: config.clone().name,
-                // active: config.active,
-                // out_topics: config.clone().out_topics.clone(),
-                out_channel: s1,
-            },
+            sender: s1,
         }
     }
 }

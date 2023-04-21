@@ -6,13 +6,13 @@ use async_std::stream::StreamExt;
 
 use crate::indra_config::MqttConfig;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender, IndraTask};
+use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 #[derive(Clone)]
 pub struct Mqtt {
     pub config: MqttConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
-    pub task: IndraTask,
+    pub sender: async_channel::Sender<IndraEvent>,
 }
 
 impl Mqtt {
@@ -23,12 +23,7 @@ impl Mqtt {
         Mqtt {
             config: config.clone(),
             receiver: r1,
-            task: IndraTask {
-                // name: config.clone().name,
-                // active: config.active,
-                // out_topics: config.clone().out_topics.clone(),
-                out_channel: s1,
-            },
+            sender: s1,
         }
     }
 }
