@@ -108,7 +108,7 @@ impl IndraEvent {
     ) -> IndraEvent {
         let now: DateTime<Utc> = Utc::now();
         //Utc::now();
-        let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+        // let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
         //let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         // println!("{}", iso_string);
         IndraEvent {
@@ -124,7 +124,7 @@ impl IndraEvent {
         }
     }
 
-    fn to_json(&self) -> Result<String> {
+    fn _to_json(&self) -> Result<String> {
         serde_json::to_string(self)
     }
 
@@ -195,7 +195,7 @@ impl IndraEvent {
         false
     }
 
-    pub fn reverse_path(path: &str) -> String {
+    pub fn _reverse_path(path: &str) -> String {
         let mut elements: Vec<&str> = path.split('/').collect();
         elements.reverse();
         elements.join("/")

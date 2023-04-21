@@ -20,9 +20,9 @@ impl DingDong {
             config: config.clone(),
             receiver: r1,
             task: IndraTask {
-                name: config.clone().name,
-                active: config.active,
-                out_topics: config.clone().out_topics.clone(),
+                // name: config.clone().name,
+                // active: config.active,
+                // out_topics: config.clone().out_topics.clone(),
                 out_channel: s1,
             },
         }
