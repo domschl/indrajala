@@ -46,7 +46,7 @@ key = "config/certs/m2max-key.pem"
 out_topics = []
 out_blocks = []
 
-[[SQLx]]
+[[sqlx]]
 name = "SQLx.1"
 capa = ["Receive", "Request"]
 db_type = "SQLite"

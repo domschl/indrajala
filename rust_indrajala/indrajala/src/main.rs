@@ -92,7 +92,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                     if blocked {
                         continue;
                     }
-                    println!("sending route {} to {}", name, ie.domain);
+                    println!("sending route {} to {}", ie.domain, name);
                     let _ = acs.send(ie.clone()).await;
                 }
             }
