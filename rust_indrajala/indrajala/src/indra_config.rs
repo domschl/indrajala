@@ -10,6 +10,7 @@ pub struct IndraConfig {
     pub ding_dong: Option<Vec<DingDongConfig>>,
     pub web: Option<Vec<WebConfig>>,
     pub sqlx: Option<Vec<SQLxConfig>>,
+    pub ws: Option<Vec<WsConfig>>,
 }
 
 /*
@@ -59,6 +60,20 @@ pub struct DingDongConfig {
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct WebConfig {
+    pub name: String,
+    pub active: bool,
+    pub capa: Vec<TaskCapability>,
+    pub address: String,
+    pub url: String,
+    pub ssl: bool,
+    pub cert: String,
+    pub key: String,
+    pub out_topics: Vec<String>,
+    pub out_blocks: Vec<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct WsConfig {
     pub name: String,
     pub active: bool,
     pub capa: Vec<TaskCapability>,
