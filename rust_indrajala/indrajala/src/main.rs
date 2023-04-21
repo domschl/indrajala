@@ -13,15 +13,15 @@ mod ding_dong;
 use ding_dong::DingDong;
 mod in_async_mqtt;
 use in_async_mqtt::Mqtt;
-mod in_async_rest;
-use in_async_rest::Rest;
+mod in_async_web;
+use in_async_web::Web;
 mod in_async_sqlx;
 use in_async_sqlx::SQLx;
 
 #[derive(Clone)]
 enum IndraTask {
     Mqtt(Mqtt),
-    Rest(Rest),
+    Web(Web),
     DingDong(DingDong),
     SQLx(SQLx),
 }
@@ -59,7 +59,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                     acs = st.sender.clone();
                     name = st.config.clone().name;
                 }
-                IndraTask::Rest(st) => {
+                IndraTask::Web(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
@@ -119,10 +119,10 @@ fn main() {
             tsk.push(IndraTask::DingDong(d.clone()));
         }
     }
-    if !indra_config.rest.is_none() {
-        for rs in indra_config.rest.clone().unwrap() {
-            let r = Rest::new(rs.clone());
-            tsk.push(IndraTask::Rest(r.clone()));
+    if !indra_config.web.is_none() {
+        for rs in indra_config.web.clone().unwrap() {
+            let r = Web::new(rs.clone());
+            tsk.push(IndraTask::Web(r.clone()));
         }
     }
     if !indra_config.sqlx.is_none() {
@@ -147,7 +147,7 @@ fn main() {
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                     join_handles.push(task::spawn(st.clone().async_sender()));
                 }
-                IndraTask::Rest(st) => {
+                IndraTask::Web(st) => {
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                     join_handles.push(task::spawn(st.clone().async_sender()));
                 }
