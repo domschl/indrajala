@@ -19,15 +19,7 @@ mod in_async_sqlx;
 use in_async_sqlx::SQLx;
 
 #[derive(Clone)]
-pub struct IndraTask {
-    // name: String,
-    // active: bool,
-    // out_topics: Vec<String>,
-    out_channel: async_channel::Sender<IndraEvent>,
-}
-
-#[derive(Clone)]
-enum IndraSubTask {
+enum IndraTask {
     Mqtt(Mqtt),
     Rest(Rest),
     DingDong(DingDong),
@@ -41,7 +33,7 @@ trait AsyncTaskReceiver {
     async fn async_sender(self);
 }
 
-async fn router(tsk: Vec<IndraSubTask>, receiver: async_channel::Receiver<IndraEvent>) {
+async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEvent>) {
     loop {
         let msg = receiver.recv().await;
         let ie = msg.unwrap();
@@ -53,32 +45,32 @@ async fn router(tsk: Vec<IndraSubTask>, receiver: async_channel::Receiver<IndraE
             let acs: async_channel::Sender<IndraEvent>;
             let name: String;
             match task {
-                IndraSubTask::DingDong(st) => {
+                IndraTask::DingDong(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
-                    acs = st.task.clone().out_channel;
+                    acs = st.sender.clone();
                     name = st.config.clone().name;
                 }
-                IndraSubTask::Mqtt(st) => {
+                IndraTask::Mqtt(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
-                    acs = st.task.clone().out_channel;
+                    acs = st.sender.clone();
                     name = st.config.clone().name;
                 }
-                IndraSubTask::Rest(st) => {
+                IndraTask::Rest(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
-                    acs = st.task.clone().out_channel;
+                    acs = st.sender.clone();
                     name = st.config.clone().name;
                 }
-                IndraSubTask::SQLx(st) => {
+                IndraTask::SQLx(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
-                    acs = st.task.clone().out_channel;
+                    acs = st.sender.clone();
                     name = st.config.clone().name;
                 }
             }
@@ -113,30 +105,30 @@ fn main() {
 
     let indra_config = IndraConfig::new();
 
-    let mut tsk: Vec<IndraSubTask> = vec![];
+    let mut tsk: Vec<IndraTask> = vec![];
 
     if !indra_config.mqtt.is_none() {
         for mq in indra_config.mqtt.clone().unwrap() {
             let m = Mqtt::new(mq.clone());
-            tsk.push(IndraSubTask::Mqtt(m.clone()));
+            tsk.push(IndraTask::Mqtt(m.clone()));
         }
     }
     if !indra_config.ding_dong.is_none() {
         for dd in indra_config.ding_dong.clone().unwrap() {
             let d = DingDong::new(dd.clone());
-            tsk.push(IndraSubTask::DingDong(d.clone()));
+            tsk.push(IndraTask::DingDong(d.clone()));
         }
     }
     if !indra_config.rest.is_none() {
         for rs in indra_config.rest.clone().unwrap() {
             let r = Rest::new(rs.clone());
-            tsk.push(IndraSubTask::Rest(r.clone()));
+            tsk.push(IndraTask::Rest(r.clone()));
         }
     }
     if !indra_config.sqlx.is_none() {
         for sq in indra_config.sqlx.clone().unwrap() {
             let s = SQLx::new(sq.clone());
-            tsk.push(IndraSubTask::SQLx(s.clone()));
+            tsk.push(IndraTask::SQLx(s.clone()));
         }
     }
 
@@ -147,17 +139,21 @@ fn main() {
         join_handles.push(router_task);
         for task in tsk {
             match task {
-                IndraSubTask::DingDong(st) => {
+                IndraTask::DingDong(st) => {
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_sender()));
                 }
-                IndraSubTask::Mqtt(st) => {
+                IndraTask::Mqtt(st) => {
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_sender()));
                 }
-                IndraSubTask::Rest(st) => {
+                IndraTask::Rest(st) => {
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_sender()));
                 }
-                IndraSubTask::SQLx(st) => {
+                IndraTask::SQLx(st) => {
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_sender()));
                 }
             }
         }
