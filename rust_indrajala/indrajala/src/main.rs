@@ -1,3 +1,4 @@
+#![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
 
 use async_channel;
@@ -19,9 +20,9 @@ use in_async_sqlx::SQLx;
 
 #[derive(Clone)]
 pub struct IndraTask {
-    name: String,
-    active: bool,
-    out_topics: Vec<String>,
+    // name: String,
+    // active: bool,
+    // out_topics: Vec<String>,
     out_channel: async_channel::Sender<IndraEvent>,
 }
 

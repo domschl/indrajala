@@ -26,9 +26,9 @@ impl SQLx {
                 receiver: r1,
                 pool: async_init(&mut config).await,
                 task: IndraTask {
-                    name: config.clone().name,
-                    active: config.active,
-                    out_topics: config.clone().out_topics.clone(),
+                    // name: config.clone().name,
+                    // active: config.active,
+                    // out_topics: config.clone().out_topics.clone(),
                     out_channel: s1,
                 },
             }
@@ -153,10 +153,10 @@ impl AsyncTaskReceiver for SQLx {
 }
 
 impl AsyncTaskSender for SQLx {
-    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
+    async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
         loop {
-            let dd: IndraEvent;
-            dd = IndraEvent::new();
+            let _dd: IndraEvent;
+            _dd = IndraEvent::new();
             //dd.data = serde_json(b);
             //println!("SQLx::sender: {:?}", dd);
             async_std::task::sleep(Duration::from_millis(1000)).await;
@@ -168,12 +168,12 @@ impl AsyncTaskSender for SQLx {
 }
 
 //use sqlx::sqlite::SqlitePool;
-use std::env;
+// use std::env;
 
 // Wildcard query on domain:
 
 //#[async_std::main]
-async fn main_searcher() -> Result<(), sqlx::Error> {
+async fn _main_searcher() -> Result<(), sqlx::Error> {
     let db_url = "sqlite://test.db";
     let pool = SqlitePool::connect(db_url).await?;
 

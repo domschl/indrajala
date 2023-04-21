@@ -22,9 +22,9 @@ impl Rest {
             config: config.clone(),
             receiver: r1,
             task: IndraTask {
-                name: config.clone().name,
-                active: config.active,
-                out_topics: config.clone().out_topics.clone(),
+                // name: config.clone().name,
+                // active: config.active,
+                // out_topics: config.clone().out_topics.clone(),
                 out_channel: s1,
             },
         }
@@ -111,27 +111,27 @@ impl AsyncTaskSender for Rest {
                 let st = req.state().clone();
                 let IndraEvent {
                     domain,
-                    from_instance,
-                    from_uuid4,
-                    to_scope,
+                    from_instance: _,
+                    from_uuid4: _,
+                    to_scope: _,
                     time_jd_start,
-                    data_type,
+                    data_type: _,
                     data,
-                    auth_hash,
-                    time_jd_end,
+                    auth_hash: _,
+                    time_jd_end: _,
                 } = req.body_json().await.unwrap();
                 println!("-------------- After post --------------");
                 let ie = {
                     let mut ie = st.ie.clone();
                     ie.domain = domain;
-                    //                    ie.from_instance = from_instance;
-                    //                    ie.from_uuid4 = from_uuid4;
-                    //                    ie.to_scope = to_scope;
-                    //                    ie.time_jd_start = time_jd_start;
-                    //                    ie.data_type = data_type;
+                    ie.from_instance = "indrajala/rest".to_string();
+                    ie.from_uuid4 = "23432234".to_string();
+                    ie.to_scope = "#".to_string();
+                    ie.time_jd_start = time_jd_start;
+                    ie.data_type = "data".to_string();
                     ie.data = data;
-                    //                   ie.auth_hash = auth_hash;
-                    //                    ie.time_jd_end = time_jd_end;
+                    // ie.auth_hash = "".to_string();
+                    // ie.time_jd_end = time_jd_end;
                     ie
                 };
                 println!("SENDING POST: {:?}", ie);
