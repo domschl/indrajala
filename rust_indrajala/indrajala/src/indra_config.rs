@@ -8,7 +8,7 @@ use toml;
 pub struct IndraConfig {
     pub mqtt: Option<Vec<MqttConfig>>,
     pub ding_dong: Option<Vec<DingDongConfig>>,
-    pub rest: Option<Vec<RestConfig>>,
+    pub web: Option<Vec<WebConfig>>,
     pub sqlx: Option<Vec<SQLxConfig>>,
 }
 
@@ -58,7 +58,7 @@ pub struct DingDongConfig {
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct RestConfig {
+pub struct WebConfig {
     pub name: String,
     pub active: bool,
     pub capa: Vec<TaskCapability>,
