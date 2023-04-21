@@ -114,26 +114,26 @@ fn main() {
 
     let mut tsk: Vec<IndraSubTask> = vec![];
 
-    if !indra_config.MQTT.is_none() {
-        for mq in indra_config.MQTT.clone().unwrap() {
+    if !indra_config.mqtt.is_none() {
+        for mq in indra_config.mqtt.clone().unwrap() {
             let m = Mqtt::new(mq.clone());
             tsk.push(IndraSubTask::Mqtt(m.clone()));
         }
     }
-    if !indra_config.DingDong.is_none() {
-        for dd in indra_config.DingDong.clone().unwrap() {
+    if !indra_config.ding_dong.is_none() {
+        for dd in indra_config.ding_dong.clone().unwrap() {
             let d = DingDong::new(dd.clone());
             tsk.push(IndraSubTask::DingDong(d.clone()));
         }
     }
-    if !indra_config.Rest.is_none() {
-        for rs in indra_config.Rest.clone().unwrap() {
+    if !indra_config.rest.is_none() {
+        for rs in indra_config.rest.clone().unwrap() {
             let r = Rest::new(rs.clone());
             tsk.push(IndraSubTask::Rest(r.clone()));
         }
     }
-    if !indra_config.SQLx.is_none() {
-        for sq in indra_config.SQLx.clone().unwrap() {
+    if !indra_config.sqlx.is_none() {
+        for sq in indra_config.sqlx.clone().unwrap() {
             let s = SQLx::new(sq.clone());
             tsk.push(IndraSubTask::SQLx(s.clone()));
         }

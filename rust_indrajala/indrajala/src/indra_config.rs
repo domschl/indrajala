@@ -6,10 +6,10 @@ use toml;
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct IndraConfig {
-    pub MQTT: Option<Vec<MqttConfig>>,
-    pub DingDong: Option<Vec<DingDongConfig>>,
-    pub Rest: Option<Vec<RestConfig>>,
-    pub SQLx: Option<Vec<SQLxConfig>>,
+    pub mqtt: Option<Vec<MqttConfig>>,
+    pub ding_dong: Option<Vec<DingDongConfig>>,
+    pub rest: Option<Vec<RestConfig>>,
+    pub sqlx: Option<Vec<SQLxConfig>>,
 }
 
 /*

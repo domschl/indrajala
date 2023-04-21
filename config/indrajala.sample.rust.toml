@@ -1,7 +1,7 @@
-[[MQTT]]
+[[mqtt]]
 name = "MQTT.1"
 active = true
-capa = ["send", "receive"]
+capa = ["Send", "Receive"]
 host = "nalanda"
 port = 1883
 username = ""
@@ -11,10 +11,10 @@ topics = ["omu/enviro-master/BME280-1/sensor/temperature"]
 out_topics = ["test/#"]
 out_blocks = [""]
 
-[[MQTT]]
+[[mqtt]]
 name = "MQTT.2"
 active = true
-capa = ["send", "receive"]
+capa = ["Send", "Receive"]
 host = "nalanda"
 port = 1883
 username = ""
@@ -24,20 +24,20 @@ topics = ["omu/enviro-master/BME280-1/sensor/temperature"]
 out_topics = ["test/#"]
 out_blocks = [""]
 
-[[DingDong]]
+[[ding_dong]]
 name = "DingDong.1"
 active = true
-capa = ["send", "receive"]
+capa = ["Send", "Receive"]
 timer = 1000
 topic = "Ding"
 message = "Dong"
 out_topics = ["#"]
 out_blocks = []
 
-[[Rest]]
+[[rest]]
 name = "Rest.1"
 active = true
-capa = ["send"]
+capa = ["Send"]
 address = "0.0.0.0:8081"
 url = "/api/v1"
 ssl = true
@@ -48,9 +48,12 @@ out_blocks = []
 
 [[SQLx]]
 name = "SQLx.1"
-capa = ["receive", "request"]
-db_type = "sqlite"
+capa = ["Receive", "Request"]
+db_type = "SQLite"
 active = true
 database_url = "config/db/indrajala.db"
 out_topics = ["#"]
 out_blocks = []
+
+[[kaka]]
+ups = 0
