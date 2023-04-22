@@ -195,9 +195,53 @@ impl IndraEvent {
         false
     }
 
+    pub fn check_route(
+        ie_domain: &String,
+        name: &String,
+        out_topics: &Vec<String>,
+        out_blocks: &Vec<String>,
+    ) -> bool {
+        for topic in out_topics {
+            println!(
+                "router: Task: {} Subs: {} Event.domain: {}",
+                name, topic, ie_domain
+            );
+            if IndraEvent::mqcmp(ie_domain, topic) {
+                let mut blocked = false;
+                for out_block in out_blocks {
+                    if IndraEvent::mqcmp(ie_domain, &out_block) {
+                        println!("router: {} {} {} blocked", name, topic, ie_domain);
+                        blocked = true;
+                    }
+                }
+
+                if blocked {
+                    continue;
+                }
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn _reverse_path(path: &str) -> String {
         let mut elements: Vec<&str> = path.split('/').collect();
         elements.reverse();
         elements.join("/")
+    }
+}
+
+pub fn add(left: usize, right: usize) -> usize {
+    left + right
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works() {
+        let result = add(2, 2);
+        assert_eq!(result, 4);
     }
 }
