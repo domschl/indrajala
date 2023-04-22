@@ -18,7 +18,7 @@ use in_async_web::Web;
 mod in_async_sqlx;
 use in_async_sqlx::SQLx;
 mod in_async_ws;
-use in_async_ws::Ws;
+use in_async_ws::{init_websocket_server, Ws};
 
 #[derive(Clone)]
 enum IndraTask {
@@ -172,6 +172,10 @@ fn main() {
                     join_handles.push(task::spawn(st.clone().async_sender()));
                 }
                 IndraTask::Ws(st) => {
+                    join_handles.push(task::spawn(init_websocket_server(
+                        st.clone().connections,
+                        st.clone().config.address,
+                    )));
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                     join_handles.push(task::spawn(st.clone().async_sender()));
                 }

@@ -124,11 +124,11 @@ impl IndraEvent {
         }
     }
 
-    fn _to_json(&self) -> Result<String> {
+    pub fn to_json(&self) -> Result<String> {
         serde_json::to_string(self)
     }
 
-    fn datetime_to_julian(dt: DateTime<Utc>) -> f64 {
+    pub fn datetime_to_julian(dt: DateTime<Utc>) -> f64 {
         let year = dt.year();
         let month = dt.month() as i32;
         let day = dt.day() as i32;
