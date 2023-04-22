@@ -1,4 +1,4 @@
-use chrono::{DateTime, Datelike, Timelike, Utc};
+use chrono::{DateTime, Datelike, TimeZone, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
@@ -128,7 +128,12 @@ impl IndraEvent {
         serde_json::to_string(self)
     }
 
+    pub fn from_json(text: &String) -> Result<IndraEvent> {
+        serde_json::from_str(text.as_str())
+    }
+
     pub fn datetime_to_julian(dt: DateTime<Utc>) -> f64 {
+        // XXX unchecked copilot mess
         let year = dt.year();
         let month = dt.month() as i32;
         let day = dt.day() as i32;
@@ -146,6 +151,44 @@ impl IndraEvent {
             + dt.timestamp_subsec_micros() as f64 / 86400000000.0;
 
         julian_date
+    }
+
+    pub fn julian_to_datetime(jd: f64) -> DateTime<Utc> {
+        // XXX unchecked copilot mess
+        let jd = jd + 0.5;
+        let z = jd as i64;
+        let f = jd - z as f64;
+        let mut a = z;
+        if z >= 2299161 {
+            let alpha = ((z as f64 - 1867216.25) / 36524.25).floor() as i64;
+            a = z + 1 + alpha - (alpha / 4) as i64;
+        }
+        let b = a + 1524;
+        let c = ((b as f64 - 122.1) / 365.25 as f64).floor() as i64;
+        let d = (365.25 as f64 * c as f64).floor() as i64;
+        let e = ((b - d) as f64 / 30.6001).floor() as i64;
+        let day = b - d - (30.6001 as f64 * e as f64).floor() as i64;
+        let month = if e < 14 { e - 1 } else { e - 13 };
+        let year = if month > 2 { c - 4716 } else { c - 4715 };
+        let hour = (f * 24.0).floor() as u32;
+        let minute = ((f * 24.0 - hour as f64) * 60.0).floor() as u32;
+        let second = (((f * 24.0 - hour as f64) * 60.0 - minute as f64) * 60.0).floor() as u32;
+        let microsecond =
+            (((((f * 24.0 - hour as f64) * 60.0 - minute as f64) * 60.0 - second as f64) * 1000.0)
+                * 1000.0)
+                .floor() as u32;
+        chrono::Utc
+            .with_ymd_and_hms(
+                year as i32,
+                month as u32,
+                day as u32,
+                hour as u32,
+                minute as u32,
+                second as u32,
+            )
+            .unwrap()
+            .with_nanosecond(microsecond * 1_000)
+            .unwrap()
     }
 
     pub fn mqcmp(pub_str: &str, sub: &str) -> bool {
@@ -231,6 +274,7 @@ impl IndraEvent {
     }
 }
 
+/*
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
@@ -245,3 +289,4 @@ mod tests {
         assert_eq!(result, 4);
     }
 }
+*/
