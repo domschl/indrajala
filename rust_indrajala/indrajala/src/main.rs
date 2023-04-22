@@ -4,7 +4,7 @@
 use async_channel;
 use async_std::task;
 
-mod indra_event;
+//mod OLD_indra_event;
 use indra_event::IndraEvent;
 mod indra_config;
 use indra_config::IndraConfig;
@@ -84,27 +84,12 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                     name = st.config.clone().name;
                 }
             }
-
             if act == false {
                 continue;
             }
-            for topic in &ot {
-                println!("router: {} {} {}", name, topic, ie.domain);
-                if IndraEvent::mqcmp(&ie.domain, &topic) {
-                    let mut blocked = false;
-                    for out_block in &ob {
-                        if IndraEvent::mqcmp(&ie.domain, &out_block) {
-                            println!("router: {} {} {} blocked", name, topic, ie.domain);
-                            blocked = true;
-                        }
-                    }
-
-                    if blocked {
-                        continue;
-                    }
-                    println!("sending route {} to {}", ie.domain, name);
-                    let _ = acs.send(ie.clone()).await;
-                }
+            if IndraEvent::check_route(&ie.domain, &name, &ot, &ob) {
+                println!("sending route {} to {}", ie.domain, name);
+                let _ = acs.send(ie.clone()).await;
             }
         }
     }

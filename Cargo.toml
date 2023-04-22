@@ -1,2 +1,6 @@
 [workspace]
-members = ["rust_indrajala/indrajala", "rust_indrajala/plotter"]
+members = [
+    "rust_indrajala/indrajala",
+    "rust_indrajala/plotter",
+    "rust_indrajala/indra_event",
+]
