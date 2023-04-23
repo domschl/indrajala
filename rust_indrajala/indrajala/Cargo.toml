@@ -9,6 +9,7 @@ default-run = "indrajala"
 [dependencies]
 indra_event = { path = "../../rust_indrajala/indra_event" }
 async-std = "*"
+uuid = { version = "*", features = ["v4"] }
 paho-mqtt = "*"
 toml = "*"
 async-channel = "*"

@@ -3,6 +3,7 @@ use paho_mqtt::{AsyncClient, ConnectOptionsBuilder, CreateOptionsBuilder};
 use std::time::Duration;
 //use async_std::task;
 use async_std::stream::StreamExt;
+use uuid::Uuid;
 
 use crate::indra_config::MqttConfig;
 use crate::IndraEvent;
@@ -31,10 +32,10 @@ impl Mqtt {
 impl AsyncTaskSender for Mqtt {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
         let server_uri = format!("tcp://{}:{}", self.config.host, self.config.port);
-
+        let client_id = format!("{}_{}", &self.config.client_id, Uuid::new_v4().to_string());
         let create_opts = CreateOptionsBuilder::new()
             .server_uri(server_uri)
-            .client_id(&self.config.client_id)
+            .client_id(client_id)
             .finalize();
 
         let mut client = AsyncClient::new(create_opts).unwrap_or_else(|err| {
