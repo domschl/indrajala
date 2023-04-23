@@ -2,10 +2,19 @@ use std::sync::Arc;
 use std::thread;
 
 use chrono::{DateTime, Utc};
+use glib;
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Label, ListBox, PolicyType, ScrolledWindow};
+use gtk::{
+    Application, ApplicationWindow, Box, DrawingArea, Label, ListBox, PolicyType, ScrolledWindow,
+};
 use tungstenite::{connect, Message};
 use url::Url;
+
+use plotters::drawing::IntoDrawingArea;
+use plotters::prelude::*;
+use plotters::style::WHITE;
+//{ChartBuilder, IntoDrawingArea, LabelAreaPosition, LineSeries};
+use plotters_cairo::CairoBackend;
 
 use indra_event::IndraEvent;
 
@@ -28,13 +37,39 @@ fn build_ui(app: &Application) {
         .build();
 
     let (sender, receiver) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+    let label = Label::new(Some("Hello World!"));
+
+    let box2: Box = Box::new(gtk::Orientation::Horizontal, 0);
+    let drawing_area = DrawingArea::new(); // builder().build(); // DrawingArea::new();
+    drawing_area.set_content_width(400);
+    drawing_area.set_draw_func(|_, cr, w, h| {
+        let backend = CairoBackend::new(cr, (w as u32, h as u32)).unwrap();
+        let root_area = backend.into_drawing_area();
+        root_area.fill(&WHITE).unwrap();
+
+        let mut ctx = ChartBuilder::on(&root_area)
+            .set_label_area_size(LabelAreaPosition::Left, 40)
+            .set_label_area_size(LabelAreaPosition::Bottom, 40)
+            .caption("Line Plot Demo", ("sans-serif", 40))
+            .build_cartesian_2d(-10..10, 0..100)
+            .unwrap();
+
+        ctx.configure_mesh().draw().unwrap();
+
+        ctx.draw_series(LineSeries::new((-10..=10).map(|x| (x, x * x)), &GREEN))
+            .unwrap();
+    });
+
+    box2.append(&drawing_area);
+    box2.append(&scrolled_window);
+    //box2.append(&label);
 
     let window = ApplicationWindow::builder()
         .application(app)
         .title("My GTK App")
         .default_width(600)
         .default_height(300)
-        .child(&scrolled_window)
+        .child(&box2)
         .build();
 
     thread::spawn(move || {
