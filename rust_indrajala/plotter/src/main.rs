@@ -1,21 +1,18 @@
-//use std::time;
-use chrono::prelude::*;
-use chrono::{DateTime, Utc};
 use std::sync::Arc;
-//use plotters::prelude::*;
-use fragile;
-use glib;
 use std::thread;
-use std::time::Duration;
 
+use chrono::{DateTime, Utc};
+use gtk::prelude::*;
+use gtk::{Application, ApplicationWindow, Label, ListBox, PolicyType, ScrolledWindow};
 use tungstenite::{connect, Message};
 use url::Url;
 
 use indra_event::IndraEvent;
 
-use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Label, ListBox, PolicyType, ScrolledWindow, Text};
-use plotters::prelude::*;
+//use std::time;
+//use chrono::prelude::*;
+//use std::time::Duration;
+//use plotters::prelude::*;
 
 fn build_ui(app: &Application) {
     // Create a window and set the title
@@ -91,12 +88,8 @@ fn build_ui(app: &Application) {
     window.present();
 }
 
-fn indra_receiver() {}
 // Create a websocket connection to a server that sends records
 fn main() {
-    use gtk::prelude::*;
-    use gtk::{glib, Application};
-
     const APP_ID: &str = "org.gtk_rs.HelloWorld1";
 
     // Create a new application

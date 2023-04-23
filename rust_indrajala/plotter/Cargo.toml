@@ -6,14 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-# plotters = "*"
 url = "*"
 chrono = "*"
 tungstenite = "*"
 serde_json = "*"
-fragile = "*"
 indra_event = { path = "../../rust_indrajala/indra_event" }
-gtk = { version = "*", package = "gtk4" }
-glib = "*"
 plotters = "*"
+gtk = { version = "*", package = "gtk4" }
+# glib = "*"
