@@ -11,6 +11,7 @@ chrono = "*"
 tungstenite = "*"
 serde_json = "*"
 indra_event = { path = "../../rust_indrajala/indra_event" }
-plotters = "*"
 gtk = { version = "*", package = "gtk4" }
-# glib = "*"
+glib = "*"
+plotters = { git = "https://github.com/plotters-rs/plotters" }
+plotters-cairo = { git = "https://github.com/plotters-rs/plotters-cairo" }
