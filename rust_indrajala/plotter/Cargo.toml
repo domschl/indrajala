@@ -12,4 +12,8 @@ url = "*"
 chrono = "*"
 tungstenite = "*"
 serde_json = "*"
+fragile = "*"
 indra_event = { path = "../../rust_indrajala/indra_event" }
+gtk = { version = "*", package = "gtk4" }
+glib = "*"
+plotters = "*"
