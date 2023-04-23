@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 url = "*"
 chrono = "*"
+plotters = "*"
 tungstenite = "*"
 serde_json = "*"
 indra_event = { path = "../../rust_indrajala/indra_event" }
