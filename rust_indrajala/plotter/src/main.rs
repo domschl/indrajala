@@ -24,9 +24,11 @@ use indra_event::IndraEvent;
 //use plotters::prelude::*;
 
 fn build_ui(app: &Application) {
+    let mut time_series: Vec<(DateTime<Utc>, f64)> = Vec::new();
     // Create a window and set the title
     enum ChMessage {
         UpdateListBox(String),
+        UpdateGraph(DateTime<Utc>, f64),
     }
     let list_box = ListBox::new();
 
@@ -42,7 +44,7 @@ fn build_ui(app: &Application) {
     let box2: Box = Box::new(gtk::Orientation::Horizontal, 0);
     let drawing_area = DrawingArea::new(); // builder().build(); // DrawingArea::new();
     drawing_area.set_content_width(400);
-    drawing_area.set_draw_func(|_, cr, w, h| {
+    drawing_area.set_draw_func(move |_, cr, w, h| {
         let backend = CairoBackend::new(cr, (w as u32, h as u32)).unwrap();
         let root_area = backend.into_drawing_area();
         root_area.fill(&WHITE).unwrap();
@@ -56,13 +58,22 @@ fn build_ui(app: &Application) {
 
         ctx.configure_mesh().draw().unwrap();
 
-        ctx.draw_series(LineSeries::new((-10..=10).map(|x| (x, x * x)), &GREEN))
-            .unwrap();
+        // plot time_series
+        ctx.draw_series(LineSeries::new(
+            time_series
+                .clone()
+                .iter()
+                .map(|d| (d.0.timestamp() as i32 % 100, d.1 as i32 % 100)),
+            &RED,
+        ))
+        .unwrap();
+        //ctx.draw_series(LineSeries::new((-10..=10).map(|x| (x, x * x)), &GREEN))
+        //    .unwrap();
     });
 
     box2.append(&drawing_area);
     box2.append(&scrolled_window);
-    //box2.append(&label);
+    box2.append(&label);
 
     let window = ApplicationWindow::builder()
         .application(app)
@@ -73,7 +84,7 @@ fn build_ui(app: &Application) {
         .build();
 
     thread::spawn(move || {
-        let mut time_series: Vec<(DateTime<Utc>, f64)> = Vec::new();
+        //let mut time_series_th: Vec<(DateTime<Utc>, f64)> = Vec::new();
 
         let (mut socket, _response) =
             connect(Url::parse("ws://localhost:8082").unwrap()).expect("Should work.");
@@ -98,21 +109,30 @@ fn build_ui(app: &Application) {
                 let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
                 let text: String = ier.data.to_string().replace("\"", "");
                 println!("text: >{}<", text);
+                let value: f64 = text.trim().parse().unwrap();
 
                 Arc::new(&sender)
                     .send(ChMessage::UpdateListBox(text.clone()))
                     .unwrap();
 
-                let value: f64 = text.trim().parse().unwrap();
+                Arc::new(&sender)
+                    .send(ChMessage::UpdateGraph(time, value))
+                    .unwrap();
+
                 println!("Temperature at {}: {}", time, value);
-                time_series.push((time, value));
+                //time_series.push((time, value));
             }
         }
     });
     let listbox_clone = list_box.clone();
+    //let time_series_clone = time_series.clone();
+    let drawing_area_clone = drawing_area.clone();
     receiver.attach(None, move |msg| {
         match msg {
             ChMessage::UpdateListBox(text) => listbox_clone.append(&Label::new(Some(&text))),
+            ChMessage::UpdateGraph(time, value) => {
+                //time_series_clone.push((time.clone(), value.clone()));
+            }
         }
         // Returning false here would close the receiver
         // and have senders fail
