@@ -81,7 +81,7 @@ fn build_ui(app: &Application) {
                 .build_cartesian_2d(min_datetime..max_datetime, min_f64 as f32..max_f64 as f32)
                 .unwrap();
 
-            ctx.configure_mesh().draw().unwrap();
+            ctx.configure_mesh().x_labels(6).draw().unwrap();
             /*
                 ctx.draw_series(LineSeries::new(
                     time_series_lock
