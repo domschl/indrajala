@@ -25,6 +25,10 @@ use indra_event::IndraEvent;
 //use std::time::Duration;
 //use plotters::prelude::*;
 
+fn tconv(t: chrono::DateTime<Utc>) -> chrono::DateTime<Utc> {
+    return t;
+}
+
 fn build_ui(app: &Application) {
     // let init_time_series: Vec<(DateTime<Local>, f64)> = Vec::new();
     let init_time_series: Vec<(DateTime<Utc>, f64)> = Vec::new();
@@ -62,12 +66,12 @@ fn build_ui(app: &Application) {
                 return;
             }
             let (min_datetime, min_f64) = time_series_lock.iter().fold(
-                (time_series_lock[0].0, time_series_lock[0].1),
-                |acc, val| (min(acc.0, val.0), min(acc.1, val.1)),
+                (tconv(time_series_lock[0].0), time_series_lock[0].1),
+                |acc, val| (min(acc.0, tconv(val.0)), min(acc.1, val.1)),
             );
             let (max_datetime, max_f64) = time_series_lock.iter().fold(
-                (time_series_lock[0].0, time_series_lock[0].1),
-                |acc, val| (max(acc.0, val.0), max(acc.1, val.1)),
+                (tconv(time_series_lock[0].0), time_series_lock[0].1),
+                |acc, val| (max(acc.0, tconv(val.0)), max(acc.1, val.1)),
             );
 
             let mut ctx = ChartBuilder::on(&root_area)
@@ -88,7 +92,7 @@ fn build_ui(app: &Application) {
                 .unwrap();
             */
             ctx.draw_series(LineSeries::new(
-                time_series_lock.iter().map(|d| (d.0, d.1 as f32)),
+                time_series_lock.iter().map(|d| (tconv(d.0), d.1 as f32)),
                 &RED,
             ))
             .unwrap();
