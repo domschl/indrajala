@@ -91,7 +91,6 @@ async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: Socke
             //    addr,
             //    msg.to_text().unwrap()
             //);
-            //let peers = peer_map.lock().unwrap();
             let peers = peer_map.read().unwrap();
 
             // We want to broadcast the message to everyone except ourselves.
@@ -113,7 +112,6 @@ async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: Socke
     future::select(broadcast_incoming, receive_from_others).await;
 
     //println!("{} disconnected", &addr);
-    //peer_map.lock().unwrap().remove(&addr);
     peer_map.write().unwrap().remove(&addr);
 }
 
