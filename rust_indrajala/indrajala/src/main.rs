@@ -40,7 +40,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
     loop {
         let msg = receiver.recv().await;
         let ie = msg.unwrap();
-        println!("{} {} {}", ie.time_jd_start, ie.domain, ie.data);
+        //println!("{} {} {}", ie.time_jd_start, ie.domain, ie.data);
         for task in &tsk {
             let ot: Vec<String>;
             let ob: Vec<String>;
@@ -88,7 +88,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                 continue;
             }
             if IndraEvent::check_route(&ie.domain, &name, &ot, &ob) {
-                println!("sending route {} to {}", ie.domain, name);
+                //println!("sending route {} to {}", ie.domain, name);
                 let _ = acs.send(ie.clone()).await;
             }
         }

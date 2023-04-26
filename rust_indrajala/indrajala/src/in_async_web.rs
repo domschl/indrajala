@@ -26,7 +26,7 @@ impl Web {
 
 impl AsyncTaskReceiver for Web {
     async fn async_sender(self) {
-        println!("IndraTask Web::sender");
+        //println!("IndraTask Web::sender");
     }
 }
 
@@ -83,13 +83,13 @@ impl AsyncTaskSender for Web {
                     ie.time_jd_end = time_jd_end;
                     ie
                 };
-                println!("SENDING POST: {:?}", ie);
+                //println!("SENDING POST: {:?}", ie);
                 st.sender.send(ie.clone()).await?;
                 Ok("Indrajala!".to_string())
             });
         app.at(ptsimple)
             .post(|mut req: tide::Request<WebState>| async move {
-                println!("-------------------POST---------------");
+                //println!("-------------------POST---------------");
                 let st = req.state().clone();
                 let IndraEvent {
                     domain,
@@ -102,7 +102,7 @@ impl AsyncTaskSender for Web {
                     auth_hash: _,
                     time_jd_end: _,
                 } = req.body_json().await.unwrap();
-                println!("-------------- After post --------------");
+                //println!("-------------- After post --------------");
                 let ie = {
                     let mut ie = st.ie.clone();
                     ie.domain = domain;
@@ -116,7 +116,7 @@ impl AsyncTaskSender for Web {
                     // ie.time_jd_end = time_jd_end;
                     ie
                 };
-                println!("SENDING POST: {:?}", ie);
+                //println!("SENDING POST: {:?}", ie);
                 st.sender.send(ie.clone()).await?;
                 Ok("Indrajala!".to_string())
             });

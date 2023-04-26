@@ -26,11 +26,11 @@ impl DingDong {
 
 impl AsyncTaskReceiver for DingDong {
     async fn async_sender(self) {
-        println!("IndraTask DingDong::sender");
+        // println!("IndraTask DingDong::sender");
         loop {
-            let msg = self.receiver.recv().await;
+            let _msg = self.receiver.recv().await;
             if self.config.active {
-                println!("DingDong::sender: {:?}", msg);
+                //println!("DingDong::sender: {:?}", msg);
             }
         }
     }

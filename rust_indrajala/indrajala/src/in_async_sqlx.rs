@@ -32,10 +32,7 @@ impl SQLx {
 }
 
 async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
-    // Connect to the database
-    //let pl: Option<SqlitePool> = None;
-    println!("SQLx::init: {:?}", config.database_url.as_str());
-    // Configure the connection options
+    //println!("SQLx::init: {:?}", config.database_url.as_str());
     let fnam = config.database_url.as_str();
     let options = SqliteConnectOptions::new()
         .filename(fnam)
@@ -44,7 +41,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     let pool_res = sqlx::SqlitePool::connect_with(options).await;
     match pool_res {
         Ok(pool_res) => {
-            println!("SQLx::init: Connected to database");
+            //println!("SQLx::init: Connected to database");
             pool = Some(pool_res);
         }
         Err(e) => {
@@ -77,7 +74,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     .await;
     match q_res {
         Ok(_) => {
-            println!("SQLx::init: Table created");
+            // println!("SQLx::init: Table created");
         }
         Err(e) => {
             println!("SQLx::init: Error creating table: {:?}", e);
@@ -98,7 +95,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     .await;
     match q_res2 {
         Ok(_) => {
-            println!("SQLx::init: Indices created");
+            //println!("SQLx::init: Indices created");
         }
         Err(e) => {
             println!("SQLx::init: Error creating indices: {:?}", e);
@@ -114,15 +111,15 @@ impl AsyncTaskReceiver for SQLx {
         if self.config.active == false {
             return;
         }
-        println!("IndraTask SQLx::sender");
+        //println!("IndraTask SQLx::sender");
         let pool = self.pool;
         loop {
             let msg = self.receiver.recv().await.unwrap();
-            println!("received route");
+            //println!("received route");
             if self.config.active {
-                println!("SQLx::sender: {:?}", msg);
+                //println!("SQLx::sender: {:?}", msg);
                 // Insert a new record into the table
-                let rows_affected = sqlx::query(
+                let _rows_affected = sqlx::query(
                         r#"
                             INSERT INTO indra_events (domain, from_instance, from_uuid4, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -141,7 +138,7 @@ impl AsyncTaskReceiver for SQLx {
                     .await.unwrap()
                     .rows_affected();
 
-                println!("Inserted {} row(s)", rows_affected);
+                //println!("Inserted {} row(s)", rows_affected);
             }
         }
     }

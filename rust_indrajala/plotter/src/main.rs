@@ -3,7 +3,7 @@ use partial_min_max::{max, min};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use glib;
 use gtk::prelude::*;
 use gtk::{
@@ -115,7 +115,7 @@ fn build_ui(app: &Application) {
         let shared_time_series = Arc::clone(&time_series);
         move || {
             let (mut socket, _response) =
-                connect(Url::parse("ws://localhost:8082").unwrap()).expect("Should work.");
+                connect(Url::parse("ws://nalanda:8082").unwrap()).expect("Should work.");
             println!("Connected to the server");
 
             //let delta = time::Duration::from_millis(500);
@@ -132,23 +132,25 @@ fn build_ui(app: &Application) {
             while let Ok(msg) = socket.read_message() {
                 // If the message is text, parse it as a record
                 if let Message::Text(text) = msg {
-                    //println!("Received: {}", text);
+                    // println!("Received: {}", text);
                     let ier: IndraEvent = IndraEvent::from_json(&text).unwrap();
-                    let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
-                    let text: String = ier.data.to_string().replace("\"", "");
-                    println!("text: >{}<", text);
-                    let value: f64 = text.trim().parse().unwrap();
-                    let mut time_series_lock = shared_time_series.lock().unwrap();
-                    // time_series_lock.push((time.with_timezone(&Local), value));
-                    time_series_lock.push((time, value));
+                    if ier.domain == "omu/enviro-master/BME280-1/sensor/temperature" {
+                        let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
+                        let text: String = ier.data.to_string().replace("\"", "");
+                        println!("text: >{}<", text);
+                        let value: f64 = text.trim().parse().unwrap();
+                        let mut time_series_lock = shared_time_series.lock().unwrap();
+                        // time_series_lock.push((time.with_timezone(&Local), value));
+                        time_series_lock.push((time, value));
 
-                    Arc::new(&sender)
-                        .send(ChMessage::UpdateListBox(text.clone()))
-                        .unwrap();
+                        Arc::new(&sender)
+                            .send(ChMessage::UpdateListBox(text.clone()))
+                            .unwrap();
 
-                    Arc::new(&sender).send(ChMessage::UpdateGraph()).unwrap();
+                        Arc::new(&sender).send(ChMessage::UpdateGraph()).unwrap();
 
-                    println!("Temperature at {}: {}", time, value);
+                        println!("Temperature at {}: {}", time, value);
+                    }
                 }
             }
         }
