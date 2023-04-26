@@ -240,20 +240,20 @@ impl IndraEvent {
 
     pub fn check_route(
         ie_domain: &String,
-        name: &String,
+        _name: &String,
         out_topics: &Vec<String>,
         out_blocks: &Vec<String>,
     ) -> bool {
         for topic in out_topics {
-            println!(
-                "router: Task: {} Subs: {} Event.domain: {}",
-                name, topic, ie_domain
-            );
+            //println!(
+            //    "router: Task: {} Subs: {} Event.domain: {}",
+            //    _name, topic, ie_domain
+            //);
             if IndraEvent::mqcmp(ie_domain, topic) {
                 let mut blocked = false;
                 for out_block in out_blocks {
                     if IndraEvent::mqcmp(ie_domain, &out_block) {
-                        println!("router: {} {} {} blocked", name, topic, ie_domain);
+                        // println!("router: {} {} {} blocked", name, topic, ie_domain);
                         blocked = true;
                     }
                 }

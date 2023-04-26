@@ -50,7 +50,7 @@ impl Ws {
 
 impl AsyncTaskReceiver for Ws {
     async fn async_sender(self) {
-        println!("IndraTask Ws::sender");
+        //println!("IndraTask Ws::sender");
         loop {
             let msg = self.receiver.recv().await.unwrap();
             let msg_text = msg.to_json().unwrap();
@@ -65,12 +65,12 @@ impl AsyncTaskReceiver for Ws {
 }
 
 async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: SocketAddr) {
-    println!("Incoming TCP connection from: {}", addr);
+    //println!("Incoming TCP connection from: {}", addr);
 
     let ws_stream = async_tungstenite::accept_async(raw_stream)
         .await
         .expect("Error during the websocket handshake occurred");
-    println!("WebSocket connection established: {}", addr);
+    //println!("WebSocket connection established: {}", addr);
 
     // Insert the write part of this peer to the peer map.
     let (tx, rx) = unbounded();
@@ -86,11 +86,11 @@ async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: Socke
             future::ready(!msg.is_close())
         })
         .try_for_each(|msg| {
-            println!(
-                "Received a message from {}: {}",
-                addr,
-                msg.to_text().unwrap()
-            );
+            //println!(
+            //    "Received a message from {}: {}",
+            //    addr,
+            //    msg.to_text().unwrap()
+            //);
             //let peers = peer_map.lock().unwrap();
             let peers = peer_map.read().unwrap();
 
@@ -112,7 +112,7 @@ async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: Socke
     pin_mut!(broadcast_incoming, receive_from_others);
     future::select(broadcast_incoming, receive_from_others).await;
 
-    println!("{} disconnected", &addr);
+    //println!("{} disconnected", &addr);
     //peer_map.lock().unwrap().remove(&addr);
     peer_map.write().unwrap().remove(&addr);
 }
@@ -120,7 +120,7 @@ async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: Socke
 pub async fn init_websocket_server(connections: PeerMap, address: String) {
     let addr = address.as_str();
     let listener = TcpListener::bind(&addr).await.expect("Can't listen");
-    println!("Listening on: {}", addr);
+    //println!("Listening on: {}", addr);
 
     // Let's spawn the handling of each connection in a separate task.
     while let Ok((stream, addr)) = listener.accept().await {
@@ -131,6 +131,6 @@ pub async fn init_websocket_server(connections: PeerMap, address: String) {
 
 impl AsyncTaskSender for Ws {
     async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
-        println!("IndraTask Ws::receiver");
+        //println!("IndraTask Ws::receiver");
     }
 }

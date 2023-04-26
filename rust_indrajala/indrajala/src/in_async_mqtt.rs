@@ -96,9 +96,9 @@ impl AsyncTaskSender for Mqtt {
 
 impl AsyncTaskReceiver for Mqtt {
     async fn async_sender(self) {
-        let msg = self.receiver.recv().await;
+        let _msg = self.receiver.recv().await;
         if self.config.active {
-            println!("MQTT::sender (publisher): {:?}", msg);
+            // println!("MQTT::sender (publisher): {:?}", msg);
         }
     }
 }
