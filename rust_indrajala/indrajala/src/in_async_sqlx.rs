@@ -32,7 +32,6 @@ impl SQLx {
 }
 
 async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
-    //println!("SQLx::init: {:?}", config.database_url.as_str());
     let fnam = config.database_url.as_str();
     let options = SqliteConnectOptions::new()
         .filename(fnam)
