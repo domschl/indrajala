@@ -30,7 +30,7 @@ impl Mqtt {
 }
 
 impl AsyncTaskSender for Mqtt {
-    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         let server_uri = format!("tcp://{}:{}", self.config.host, self.config.port);
         let client_id = format!("{}_{}", &self.config.client_id, Uuid::new_v4().to_string());
         let create_opts = CreateOptionsBuilder::new()
@@ -73,6 +73,7 @@ impl AsyncTaskSender for Mqtt {
                     if self.config.active {
                         let mut dd = IndraEvent::new();
                         dd.domain = topic.to_string();
+                        dd.from_instance = self.config.name.clone();
                         dd.data = serde_json::json!(payload.to_string());
                         sender.send(dd).await.unwrap();
                     }
@@ -95,7 +96,7 @@ impl AsyncTaskSender for Mqtt {
 }
 
 impl AsyncTaskReceiver for Mqtt {
-    async fn async_sender(self) {
+    async fn async_receiver(self) {
         let _msg = self.receiver.recv().await;
         if self.config.active {
             // println!("MQTT::sender (publisher): {:?}", msg);

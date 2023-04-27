@@ -25,7 +25,7 @@ impl DingDong {
 }
 
 impl AsyncTaskReceiver for DingDong {
-    async fn async_sender(self) {
+    async fn async_receiver(self) {
         // println!("IndraTask DingDong::sender");
         loop {
             let _msg = self.receiver.recv().await;
@@ -37,13 +37,14 @@ impl AsyncTaskReceiver for DingDong {
 }
 
 impl AsyncTaskSender for DingDong {
-    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         loop {
             let a = &self.config.topic;
             let b = &self.config.message;
             let mut dd: IndraEvent;
             dd = IndraEvent::new();
             dd.domain = a.to_string();
+            dd.from_instance = self.config.name.to_string();
             dd.data = serde_json::json!(b);
             //dd.data = serde_json(b);
             async_std::task::sleep(Duration::from_millis(self.config.timer)).await;

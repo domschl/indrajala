@@ -49,17 +49,26 @@ impl Ws {
 }
 
 impl AsyncTaskReceiver for Ws {
-    async fn async_sender(self) {
-        //println!("IndraTask Ws::sender");
+    async fn async_receiver(self) {
+        // println!("IndraTask Ws::receiver");
         loop {
             let msg = self.receiver.recv().await.unwrap();
             let msg_text = msg.to_json().unwrap();
             let wmsg = Message::Text(msg_text);
             let conns = self.connections.clone();
             let peers = conns.read().unwrap().clone();
+            /* 
             for recp in peers.iter().map(|(_, ws_sink)| ws_sink) {
                 recp.unbounded_send(wmsg.clone()).unwrap();
             }
+            */
+            for recp_tuple in peers.iter() {
+                let (addr, ws_sink) = recp_tuple;
+                ws_sink.unbounded_send(wmsg.clone()).unwrap();
+                let cur_dt = chrono::Utc::now();
+                println!("{} WS-ROUTE: {} to {} [{}]", cur_dt, msg.domain, addr, msg.data.to_string());
+            }
+
         }
     }
 }
@@ -69,8 +78,9 @@ async fn handle_connection(
     raw_stream: TcpStream,
     addr: SocketAddr,
     sender: async_channel::Sender<IndraEvent>,
+    name: String
 ) {
-    //println!("Incoming TCP connection from: {}", addr);
+    //println!("Incoming TCP connection from: {}, I am {}, sender is {:?}", addr, name, sender);
 
     let ws_stream = async_tungstenite::accept_async(raw_stream)
         .await
@@ -81,48 +91,40 @@ async fn handle_connection(
     let (tx, rx) = unbounded();
     //peer_map.lock().unwrap().insert(addr, tx);
     peer_map.write().unwrap().insert(addr, tx);
+    let p2 = peer_map.read().unwrap().clone();
 
     let (outgoing, incoming) = ws_stream.split();
+    //let sx = sender.clone();
 
     let broadcast_incoming = incoming
-        .try_filter(|msg| {
+        .try_filter( move |msg|  {
             // Broadcasting a Close message from one client
             // will close the other clients.
             future::ready(!msg.is_close())
         })
-        .try_for_each(|msg| {
-            //println!(
-            //    "Received a message from {}: {}",
-            //    addr,
-            //    msg.to_text().unwrap()
-            //);
-            let sx = sender.clone();
+        .try_for_each( move |msg| {
             if let Message::Text(text) = msg.clone() {
-                // println!("Received: {}", text);
-                let iero = IndraEvent::from_json(&text);
-                match iero {
-                    Ok(ie) => {
-                        //println!("Received: {:?}", ie);
-                        let mut ie2 = ie.clone();
-                        ie2.from_instance = format!("ws/{}", addr).to_string();
-                        task::block_on(async { sx.send(ie2).await.unwrap() });
-                    }
-                    Err(e) => {
-                        println!("Error: {:?}", e);
-                    }
+                //println!("Received: {}", text);
+                let mut iero = IndraEvent::from_json(&text).unwrap();
+                task::block_on(async  { 
+                    iero.from_instance = format!("{}/{}", name,  addr).to_string().clone();
+                    //println!("Received->Send: {:?}", iero);
+                    let _res = sender.send(iero.clone()).await.unwrap();
+                    //println!("Send result: {:?} {:?} {:?}", sender, iero, res);
+                 });
+                let peers = p2.clone();
+
+                // We want to broadcast the message to everyone except ourselves.
+                let broadcast_recipients = peers
+                    .iter()
+                    .filter(|(peer_addr, _)| peer_addr != &&addr)
+                    .map(|(_, ws_sink)| ws_sink);
+
+                for recp in broadcast_recipients {
+                    recp.unbounded_send(msg.clone()).unwrap();
+                    let cur_dt = chrono::Utc::now();
+                    println!("{} WS-PEER-ROUTE: {} to {} [{}]", cur_dt, iero.domain, addr, iero.data.to_string());
                 }
-            }
-
-            let peers = peer_map.read().unwrap();
-
-            // We want to broadcast the message to everyone except ourselves.
-            let broadcast_recipients = peers
-                .iter()
-                .filter(|(peer_addr, _)| peer_addr != &&addr)
-                .map(|(_, ws_sink)| ws_sink);
-
-            for recp in broadcast_recipients {
-                recp.unbounded_send(msg.clone()).unwrap();
             }
 
             future::ok(())
@@ -141,6 +143,7 @@ pub async fn init_websocket_server(
     connections: PeerMap,
     address: String,
     sender: async_channel::Sender<IndraEvent>,
+    name: String
 ) {
     let addr = address.as_str();
     let listener = TcpListener::bind(&addr).await.expect("Can't listen");
@@ -153,13 +156,17 @@ pub async fn init_websocket_server(
             stream,
             addr,
             sender.clone(),
+            name.clone()
         ));
     }
     //Ok(())
 }
 
 impl AsyncTaskSender for Ws {
-    async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
-        //println!("IndraTask Ws::receiver");
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
+        println!("IndraTask Ws::sender {:?}", sender);
+        if self.config.active == false {
+            return;
+        }
     }
 }

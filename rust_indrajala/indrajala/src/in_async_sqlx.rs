@@ -37,8 +37,15 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
         .filename(fnam)
         .create_if_missing(true)
         .pragma("journal_mode", "WAL") // alternative: DELETE, TRUNCATE, PERSIST, MEMORY, OFF
+        //  This line sets the page size of the memory to 4096 bytes. This is the size of a single page in the memory.
+        // You can change this if you want to, but please be aware that the page size must be a power of 2.
+        // For example, 1024, 2048, 4096, 8192, 16384, etc.
         .pragma("page_size", "4096")
+        //  This is the number of pages that will be cached in memory. If you have a lot of memory, you can increase 
+        // this number to improve performance. If you have a small amount of memory, you can decrease this number to free up memory.
         .pragma("cache_size", "10000")
+        // This means that the database will be synced to disk after each transaction. If you don't want this, you can set it to off. 
+        // However, please be aware that this will make your database more vulnerable to corruption.
         .pragma("synchronous", "normal") // alternative: OFF, NORMAL, FULL, EXTRA
         .pragma("temp_store", "memory") // alternative: FILE
         .pragma("mmap_size", "1073741824"); // 1Galternative: any positive integer    
@@ -112,7 +119,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
 }
 
 impl AsyncTaskReceiver for SQLx {
-    async fn async_sender(self) {
+    async fn async_receiver(self) {
         if self.config.active == false {
             return;
         }
@@ -150,7 +157,7 @@ impl AsyncTaskReceiver for SQLx {
 }
 
 impl AsyncTaskSender for SQLx {
-    async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
+    async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
         loop {
             let _dd: IndraEvent;
             _dd = IndraEvent::new();

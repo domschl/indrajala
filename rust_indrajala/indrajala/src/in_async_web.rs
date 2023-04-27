@@ -25,7 +25,7 @@ impl Web {
 }
 
 impl AsyncTaskReceiver for Web {
-    async fn async_sender(self) {
+    async fn async_receiver(self) {
         //println!("IndraTask Web::sender");
     }
 }
@@ -46,7 +46,7 @@ impl WebState {
 // curl --cacert ~/Nextcloud/Security/Certs/ca-root.pem  https://pergamon:8081/api/v1/event/full -d '{"domain": "test/ok/XXXXXXXXXXXXXXXX", "from_instance":"world-wide-web", "from_uuid4":"ui324234234234", "to_scope":"to-all-my-friend", "time_start":"2023-04-15T11:28:00CET", "data_type":"test", "data":"lots-of-data", "auth_hash":"XXX", "time_end":"never"}'
 
 impl AsyncTaskSender for Web {
-    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         let astate = WebState::new(sender.clone(), IndraEvent::new());
         let mut app = tide::with_state(astate); //new();
         let mut ie: IndraEvent = IndraEvent::new();

@@ -30,16 +30,20 @@ enum IndraTask {
 }
 
 trait AsyncTaskSender {
-    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>);
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>);
 }
 trait AsyncTaskReceiver {
-    async fn async_sender(self);
+    async fn async_receiver(self);
 }
 
 async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEvent>) {
     loop {
         let msg = receiver.recv().await;
         let ie = msg.unwrap();
+        let mut from_ident = false;
+        if ie.from_instance == "" {
+            println!("ERROR: ignoring {:#?}, from_instance is not set, can't avoid recursion.", ie);
+        }
         //println!("{} {} {}", ie.time_jd_start, ie.domain, ie.data);
         for task in &tsk {
             let ot: Vec<String>;
@@ -87,10 +91,22 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
             if act == false {
                 continue;
             }
+            let name_subs = name.clone() + "/#";
+            if IndraEvent::mqcmp(&ie.from_instance, &name_subs ) || &ie.from_instance == &name {
+                //println!("NOT sending {} to {}, recursion avoidance.", ie.from_instance, name);
+                from_ident = true;
+                continue;
+            } else {
+                //println!("{}, {} no match", ie.from_instance, name_subs);
+            }
             if IndraEvent::check_route(&ie.domain, &name, &ot, &ob) {
-                //println!("sending route {} to {}", ie.domain, name);
+                let cur_dt = chrono::Utc::now();
+                println!("{} ROUTE: {} to {} [{}]", cur_dt, ie.domain, name, ie.data.to_string());
                 let _ = acs.send(ie.clone()).await;
             }
+        }
+        if from_ident == false {
+            println!("ERROR: invalid from_instance in {:#?}, could not identify originating task!", ie);
         }
     }
 }
@@ -141,29 +157,30 @@ fn main() {
         for task in tsk {
             match task {
                 IndraTask::DingDong(st) => {
-                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_sender()));
+                    join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_receiver()));
                 }
                 IndraTask::Mqtt(st) => {
-                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_sender()));
+                    join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_receiver()));
                 }
                 IndraTask::Web(st) => {
-                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_sender()));
+                    join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_receiver()));
                 }
                 IndraTask::SQLx(st) => {
-                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_sender()));
+                    join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_receiver()));
                 }
                 IndraTask::Ws(st) => {
                     join_handles.push(task::spawn(init_websocket_server(
                         st.clone().connections,
                         st.clone().config.address,
-                        st.clone().sender.clone(),
+                        sender.clone(),
+                        st.config.name.clone(),
                     )));
-                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_sender()));
+                    join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_receiver()));
                 }
             }
         }
