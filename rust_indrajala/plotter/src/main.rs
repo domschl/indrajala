@@ -137,6 +137,7 @@ fn build_ui(app: &Application) {
     let host2 = cfg.uris[0].clone();
     let domain_topic2 = cfg.default_domains[0].clone();
     thread::spawn({
+        //websocket_client
         let shared_time_series = Arc::clone(&time_series);
         move || {
             let (mut socket, _response) =
