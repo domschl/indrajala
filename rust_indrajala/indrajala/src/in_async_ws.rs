@@ -64,7 +64,12 @@ impl AsyncTaskReceiver for Ws {
     }
 }
 
-async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: SocketAddr) {
+async fn handle_connection(
+    peer_map: PeerMap,
+    raw_stream: TcpStream,
+    addr: SocketAddr,
+    sender: async_channel::Sender<IndraEvent>,
+) {
     //println!("Incoming TCP connection from: {}", addr);
 
     let ws_stream = async_tungstenite::accept_async(raw_stream)
@@ -91,6 +96,23 @@ async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: Socke
             //    addr,
             //    msg.to_text().unwrap()
             //);
+            let sx = sender.clone();
+            if let Message::Text(text) = msg.clone() {
+                // println!("Received: {}", text);
+                let iero = IndraEvent::from_json(&text);
+                match iero {
+                    Ok(ie) => {
+                        //println!("Received: {:?}", ie);
+                        let mut ie2 = ie.clone();
+                        ie2.from_instance = format!("ws/{}", addr).to_string();
+                        task::block_on(async { sx.send(ie2).await.unwrap() });
+                    }
+                    Err(e) => {
+                        println!("Error: {:?}", e);
+                    }
+                }
+            }
+
             let peers = peer_map.read().unwrap();
 
             // We want to broadcast the message to everyone except ourselves.
@@ -115,14 +137,23 @@ async fn handle_connection(peer_map: PeerMap, raw_stream: TcpStream, addr: Socke
     peer_map.write().unwrap().remove(&addr);
 }
 
-pub async fn init_websocket_server(connections: PeerMap, address: String) {
+pub async fn init_websocket_server(
+    connections: PeerMap,
+    address: String,
+    sender: async_channel::Sender<IndraEvent>,
+) {
     let addr = address.as_str();
     let listener = TcpListener::bind(&addr).await.expect("Can't listen");
     //println!("Listening on: {}", addr);
 
     // Let's spawn the handling of each connection in a separate task.
     while let Ok((stream, addr)) = listener.accept().await {
-        task::spawn(handle_connection(connections.clone(), stream, addr));
+        task::spawn(handle_connection(
+            connections.clone(),
+            stream,
+            addr,
+            sender.clone(),
+        ));
     }
     //Ok(())
 }
