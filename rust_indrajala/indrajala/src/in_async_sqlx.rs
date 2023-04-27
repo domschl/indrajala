@@ -36,7 +36,13 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     let fnam = config.database_url.as_str();
     let options = SqliteConnectOptions::new()
         .filename(fnam)
-        .create_if_missing(true);
+        .create_if_missing(true)
+        .pragma("journal_mode", "WAL") // alternative: DELETE, TRUNCATE, PERSIST, MEMORY, OFF
+        .pragma("page_size", "4096")
+        .pragma("cache_size", "10000")
+        .pragma("synchronous", "normal") // alternative: OFF, NORMAL, FULL, EXTRA
+        .pragma("temp_store", "memory") // alternative: FILE
+        .pragma("mmap_size", "1073741824"); // 1Galternative: any positive integer    
     let mut pool: Option<SqlitePool>;
     let pool_res = sqlx::SqlitePool::connect_with(options).await;
     match pool_res {

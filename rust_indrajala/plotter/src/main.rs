@@ -1,14 +1,16 @@
 //use std::f64::{partial_max, partial_min};
-use partial_min_max::{max, min};
-use std::sync::{Arc, Mutex};
-use std::thread;
-
 use chrono::{DateTime, Utc};
 use glib;
 use gtk::prelude::*;
 use gtk::{
     Application, ApplicationWindow, Box, DrawingArea, Label, ListBox, PolicyType, ScrolledWindow,
 };
+use partial_min_max::{max, min};
+use serde::Deserialize;
+use std::fs;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use toml;
 use tungstenite::{connect, Message};
 use url::Url;
 
@@ -29,7 +31,28 @@ fn tconv(t: chrono::DateTime<Utc>) -> chrono::DateTime<Utc> {
     return t;
 }
 
+#[derive(Deserialize, Clone, Debug)]
+struct Config {
+    uris: Vec<String>,
+    default_domains: Vec<String>,
+}
+
+impl Config {
+    fn new(config_filename: &str) -> Config {
+        let toml_string = fs::read_to_string(config_filename).unwrap();
+        let toml_str = toml_string.as_str();
+
+        let cfg: Config = toml::from_str(toml_str).unwrap();
+        cfg
+    }
+    fn _add_uri(&mut self, uri: String) {
+        self.uris.push(uri);
+    }
+}
+
 fn build_ui(app: &Application) {
+    //println!("build_ui");
+    let cfg: Config = Config::new("plotter.toml");
     // let init_time_series: Vec<(DateTime<Local>, f64)> = Vec::new();
     let init_time_series: Vec<(DateTime<Utc>, f64)> = Vec::new();
     let time_series = Arc::new(Mutex::new(init_time_series));
@@ -111,11 +134,13 @@ fn build_ui(app: &Application) {
         .child(&box2)
         .build();
 
+    let host2 = cfg.uris[0].clone();
+    let domain_topic2 = cfg.default_domains[0].clone();
     thread::spawn({
         let shared_time_series = Arc::clone(&time_series);
         move || {
             let (mut socket, _response) =
-                connect(Url::parse("ws://nalanda:8082").unwrap()).expect("Should work.");
+                connect(Url::parse(host2.as_str()).unwrap()).expect("Should work.");
             println!("Connected to the server");
 
             //let delta = time::Duration::from_millis(500);
@@ -123,8 +148,9 @@ fn build_ui(app: &Application) {
             ie.domain = "$cmd/ws/subs".to_string();
             ie.from_instance = "ws/plotter".to_string();
             ie.data_type = "cmd".to_string();
-            ie.data = serde_json::from_str(r#"{"subs":["omu/enviro-master/BME280-1/sensor/#"]}"#)
-                .unwrap();
+            let s1 = r#"{"subs":[""#.to_string();
+            let s2 = r#""]}"#.to_string();
+            ie.data = serde_json::from_str((s1 + &domain_topic2 + &s2).as_str()).unwrap();
             let ie_txt = ie.to_json().unwrap();
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message");
@@ -134,7 +160,13 @@ fn build_ui(app: &Application) {
                 if let Message::Text(text) = msg {
                     // println!("Received: {}", text);
                     let ier: IndraEvent = IndraEvent::from_json(&text).unwrap();
-                    if ier.domain == "omu/enviro-master/BME280-1/sensor/temperature" {
+                    let mut matched = false;
+                    for domain in cfg.default_domains.iter() {
+                        if IndraEvent::mqcmp(ier.domain.as_str(), domain.as_str()) {
+                            matched = true;
+                        }
+                    }
+                    if matched == true {
                         let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
                         let text: String = ier.data.to_string().replace("\"", "");
                         println!("text: >{}<", text);
@@ -180,10 +212,8 @@ fn main() {
 
     // Create a new application
     let app = Application::builder().application_id(APP_ID).build();
-
     // Connect to "activate" signal of `app`
     app.connect_activate(build_ui);
-
     // Run the application
     app.run();
 }
