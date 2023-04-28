@@ -71,8 +71,11 @@ fn build_ui(app: &Application) {
 
     let (sender, receiver) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
     let label = Label::new(Some("Hello World!"));
+    label.set_width_request(200);
 
-    let box2: Box = Box::new(gtk::Orientation::Horizontal, 0);
+    let box_h: Box = Box::new(gtk::Orientation::Horizontal, 0);
+    let box_v = Box::new(gtk::Orientation::Vertical, 0);
+    box_v.set_width_request(200);
     let drawing_area = DrawingArea::new(); // builder().build(); // DrawingArea::new();
     drawing_area.set_content_width(1000);
     drawing_area.set_draw_func({
@@ -122,16 +125,17 @@ fn build_ui(app: &Application) {
         }
     });
 
-    box2.append(&drawing_area);
-    box2.append(&scrolled_window);
-    box2.append(&label);
+    box_h.append(&box_v);
+    box_h.append(&drawing_area);
+    box_v.append(&label);
+    box_v.append(&scrolled_window);
 
     let window = ApplicationWindow::builder()
         .application(app)
         .title("Indrajala Event Plotter")
         .default_width(1200)
         .default_height(600)
-        .child(&box2)
+        .child(&box_h)
         .build();
 
     let host2 = cfg.uris[0].clone();
