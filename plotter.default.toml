@@ -1,0 +1,3 @@
+uris = ["ws://localhost:8082"]
+default_domains = ["omu/enviro-master/BME280-1/sensor/temperature" ]
+
