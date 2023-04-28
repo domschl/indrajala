@@ -19,6 +19,8 @@ mod in_async_sqlx;
 use in_async_sqlx::SQLx;
 mod in_async_ws;
 use in_async_ws::{init_websocket_server, Ws};
+mod in_async_signal;
+use in_async_signal::Signal;
 
 #[derive(Clone)]
 enum IndraTask {
@@ -27,6 +29,7 @@ enum IndraTask {
     DingDong(DingDong),
     SQLx(SQLx),
     Ws(Ws),
+    Signal(Signal),
 }
 
 trait AsyncTaskSender {
@@ -37,12 +40,16 @@ trait AsyncTaskReceiver {
 }
 
 async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEvent>) {
+    let mut quit_cmd_received: bool = false;
     loop {
         let msg = receiver.recv().await;
         let ie = msg.unwrap();
         let mut from_ident = false;
         if ie.from_instance == "" {
-            println!("ERROR: ignoring {:#?}, from_instance is not set, can't avoid recursion.", ie);
+            println!(
+                "ERROR: ignoring {:#?}, from_instance is not set, can't avoid recursion.",
+                ie
+            );
         }
         //println!("{} {} {}", ie.time_jd_start, ie.domain, ie.data);
         for task in &tsk {
@@ -87,26 +94,51 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                     acs = st.sender.clone();
                     name = st.config.clone().name;
                 }
+                IndraTask::Signal(st) => {
+                    ot = st.config.clone().out_topics;
+                    ob = st.config.clone().out_blocks;
+                    act = st.config.clone().active;
+                    acs = st.sender.clone();
+                    name = st.config.clone().name;
+                }
             }
             if act == false {
                 continue;
             }
             let name_subs = name.clone() + "/#";
-            if IndraEvent::mqcmp(&ie.from_instance, &name_subs ) || &ie.from_instance == &name {
-                //println!("NOT sending {} to {}, recursion avoidance.", ie.from_instance, name);
+            if IndraEvent::mqcmp(&ie.from_instance, &name_subs) || (&ie.from_instance == &name) {
+                if ie.domain != "$cmd/quit" {
+                    //println!("NOT sending {} to {}, recursion avoidance.", ie.from_instance, name);
+                    from_ident = true;
+                    continue;
+                } else {
+                    quit_cmd_received = true;
+                }
                 from_ident = true;
-                continue;
             } else {
                 //println!("{}, {} no match", ie.from_instance, name_subs);
             }
-            if IndraEvent::check_route(&ie.domain, &name, &ot, &ob) {
+            if IndraEvent::check_route(&ie.domain, &name, &ot, &ob) || ie.domain == "$cmd/quit" {
                 let cur_dt = chrono::Utc::now();
-                println!("{} ROUTE: {} to {} [{}]", cur_dt, ie.domain, name, ie.data.to_string());
+                println!(
+                    "{} ROUTE: {} to {} [{}]",
+                    cur_dt,
+                    ie.domain,
+                    name,
+                    ie.data.to_string()
+                );
                 let _ = acs.send(ie.clone()).await;
             }
         }
         if from_ident == false {
-            println!("ERROR: invalid from_instance in {:#?}, could not identify originating task!", ie);
+            println!(
+                "ERROR: invalid from_instance in {:#?}, could not identify originating task!",
+                ie
+            );
+        }
+        if quit_cmd_received == true {
+            println!("Router: QUIT command received, exiting.");
+            break;
         }
     }
 }
@@ -148,6 +180,12 @@ fn main() {
             tsk.push(IndraTask::Ws(w.clone()));
         }
     }
+    if !indra_config.signal.is_none() {
+        for si in indra_config.signal.clone().unwrap() {
+            let si: Signal = Signal::new(si.clone());
+            tsk.push(IndraTask::Signal(si.clone()));
+        }
+    }
 
     let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
     let mut join_handles: Vec<task::JoinHandle<()>> = vec![];
@@ -179,6 +217,10 @@ fn main() {
                         sender.clone(),
                         st.config.name.clone(),
                     )));
+                    join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
+                    join_handles.push(task::spawn(st.clone().async_receiver()));
+                }
+                IndraTask::Signal(st) => {
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
                     join_handles.push(task::spawn(st.clone().async_receiver()));
                 }

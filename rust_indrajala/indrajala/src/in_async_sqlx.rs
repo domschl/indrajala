@@ -41,14 +41,14 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
         // You can change this if you want to, but please be aware that the page size must be a power of 2.
         // For example, 1024, 2048, 4096, 8192, 16384, etc.
         .pragma("page_size", "4096")
-        //  This is the number of pages that will be cached in memory. If you have a lot of memory, you can increase 
+        //  This is the number of pages that will be cached in memory. If you have a lot of memory, you can increase
         // this number to improve performance. If you have a small amount of memory, you can decrease this number to free up memory.
         .pragma("cache_size", "10000")
-        // This means that the database will be synced to disk after each transaction. If you don't want this, you can set it to off. 
+        // This means that the database will be synced to disk after each transaction. If you don't want this, you can set it to off.
         // However, please be aware that this will make your database more vulnerable to corruption.
         .pragma("synchronous", "normal") // alternative: OFF, NORMAL, FULL, EXTRA
         .pragma("temp_store", "memory") // alternative: FILE
-        .pragma("mmap_size", "1073741824"); // 1Galternative: any positive integer    
+        .pragma("mmap_size", "1073741824"); // 1Galternative: any positive integer
     let mut pool: Option<SqlitePool>;
     let pool_res = sqlx::SqlitePool::connect_with(options).await;
     match pool_res {
@@ -119,7 +119,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
 }
 
 impl AsyncTaskReceiver for SQLx {
-    async fn async_receiver(self) {
+    async fn async_receiver(mut self) {
         if self.config.active == false {
             return;
         }
@@ -127,6 +127,16 @@ impl AsyncTaskReceiver for SQLx {
         let pool = self.pool;
         loop {
             let msg = self.receiver.recv().await.unwrap();
+            if msg.domain == "$cmd/quit" {
+                println!("SQLx: Received quit command, quiting receive-loop.");
+                if self.config.active {
+                    let _ret = &pool.unwrap().close().await;
+                    println!("SQLx: Database connection closed.");
+                    self.config.active = false;
+                }
+                break;
+            }
+
             //println!("received route");
             if self.config.active {
                 //println!("SQLx::sender: {:?}", msg);

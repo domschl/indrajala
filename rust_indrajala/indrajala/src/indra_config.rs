@@ -11,6 +11,7 @@ pub struct IndraConfig {
     pub web: Option<Vec<WebConfig>>,
     pub sqlx: Option<Vec<SQLxConfig>>,
     pub ws: Option<Vec<WsConfig>>,
+    pub signal: Option<Vec<SignalConfig>>,
 }
 
 /*
@@ -54,6 +55,15 @@ pub struct DingDongConfig {
     pub timer: u64,
     pub topic: String,
     pub message: String,
+    pub out_topics: Vec<String>,
+    pub out_blocks: Vec<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct SignalConfig {
+    pub name: String,
+    pub active: bool,
+    pub capa: Vec<TaskCapability>,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
 }

@@ -75,7 +75,10 @@ impl AsyncTaskSender for Mqtt {
                         dd.domain = topic.to_string();
                         dd.from_instance = self.config.name.clone();
                         dd.data = serde_json::json!(payload.to_string());
-                        sender.send(dd).await.unwrap();
+                        if sender.send(dd).await.is_err() {
+                            println!("Mqtt: Error sending message to channel, assuming shutdown.");
+                            break;
+                        }
                     }
                 }
                 // println!("{}", msg);
@@ -96,10 +99,17 @@ impl AsyncTaskSender for Mqtt {
 }
 
 impl AsyncTaskReceiver for Mqtt {
-    async fn async_receiver(self) {
-        let _msg = self.receiver.recv().await;
-        if self.config.active {
-            // println!("MQTT::sender (publisher): {:?}", msg);
+    async fn async_receiver(mut self) {
+        loop {
+            let msg = self.receiver.recv().await.unwrap();
+            if msg.domain == "$cmd/quit" {
+                println!("Mqtt: Received quit command, quiting receive-loop.");
+                self.config.active = false;
+                break;
+            }
+            if self.config.active {
+                // println!("MQTT::sender (publisher): {:?}", msg);
+            }
         }
     }
 }

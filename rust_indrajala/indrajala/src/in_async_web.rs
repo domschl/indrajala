@@ -25,8 +25,21 @@ impl Web {
 }
 
 impl AsyncTaskReceiver for Web {
-    async fn async_receiver(self) {
+    async fn async_receiver(mut self) {
         //println!("IndraTask Web::sender");
+        if self.config.active == false {
+            return;
+        }
+        loop {
+            let msg = self.receiver.recv().await.unwrap();
+            if msg.domain == "$cmd/quit" {
+                println!("Web: Received quit command, quiting receive-loop.");
+                if self.config.active {
+                    self.config.active = false;
+                }
+                break;
+            }
+        }
     }
 }
 
