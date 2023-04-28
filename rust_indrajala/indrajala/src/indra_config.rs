@@ -104,11 +104,18 @@ pub enum DbType {
 }
 
 #[derive(Deserialize, Clone, Debug)]
+pub enum DbSync {
+    Sync,
+    Async,
+}
+
+#[derive(Deserialize, Clone, Debug)]
 pub struct SQLxConfig {
     pub name: String,
     pub active: bool,
     pub capa: Vec<TaskCapability>,
     pub db_type: DbType,
+    pub db_sync: DbSync,
     pub database_url: String,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
