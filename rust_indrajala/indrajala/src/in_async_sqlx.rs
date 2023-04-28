@@ -3,7 +3,7 @@ use async_std::task;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::time::Duration;
 
-use crate::indra_config::SQLxConfig;
+use crate::indra_config::{SQLxConfig, DbSync};
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 #[derive(Clone)]
@@ -33,6 +33,15 @@ impl SQLx {
 
 async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     let fnam = config.database_url.as_str();
+    let db_sync: &str;
+    match config.db_sync {
+        DbSync::Sync => {
+            db_sync = "NORMAL";
+        }
+        DbSync::Async => {
+            db_sync = "OFF";
+        }
+    }
     let options = SqliteConnectOptions::new()
         .filename(fnam)
         .create_if_missing(true)
@@ -46,7 +55,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
         .pragma("cache_size", "10000")
         // This means that the database will be synced to disk after each transaction. If you don't want this, you can set it to off.
         // However, please be aware that this will make your database more vulnerable to corruption.
-        .pragma("synchronous", "normal") // alternative: OFF, NORMAL, FULL, EXTRA
+        .pragma("synchronous", db_sync) // alternative: OFF, NORMAL, FULL, EXTRA
         .pragma("temp_store", "memory") // alternative: FILE
         .pragma("mmap_size", "1073741824"); // 1Galternative: any positive integer
     let mut pool: Option<SqlitePool>;
