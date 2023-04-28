@@ -49,15 +49,23 @@ impl Ws {
 }
 
 impl AsyncTaskReceiver for Ws {
-    async fn async_receiver(self) {
+    async fn async_receiver(mut self) {
         // println!("IndraTask Ws::receiver");
         loop {
             let msg = self.receiver.recv().await.unwrap();
+            if msg.domain == "$cmd/quit" {
+                println!("Ws: Received quit command, quiting receive-loop.");
+                if self.config.active {
+                    self.config.active = false;
+                }
+                break;
+            }
+
             let msg_text = msg.to_json().unwrap();
             let wmsg = Message::Text(msg_text);
             let conns = self.connections.clone();
             let peers = conns.read().unwrap().clone();
-            /* 
+            /*
             for recp in peers.iter().map(|(_, ws_sink)| ws_sink) {
                 recp.unbounded_send(wmsg.clone()).unwrap();
             }
@@ -66,9 +74,14 @@ impl AsyncTaskReceiver for Ws {
                 let (addr, ws_sink) = recp_tuple;
                 ws_sink.unbounded_send(wmsg.clone()).unwrap();
                 let cur_dt = chrono::Utc::now();
-                println!("{} WS-ROUTE: {} to {} [{}]", cur_dt, msg.domain, addr, msg.data.to_string());
+                println!(
+                    "{} WS-ROUTE: {} to {} [{}]",
+                    cur_dt,
+                    msg.domain,
+                    addr,
+                    msg.data.to_string()
+                );
             }
-
         }
     }
 }
@@ -78,7 +91,7 @@ async fn handle_connection(
     raw_stream: TcpStream,
     addr: SocketAddr,
     sender: async_channel::Sender<IndraEvent>,
-    name: String
+    name: String,
 ) {
     //println!("Incoming TCP connection from: {}, I am {}, sender is {:?}", addr, name, sender);
 
@@ -97,21 +110,25 @@ async fn handle_connection(
     //let sx = sender.clone();
 
     let broadcast_incoming = incoming
-        .try_filter( move |msg|  {
+        .try_filter(move |msg| {
             // Broadcasting a Close message from one client
             // will close the other clients.
             future::ready(!msg.is_close())
         })
-        .try_for_each( move |msg| {
+        .try_for_each(move |msg| {
             if let Message::Text(text) = msg.clone() {
                 //println!("Received: {}", text);
                 let mut iero = IndraEvent::from_json(&text).unwrap();
-                task::block_on(async  { 
-                    iero.from_instance = format!("{}/{}", name,  addr).to_string().clone();
+                task::block_on(async {
+                    iero.from_instance = format!("{}/{}", name, addr).to_string().clone();
                     //println!("Received->Send: {:?}", iero);
-                    let _res = sender.send(iero.clone()).await.unwrap();
+                    if sender.send(iero.clone()).await.is_err() {
+                        println!("Ws: Error sending message to channel, assuming shutdown.");
+                        return;
+                    }
+                    //let _res = sender.send(iero.clone()).await.unwrap();
                     //println!("Send result: {:?} {:?} {:?}", sender, iero, res);
-                 });
+                });
                 let peers = p2.clone();
 
                 // We want to broadcast the message to everyone except ourselves.
@@ -123,7 +140,13 @@ async fn handle_connection(
                 for recp in broadcast_recipients {
                     recp.unbounded_send(msg.clone()).unwrap();
                     let cur_dt = chrono::Utc::now();
-                    println!("{} WS-PEER-ROUTE: {} to {} [{}]", cur_dt, iero.domain, addr, iero.data.to_string());
+                    println!(
+                        "{} WS-PEER-ROUTE: {} to {} [{}]",
+                        cur_dt,
+                        iero.domain,
+                        addr,
+                        iero.data.to_string()
+                    );
                 }
             }
 
@@ -143,7 +166,7 @@ pub async fn init_websocket_server(
     connections: PeerMap,
     address: String,
     sender: async_channel::Sender<IndraEvent>,
-    name: String
+    name: String,
 ) {
     let addr = address.as_str();
     let listener = TcpListener::bind(&addr).await.expect("Can't listen");
@@ -156,15 +179,14 @@ pub async fn init_websocket_server(
             stream,
             addr,
             sender.clone(),
-            name.clone()
+            name.clone(),
         ));
     }
     //Ok(())
 }
 
 impl AsyncTaskSender for Ws {
-    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
-        println!("IndraTask Ws::sender {:?}", sender);
+    async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
         if self.config.active == false {
             return;
         }

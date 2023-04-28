@@ -22,3 +22,5 @@ tide-rustls = "*"
 sqlx = { version = "*", features = ["runtime-async-std-rustls", "sqlite"] }
 async-tungstenite = { version = "*", features = ["async-tls"] }
 futures = "*"
+signal-hook = "*"
+signal-hook-async-std = "*"

@@ -25,10 +25,16 @@ impl DingDong {
 }
 
 impl AsyncTaskReceiver for DingDong {
-    async fn async_receiver(self) {
+    async fn async_receiver(mut self) {
         // println!("IndraTask DingDong::sender");
         loop {
-            let _msg = self.receiver.recv().await;
+            let msg = self.receiver.recv().await.unwrap();
+            if msg.domain == "$cmd/quit" {
+                println!("ding_dong: Received quit command, quiting receive-loop.");
+                self.config.active = false;
+                break;
+            }
+
             if self.config.active {
                 //println!("DingDong::sender: {:?}", msg);
             }
@@ -49,7 +55,13 @@ impl AsyncTaskSender for DingDong {
             //dd.data = serde_json(b);
             async_std::task::sleep(Duration::from_millis(self.config.timer)).await;
             if self.config.active {
-                sender.send(dd).await.unwrap();
+                if sender.send(dd).await.is_err() {
+                    println!("DingDong: Error sending message to channel, assuming shutdown.");
+                    break;
+                }
+            } else {
+                println!("DingDong: quitting send-loop.");
+                break;
             }
         }
     }
