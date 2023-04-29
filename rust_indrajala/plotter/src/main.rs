@@ -6,6 +6,7 @@ use gtk::{
     Application, ApplicationWindow, Box, DrawingArea, Label, ListBox, PolicyType, ScrolledWindow,
 };
 use partial_min_max::{max, min};
+use std::collections::HashMap;
 use serde::Deserialize;
 use std::fs;
 use std::sync::{Arc, Mutex};
@@ -53,20 +54,34 @@ impl Config {
 fn build_ui(app: &Application) {
     //println!("build_ui");
     let cfg: Config = Config::new("plotter.toml");
-    // let init_time_series: Vec<(DateTime<Local>, f64)> = Vec::new();
-    let init_time_series: Vec<(DateTime<Utc>, f64)> = Vec::new();
+    // let init_time_series: Hashmap<String, Vec<(DateTime<Local>, f64)>> = Hashmap::new();
+    let init_time_series: HashMap<String, Vec<(DateTime<Utc>, f64)>> = HashMap::new();
     let time_series = Arc::new(Mutex::new(init_time_series));
     // Create a window and set the title
     enum ChMessage {
         UpdateListBox(String),
         UpdateGraph(),
     }
-    let list_box = ListBox::new();
 
-    let scrolled_window = ScrolledWindow::builder()
+    let list_box1 = ListBox::new();
+    let scrolled_window1 = ScrolledWindow::builder()
         .hscrollbar_policy(PolicyType::Never) // Disable horizontal scrolling
         .min_content_width(360)
-        .child(&list_box)
+        .min_content_height(200)
+        .child(&list_box1)
+        .build();
+    let list_box2 = ListBox::new();
+    let scrolled_window2 = ScrolledWindow::builder()
+        .hscrollbar_policy(PolicyType::Never) // Disable horizontal scrolling
+        .min_content_width(360)
+        .min_content_height(300)
+        .child(&list_box2)
+        .build();
+    let list_box3 = ListBox::new();
+    let scrolled_window3 = ScrolledWindow::builder()
+        .hscrollbar_policy(PolicyType::Never) // Disable horizontal scrolling
+        .min_content_width(360)
+        .child(&list_box3)
         .build();
 
     let (sender, receiver) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
@@ -78,6 +93,7 @@ fn build_ui(app: &Application) {
     box_v.set_width_request(200);
     let drawing_area = DrawingArea::new(); // builder().build(); // DrawingArea::new();
     drawing_area.set_content_width(1000);
+    let lb2 = list_box2.clone();
     drawing_area.set_draw_func({
         let shared_time = Arc::clone(&time_series);
         move |_, cr, w, h| {
@@ -88,15 +104,33 @@ fn build_ui(app: &Application) {
             // plot time_series
             let time_series_lock = shared_time.lock().unwrap();
 
-            if time_series_lock.len() < 2 {
+            if time_series_lock.len() < 1 {
+                println!("nothing in time_series");
                 return;
             }
-            let (min_datetime, min_f64) = time_series_lock.iter().fold(
-                (tconv(time_series_lock[0].0), time_series_lock[0].1),
+            if lb2.selected_row().is_none() {
+                println!("nothing selected in time_series");
+                return;
+            }
+            let selected_row = lb2.selected_row().unwrap();
+            let selected_row_label = selected_row
+                .child()
+                .unwrap()
+                .downcast::<Label>()
+                .unwrap()
+                .label()
+                .to_string();
+            let data_vec = time_series_lock.get(&selected_row_label).unwrap();
+            if data_vec.len() < 2 {
+                println!("selected {} in time_series contains not yet enough data", selected_row_label);
+                return;
+            }
+            let (min_datetime, min_f64) = data_vec.iter().fold(
+                (tconv(data_vec[0].0), data_vec[0].1),
                 |acc, val| (min(acc.0, tconv(val.0)), min(acc.1, val.1)),
             );
-            let (max_datetime, max_f64) = time_series_lock.iter().fold(
-                (tconv(time_series_lock[0].0), time_series_lock[0].1),
+            let (max_datetime, max_f64) = data_vec.iter().fold(
+                (tconv(data_vec[0].0), data_vec[0].1),
                 |acc, val| (max(acc.0, tconv(val.0)), max(acc.1, val.1)),
             );
 
@@ -118,7 +152,7 @@ fn build_ui(app: &Application) {
                 .unwrap();
             */
             ctx.draw_series(LineSeries::new(
-                time_series_lock.iter().map(|d| (tconv(d.0), d.1 as f32)),
+                data_vec.iter().map(|d| (tconv(d.0), d.1 as f32)),
                 &RED,
             ))
             .unwrap();
@@ -128,7 +162,9 @@ fn build_ui(app: &Application) {
     box_h.append(&box_v);
     box_h.append(&drawing_area);
     box_v.append(&label);
-    box_v.append(&scrolled_window);
+    box_v.append(&scrolled_window1);
+    box_v.append(&scrolled_window2);
+    box_v.append(&scrolled_window3);
 
     let window = ApplicationWindow::builder()
         .application(app)
@@ -144,6 +180,7 @@ fn build_ui(app: &Application) {
         //websocket_client
         let shared_time_series = Arc::clone(&time_series);
         move || {
+            let mut known_topics: Vec<String> = Vec::new();
             let (mut socket, _response) =
                 connect(Url::parse(host2.as_str()).unwrap()).expect("Should work.");
             println!("Connected to the server");
@@ -173,16 +210,28 @@ fn build_ui(app: &Application) {
                     }
                     if matched == true {
                         let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
-                        let text: String = ier.data.to_string().replace("\"", "");
+                        let text: String = ier.domain.to_string(); //.replace("\"", "");
                         println!("text: >{}<", text);
-                        let value: f64 = text.trim().parse().unwrap();
+                        let num_text: String = ier.data.to_string().replace("\"", "");
+                        let value: f64 = num_text.trim().parse().unwrap();
                         let mut time_series_lock = shared_time_series.lock().unwrap();
                         // time_series_lock.push((time.with_timezone(&Local), value));
-                        time_series_lock.push((time, value));
+                        if time_series_lock.contains_key(&text.clone()) {
+                            time_series_lock.get_mut(text.as_str()).unwrap().push((time, value));
+                        } else {
+                            time_series_lock.insert(text.clone(), Vec::new());
+                            time_series_lock.get_mut(text.as_str()).unwrap().push((time, value));
+                        }
+                        //time_series_lock[text.clone().as_str()].push((time, value));
 
-                        Arc::new(&sender)
-                            .send(ChMessage::UpdateListBox(text.clone()))
-                            .unwrap();
+                        // Check if text in known_topics:
+
+                        if !known_topics.contains(&text.clone()) {
+                            known_topics.push(text.clone());
+                            Arc::new(&sender)
+                                .send(ChMessage::UpdateListBox(text.clone()))
+                                .unwrap();
+                        }
 
                         Arc::new(&sender).send(ChMessage::UpdateGraph()).unwrap();
 
@@ -192,12 +241,12 @@ fn build_ui(app: &Application) {
             }
         }
     });
-    let listbox_clone = list_box.clone();
+    let listbox_clone2 = list_box2.clone();
     //let time_series_clone = time_series.clone();
     let drawing_area_clone = drawing_area.clone();
     receiver.attach(None, move |msg| {
         match msg {
-            ChMessage::UpdateListBox(text) => listbox_clone.append(&Label::new(Some(&text))),
+            ChMessage::UpdateListBox(text) => listbox_clone2.append(&Label::new(Some(&text))),
             ChMessage::UpdateGraph() => {
                 drawing_area_clone.queue_draw();
             }
