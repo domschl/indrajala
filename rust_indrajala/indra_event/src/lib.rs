@@ -82,9 +82,16 @@ impl IndraTime {
     }
 }
 */
+
+pub const INDRA_EVENT_VERSION: i64 = 1;
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IndraEvent {
+    pub version: i64,
+    pub seq_no: i64,
     pub domain: String,
+    pub rev_domain: String,
+    pub location: String,
     pub from_instance: String,
     pub from_uuid4: String,
     pub to_scope: String,
@@ -112,7 +119,11 @@ impl IndraEvent {
         //let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         // println!("{}", iso_string);
         IndraEvent {
+            version: INDRA_EVENT_VERSION,
+            seq_no: 0,
             domain: "".to_string(),
+            rev_domain: "".to_string(),
+            location: "".to_string(),
             from_instance: "".to_string(),
             from_uuid4: "".to_string(),
             to_scope: "".to_string(),

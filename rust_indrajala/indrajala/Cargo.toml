@@ -19,7 +19,7 @@ chrono = "*"
 chrono-tz = "*"
 tide = "*"
 tide-rustls = "*"
-sqlx = { version = "*", features = ["runtime-async-std-rustls", "sqlite"] }
+sqlx = { version = "*", features = ["runtime-async-std-rustls", "sqlite", "macros"] }
 async-tungstenite = { version = "*", features = ["async-tls"] }
 futures = "*"
 signal-hook = "*"

@@ -6,8 +6,8 @@ use gtk::{
     Application, ApplicationWindow, Box, DrawingArea, Label, ListBox, PolicyType, ScrolledWindow,
 };
 use partial_min_max::{max, min};
-use std::collections::HashMap;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -122,17 +122,22 @@ fn build_ui(app: &Application) {
                 .to_string();
             let data_vec = time_series_lock.get(&selected_row_label).unwrap();
             if data_vec.len() < 2 {
-                println!("selected {} in time_series contains not yet enough data", selected_row_label);
+                println!(
+                    "selected {} in time_series contains not yet enough data",
+                    selected_row_label
+                );
                 return;
             }
-            let (min_datetime, min_f64) = data_vec.iter().fold(
-                (tconv(data_vec[0].0), data_vec[0].1),
-                |acc, val| (min(acc.0, tconv(val.0)), min(acc.1, val.1)),
-            );
-            let (max_datetime, max_f64) = data_vec.iter().fold(
-                (tconv(data_vec[0].0), data_vec[0].1),
-                |acc, val| (max(acc.0, tconv(val.0)), max(acc.1, val.1)),
-            );
+            let (min_datetime, min_f64) = data_vec
+                .iter()
+                .fold((tconv(data_vec[0].0), data_vec[0].1), |acc, val| {
+                    (min(acc.0, tconv(val.0)), min(acc.1, val.1))
+                });
+            let (max_datetime, max_f64) = data_vec
+                .iter()
+                .fold((tconv(data_vec[0].0), data_vec[0].1), |acc, val| {
+                    (max(acc.0, tconv(val.0)), max(acc.1, val.1))
+                });
 
             let mut ctx = ChartBuilder::on(&root_area)
                 .set_label_area_size(LabelAreaPosition::Left, 40)
@@ -217,10 +222,25 @@ fn build_ui(app: &Application) {
                         let mut time_series_lock = shared_time_series.lock().unwrap();
                         // time_series_lock.push((time.with_timezone(&Local), value));
                         if time_series_lock.contains_key(&text.clone()) {
-                            time_series_lock.get_mut(text.as_str()).unwrap().push((time, value));
+                            time_series_lock
+                                .get_mut(text.as_str())
+                                .unwrap()
+                                .push((time, value));
                         } else {
                             time_series_lock.insert(text.clone(), Vec::new());
-                            time_series_lock.get_mut(text.as_str()).unwrap().push((time, value));
+                            time_series_lock
+                                .get_mut(text.as_str())
+                                .unwrap()
+                                .push((time, value));
+                            // request history
+                            let mut ie: IndraEvent = IndraEvent::new();
+                            ie.domain = "$cmd/db/req/".to_string() + &text.clone();
+                            ie.from_instance = "ws/plotter".to_string();
+                            ie.data_type = "cmd".to_string();
+                            let s1 = r#"{"req":"history"}"#.to_string();
+                            ie.data = serde_json::from_str(s1.as_str()).unwrap();
+                            let ie_txt = ie.to_json().unwrap();
+                            socket.write_message(ie_txt.into()).unwrap();
                         }
                         //time_series_lock[text.clone().as_str()].push((time, value));
 
