@@ -73,7 +73,11 @@ impl AsyncTaskSender for Web {
             .post(|mut req: tide::Request<WebState>| async move {
                 let st = req.state().clone();
                 let IndraEvent {
+                    version,
+                    seq_no,
                     domain,
+                    rev_domain,
+                    location,
                     from_instance,
                     from_uuid4,
                     to_scope,
@@ -85,7 +89,11 @@ impl AsyncTaskSender for Web {
                 } = req.body_json().await.unwrap();
                 let ie = {
                     let mut ie = st.ie.clone();
+                    ie.version = version;
+                    ie.seq_no = seq_no;
                     ie.domain = domain;
+                    ie.rev_domain = rev_domain;
+                    ie.location = location;
                     ie.from_instance = from_instance;
                     ie.from_uuid4 = from_uuid4;
                     ie.to_scope = to_scope;
@@ -105,7 +113,11 @@ impl AsyncTaskSender for Web {
                 //println!("-------------------POST---------------");
                 let st = req.state().clone();
                 let IndraEvent {
+                    version,
+                    seq_no,
                     domain,
+                    rev_domain,
+                    location,
                     from_instance: _,
                     from_uuid4: _,
                     to_scope: _,
@@ -118,7 +130,11 @@ impl AsyncTaskSender for Web {
                 //println!("-------------- After post --------------");
                 let ie = {
                     let mut ie = st.ie.clone();
+                    ie.version = version;
+                    ie.seq_no = seq_no;
                     ie.domain = domain;
+                    ie.rev_domain = rev_domain;
+                    ie.location = location;
                     ie.from_instance = "indrajala/web".to_string();
                     ie.from_uuid4 = "23432234".to_string();
                     ie.to_scope = "#".to_string();
