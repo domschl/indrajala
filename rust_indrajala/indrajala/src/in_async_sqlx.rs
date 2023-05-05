@@ -1,6 +1,6 @@
 use crate::IndraEvent;
 use async_std::task;
-//use chrono::format;
+use chrono::Utc;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::time::Duration;
 //use std::path::Path;
@@ -18,6 +18,7 @@ pub struct SQLx {
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
     pub pool: Option<SqlitePool>,
+    pub r_sender: Option<async_channel::Sender<IndraEvent>>,
 }
 
 //pub const INDRA_EVENT_DB_VERSION: i64 = 1;
@@ -35,6 +36,7 @@ impl SQLx {
                 receiver: r1,
                 sender: s1,
                 pool: pool,
+                r_sender: Default::default(),
             }
         })
     }
@@ -139,7 +141,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
 }
 
 impl AsyncTaskReceiver for SQLx {
-    async fn async_receiver(mut self) {
+    async fn async_receiver(mut self, sender: async_channel::Sender<IndraEvent>) {
         if self.config.active == false {
             return;
         }
@@ -183,10 +185,32 @@ impl AsyncTaskReceiver for SQLx {
                             (time_jd_start, data_f64)
                         })
                         .collect();
-                    debug!("Found {} items: {:?}", res.len(), res);
-                    for row in res {
-                        debug!("Found item: {:?}", row);
+                    info!("Found {} items for {}", res.len(), remainder);
+                    for _row in res.clone() {
+                        // debug!("Found item: {:?}", row);
                     }
+                    let ut_now = Utc::now();
+                    let rmsg = IndraEvent {
+                        domain: msg.from_instance.clone(),
+                        from_instance: self.config.name.clone(),
+                        from_uuid4: msg.from_uuid4.clone(),
+                        to_scope: msg.from_instance.clone(),
+                        time_jd_start: IndraEvent::datetime_to_julian(ut_now),
+                        data_type: "f64".to_string(),
+                        data: serde_json::to_value(res).unwrap(),
+                        auth_hash: Default::default(),
+                        time_jd_end: Default::default(),
+                    };
+                    //if self.r_sender.clone().is_none() {
+                    //    error!("SQLx: Error sending reply-message to channel {}, r_sender NOT AVAILABLE", rmsg.domain);
+                    //    //break;
+                    //} else {
+                    println!("Sending: {}->{}", rmsg.from_instance, rmsg.domain);
+                    if sender.send(rmsg.clone()).await.is_err() {
+                            error!("SQLx: Error sending reply-message to channel {}", rmsg.domain);
+                            //break;
+                        }
+                    //}
                     continue;
                 }
                 warn!("SQLx: Received unknown command: {:?}", msg.domain);
@@ -194,6 +218,11 @@ impl AsyncTaskReceiver for SQLx {
             }
 
             if self.config.active {
+                // ignore Ws* domains
+                if msg.domain.starts_with("Ws") {
+                    warn!("SQLx: Received Ws* domain: {:?}", msg.domain);
+                    continue;
+                }
                 debug!("SQLx::sender: {:?}", msg);
                 // Insert a new record into the table
                 let rows_affected = sqlx::query(
