@@ -79,11 +79,11 @@ impl AsyncTaskReceiver for Ws {
                 let (addr, ws_sink) = recp_tuple;
                 ws_sink.unbounded_send(wmsg.clone()).unwrap();
                 info!(
-                    "WS-ROUTE: from: {} to: {} via {} [{}]",
+                    "WS-ROUTE: from: {} to: {} via {}",
                     msg.from_instance,
                     msg.domain,
                     addr,
-                    msg.data.to_string()
+//                    msg.data.to_string(),
                 );
             }
         }
@@ -142,11 +142,11 @@ async fn handle_connection(
                 for recp in broadcast_recipients {
                     recp.unbounded_send(msg.clone()).unwrap();
                     info!(
-                        "WS-PEER-ROUTE: from: {} to: {} to {} [{}]",
+                        "WS-PEER-ROUTE: from: {} to: {} to {}", // [{}]",
                         iero.from_instance,
                         iero.domain,
                         addr,
-                        iero.data.to_string()
+                        //iero.data.to_string().truncate(16),
                     );
                 }
             }
