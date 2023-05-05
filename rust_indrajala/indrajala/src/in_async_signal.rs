@@ -36,7 +36,7 @@ impl Signal {
 }
 
 impl AsyncTaskReceiver for Signal {
-    async fn async_receiver(self) {
+    async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
         debug!("IndraTask Signal::sender");
         loop {
             let msg = self.receiver.recv().await.unwrap();

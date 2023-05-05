@@ -53,7 +53,7 @@ impl Ws {
 }
 
 impl AsyncTaskReceiver for Ws {
-    async fn async_receiver(mut self) {
+    async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
         debug!("IndraTask Ws::receiver");
         loop {
             let msg = self.receiver.recv().await.unwrap();
@@ -74,13 +74,13 @@ impl AsyncTaskReceiver for Ws {
                 recp.unbounded_send(wmsg.clone()).unwrap();
             }
             */
+            debug!("Ws: Sending msg {}->{} to {} peers.", msg.from_instance, msg.domain, peers.len());
             for recp_tuple in peers.iter() {
                 let (addr, ws_sink) = recp_tuple;
                 ws_sink.unbounded_send(wmsg.clone()).unwrap();
-                let cur_dt = chrono::Utc::now();
                 info!(
-                    "{} WS-ROUTE: {} to {} [{}]",
-                    cur_dt,
+                    "WS-ROUTE: from: {} to: {} via {} [{}]",
+                    msg.from_instance,
                     msg.domain,
                     addr,
                     msg.data.to_string()
@@ -141,10 +141,9 @@ async fn handle_connection(
 
                 for recp in broadcast_recipients {
                     recp.unbounded_send(msg.clone()).unwrap();
-                    let cur_dt = chrono::Utc::now();
                     info!(
-                        "{} WS-PEER-ROUTE: {} to {} [{}]",
-                        cur_dt,
+                        "WS-PEER-ROUTE: from: {} to: {} to {} [{}]",
+                        iero.from_instance,
                         iero.domain,
                         addr,
                         iero.data.to_string()

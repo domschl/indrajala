@@ -103,7 +103,7 @@ impl AsyncTaskSender for Mqtt {
 }
 
 impl AsyncTaskReceiver for Mqtt {
-    async fn async_receiver(mut self) {
+    async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {

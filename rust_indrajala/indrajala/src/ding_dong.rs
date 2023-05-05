@@ -29,7 +29,7 @@ impl DingDong {
 }
 
 impl AsyncTaskReceiver for DingDong {
-    async fn async_receiver(mut self) {
+    async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {
@@ -39,7 +39,7 @@ impl AsyncTaskReceiver for DingDong {
             }
 
             if self.config.active {
-                debug!("DingDong::sender: {:?}", msg);
+                debug!("DingDong::receiver: {:?}", msg);
             }
         }
     }

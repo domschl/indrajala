@@ -39,7 +39,7 @@ trait AsyncTaskSender {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>);
 }
 trait AsyncTaskReceiver {
-    async fn async_receiver(self);
+    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>);
 }
 
 async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEvent>) {
@@ -122,11 +122,17 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                 debug!("{}, {} no match", ie.from_instance, name_subs);
             }
             if IndraEvent::check_route(&ie.domain, &name, &ot, &ob) || ie.domain == "$cmd/quit" {
+                let mut sdata = ie.data.to_string();
+                if sdata.len() > 16 {
+                    sdata.truncate(16);
+                    sdata += "...";
+                }
                 info!(
-                    "ROUTE: {} to {} [{}]",
+                    "ROUTE: from: {} to: {} task {} [{}]",
+                    ie.from_instance,
                     ie.domain,
                     name,
-                    ie.data.to_string()
+                    sdata,
                 );
                 let _ = acs.send(ie.clone()).await;
             }
@@ -149,7 +155,7 @@ fn main() {
 
     let indra_config = IndraConfig::new();
 
-    env_logger::Builder::from_env(Env::default().default_filter_or("indrajala=info")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("indrajala=info")).format_timestamp(Some(env_logger::TimestampPrecision::Millis)).init();
 
     let mut tsk: Vec<IndraTask> = vec![];
 
@@ -199,19 +205,19 @@ fn main() {
             match task {
                 IndraTask::DingDong(st) => {
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_receiver()));
+                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
                 IndraTask::Mqtt(st) => {
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_receiver()));
+                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
                 IndraTask::Web(st) => {
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_receiver()));
+                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
                 IndraTask::SQLx(st) => {
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_receiver()));
+                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
                 IndraTask::Ws(st) => {
                     join_handles.push(task::spawn(init_websocket_server(
@@ -221,11 +227,11 @@ fn main() {
                         st.config.name.clone(),
                     )));
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_receiver()));
+                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
                 IndraTask::Signal(st) => {
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
-                    join_handles.push(task::spawn(st.clone().async_receiver()));
+                    join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
             }
         }
