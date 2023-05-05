@@ -194,7 +194,7 @@ impl AsyncTaskReceiver for SQLx {
                         domain: msg.from_instance.clone(),
                         from_instance: self.config.name.clone(),
                         from_uuid4: msg.from_uuid4.clone(),
-                        to_scope: msg.from_instance.clone(),
+                        to_scope: remainder.to_string().clone(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
                         data_type: "f64".to_string(),
                         data: serde_json::to_value(res).unwrap(),

@@ -208,54 +208,89 @@ fn build_ui(app: &Application) {
                     // println!("Received: {}", text);
                     let ier: IndraEvent = IndraEvent::from_json(&text).unwrap();
                     let mut matched = false;
+                    let mut reply = false;
                     for domain in cfg.default_domains.iter() {
                         if IndraEvent::mqcmp(ier.domain.as_str(), domain.as_str()) {
                             matched = true;
+                            reply = false;
+                        }
+                    }
+                    if matched == false {
+                        let mut st = ier.domain.clone();
+                        st.truncate(2);
+                        if st == "Ws".to_string() {
+                            matched = true;
+                            reply = true;
                         }
                     }
                     if matched == true {
-                        let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
-                        let text: String = ier.domain.to_string(); //.replace("\"", "");
-                        println!("text: >{}<", text);
-                        let num_text: String = ier.data.to_string().replace("\"", "");
-                        let value: f64 = num_text.trim().parse().unwrap();
-                        let mut time_series_lock = shared_time_series.lock().unwrap();
-                        // time_series_lock.push((time.with_timezone(&Local), value));
-                        if time_series_lock.contains_key(&text.clone()) {
-                            time_series_lock
-                                .get_mut(text.as_str())
-                                .unwrap()
-                                .push((time, value));
+                        if reply == false {
+                            let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
+                            let text: String = ier.domain.to_string(); //.replace("\"", "");
+                            println!("text: >{}<", text);
+                            let num_text: String = ier.data.to_string().replace("\"", "");
+                            let value: f64 = num_text.trim().parse().unwrap();
+                            let mut time_series_lock = shared_time_series.lock().unwrap();
+                            // time_series_lock.push((time.with_timezone(&Local), value));
+                            if time_series_lock.contains_key(&text.clone()) {
+                                time_series_lock
+                                    .get_mut(text.as_str())
+                                    .unwrap()
+                                    .push((time, value));
+                            } else {
+                                time_series_lock.insert(text.clone(), Vec::new());
+                                time_series_lock
+                                    .get_mut(text.as_str())
+                                    .unwrap()
+                                    .push((time, value));
+                                // request history
+                                let mut ie: IndraEvent = IndraEvent::new();
+                                ie.domain = "$cmd/db/req/".to_string() + &text.clone();
+                                ie.from_instance = "ws/plotter".to_string();
+                                ie.data_type = "cmd".to_string();
+                                let s1 = r#"{"req":"history"}"#.to_string();
+                                ie.data = serde_json::from_str(s1.as_str()).unwrap();
+                                let ie_txt = ie.to_json().unwrap();
+                                socket.write_message(ie_txt.into()).unwrap();
+                            }
+                                println!("Temperature at {}: {}", time, value);
+                            if !known_topics.contains(&text.clone()) {
+                                known_topics.push(text.clone());
+                                Arc::new(&sender)
+                                    .send(ChMessage::UpdateListBox(text.clone()))
+                                    .unwrap();
+                            }
                         } else {
-                            time_series_lock.insert(text.clone(), Vec::new());
-                            time_series_lock
-                                .get_mut(text.as_str())
-                                .unwrap()
-                                .push((time, value));
-                            // request history
-                            let mut ie: IndraEvent = IndraEvent::new();
-                            ie.domain = "$cmd/db/req/".to_string() + &text.clone();
-                            ie.from_instance = "ws/plotter".to_string();
-                            ie.data_type = "cmd".to_string();
-                            let s1 = r#"{"req":"history"}"#.to_string();
-                            ie.data = serde_json::from_str(s1.as_str()).unwrap();
-                            let ie_txt = ie.to_json().unwrap();
-                            socket.write_message(ie_txt.into()).unwrap();
+                            println!("We got some reply! {} {} for {}", ier.domain, ier.from_instance, ier.to_scope);  
+                            let res: Vec<(f64,f64)>;
+                            let text: String = ier.to_scope.to_string();
+                            res = serde_json::from_str(ier.data.to_string().as_str()).unwrap();
+                            println!("res: {}", res.len());
+                            let mut time_series_lock = shared_time_series.lock().unwrap();
+                            if time_series_lock.contains_key(&text.clone()) {
+                                for r in res.iter() {
+                                    time_series_lock
+                                        .get_mut(text.as_str())
+                                        .unwrap()
+                                        .push((IndraEvent::julian_to_datetime(r.0), r.1));
+
+                                }
+                                // sort array
+                                time_series_lock
+                                    .get_mut(text.as_str())
+                                    .unwrap()
+                                    .sort_by(|a, b| a.0.cmp(&b.0));
+                            } else {
+                                println!("Can't find {}", text.clone());
+                            }
+                            continue;
                         }
                         //time_series_lock[text.clone().as_str()].push((time, value));
 
                         // Check if text in known_topics:
-
-                        if !known_topics.contains(&text.clone()) {
-                            known_topics.push(text.clone());
-                            Arc::new(&sender)
-                                .send(ChMessage::UpdateListBox(text.clone()))
-                                .unwrap();
+                        if matched == true {
+                            Arc::new(&sender).send(ChMessage::UpdateGraph()).unwrap();
                         }
-
-                        Arc::new(&sender).send(ChMessage::UpdateGraph()).unwrap();
-
-                        println!("Temperature at {}: {}", time, value);
                     }
                 }
             }
