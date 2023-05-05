@@ -4,6 +4,9 @@ use std::fs;
 use std::path::Path;
 use toml;
 
+//use env_logger::Env;
+//use log::{debug, error, info, warn};
+
 #[derive(Deserialize, Clone, Debug)]
 pub struct IndraConfig {
     pub mqtt: Option<Vec<MqttConfig>>,

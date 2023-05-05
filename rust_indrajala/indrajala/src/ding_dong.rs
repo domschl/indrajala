@@ -1,6 +1,10 @@
 use crate::IndraEvent;
 use std::time::Duration;
 
+//use env_logger::Env;
+//use log::{debug, error, info, warn};
+use log::{debug, warn};
+
 use crate::indra_config::DingDongConfig; //, IndraTaskConfig};
 use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
 
@@ -26,17 +30,16 @@ impl DingDong {
 
 impl AsyncTaskReceiver for DingDong {
     async fn async_receiver(mut self) {
-        // println!("IndraTask DingDong::sender");
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {
-                println!("ding_dong: Received quit command, quiting receive-loop.");
+                debug!("ding_dong: Received quit command, quiting receive-loop.");
                 self.config.active = false;
                 break;
             }
 
             if self.config.active {
-                //println!("DingDong::sender: {:?}", msg);
+                debug!("DingDong::sender: {:?}", msg);
             }
         }
     }
@@ -56,11 +59,11 @@ impl AsyncTaskSender for DingDong {
             async_std::task::sleep(Duration::from_millis(self.config.timer)).await;
             if self.config.active {
                 if sender.send(dd).await.is_err() {
-                    println!("DingDong: Error sending message to channel, assuming shutdown.");
+                    warn!("DingDong: Error sending message to channel, assuming shutdown.");
                     break;
                 }
             } else {
-                println!("DingDong: quitting send-loop.");
+                debug!("DingDong: quitting send-loop.");
                 break;
             }
         }

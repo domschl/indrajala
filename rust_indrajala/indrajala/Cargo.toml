@@ -24,3 +24,6 @@ async-tungstenite = { version = "*", features = ["async-tls"] }
 futures = "*"
 signal-hook = "*"
 signal-hook-async-std = "*"
+log = "*"
+env_logger = "*"
+

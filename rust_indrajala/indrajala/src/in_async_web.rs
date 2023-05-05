@@ -1,6 +1,11 @@
 use crate::indra_config::WebConfig;
 use crate::IndraEvent;
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
+
+//use env_logger::Env;
+//use log::{debug, error, info, warn};
+use log::{debug};
+
 use tide;
 use tide_rustls::TlsListener;
 
@@ -26,14 +31,14 @@ impl Web {
 
 impl AsyncTaskReceiver for Web {
     async fn async_receiver(mut self) {
-        //println!("IndraTask Web::sender");
+        debug!("IndraTask Web::sender");
         if self.config.active == false {
             return;
         }
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {
-                println!("Web: Received quit command, quiting receive-loop.");
+                debug!("Web: Received quit command, quiting receive-loop.");
                 if self.config.active {
                     self.config.active = false;
                 }
@@ -104,13 +109,12 @@ impl AsyncTaskSender for Web {
                     ie.time_jd_end = time_jd_end;
                     ie
                 };
-                //println!("SENDING POST: {:?}", ie);
+                debug!("SENDING POST: {:?}", ie);
                 st.sender.send(ie.clone()).await?;
                 Ok("Indrajala!".to_string())
             });
         app.at(ptsimple)
             .post(|mut req: tide::Request<WebState>| async move {
-                //println!("-------------------POST---------------");
                 let st = req.state().clone();
                 let IndraEvent {
                     version,
@@ -127,7 +131,6 @@ impl AsyncTaskSender for Web {
                     auth_hash: _,
                     time_jd_end: _,
                 } = req.body_json().await.unwrap();
-                //println!("-------------- After post --------------");
                 let ie = {
                     let mut ie = st.ie.clone();
                     ie.version = version;
@@ -145,7 +148,7 @@ impl AsyncTaskSender for Web {
                     // ie.time_jd_end = time_jd_end;
                     ie
                 };
-                //println!("SENDING POST: {:?}", ie);
+                debug!("SENDING POST: {:?}", ie);
                 st.sender.send(ie.clone()).await?;
                 Ok("Indrajala!".to_string())
             });

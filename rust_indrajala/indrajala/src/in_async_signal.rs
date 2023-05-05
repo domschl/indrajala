@@ -4,6 +4,10 @@ use std::time::Duration;
 use crate::indra_config::SignalConfig; //, IndraTaskConfig};
 use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
 
+//use env_logger::Env;
+//use log::{debug, error, info, warn};
+use log::{debug, info};
+
 //use std::io::Error;
 
 use async_std::prelude::*;
@@ -33,17 +37,17 @@ impl Signal {
 
 impl AsyncTaskReceiver for Signal {
     async fn async_receiver(self) {
-        // println!("IndraTask Signal::sender");
+        debug!("IndraTask Signal::sender");
         loop {
             let msg = self.receiver.recv().await.unwrap();
 
             if msg.domain == "$cmd/quit" {
-                println!("in_async_signal: Received quit command, quiting receive-loop.");
+                debug!("in_async_signal: Received quit command, quiting receive-loop.");
                 self.destruct().await;
                 break;
             }
             if self.config.active {
-                //println!("Signal::sender: {:?}", msg);
+                debug!("Signal::sender: {:?}", msg);
             }
         }
     }
@@ -51,9 +55,9 @@ impl AsyncTaskReceiver for Signal {
 
 impl Signal {
     async fn destruct(self) {
-        println!("Exit in 2 seconds...");
+        info!("Exit in {} milli seconds...", self.config.shutdown_delay_ms);
         async_std::task::sleep(Duration::from_millis(self.config.shutdown_delay_ms)).await;
-        println!("Exit...");
+        info!("Process Exit.");
         std::process::exit(0);
     }
 }
@@ -64,18 +68,18 @@ impl Signal {
         mut signals: Signals,
         sender: async_channel::Sender<IndraEvent>,
     ) {
-        //println!("Signal handler!");
+        debug!("Signal handler started");
         while let Some(signal) = signals.next().await {
-            //println!("SIG EVENT");
+            info!("SIGNAL EVENT");
             match signal {
                 SIGHUP => {
-                    println!("SIGHUP!");
+                    info!("SIGHUP received");
                     // Reload configuration
                     // Reopen the log file
                 }
                 SIGTERM | SIGINT | SIGQUIT => {
                     // Shutdown the system;
-                    //println!("SIGTERM | SIGINT | SIGQUIT!");
+                    info!("SIGTERM | SIGINT | SIGQUIT received");
                     self.config.active = false;
                     let a = "$cmd/quit".to_string();
                     let b = "".to_string();
@@ -100,16 +104,15 @@ impl AsyncTaskSender for Signal {
 
         let signals_task = async_std::task::spawn(self.clone().handle_signals(signals, sender));
 
-        loop {
+        loop {  // XXX remove this loop
             async_std::task::sleep(Duration::from_millis(100)).await;
             if !self.config.active {
-                //println!("XXXX QUIT");
+                debug!("Signal handler not active, quitting sender-loop.");
                 break;
             }
         }
-        //println!("Sig close");
 
-        // Terminate the signal stream.
+        // Terminate the signal stream.  XXX remove.
         handle.close();
         signals_task.await;
 
