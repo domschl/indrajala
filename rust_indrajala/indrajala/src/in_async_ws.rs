@@ -121,11 +121,10 @@ async fn handle_connection(
         })
         .try_for_each(move |msg| {
             if let Message::Text(text) = msg.clone() {
-                debug!("Received: {}", text);
+                //debug!("Received: {}", text);
                 let mut iero = IndraEvent::from_json(&text).unwrap();
                 task::block_on(async {
                     iero.from_instance = format!("{}/{}", name, addr).to_string().clone();
-                    debug!("Received->Send: {:?}", iero);
                     if sender.send(iero.clone()).await.is_err() {
                         error!("Ws: Error sending message to channel, assuming shutdown.");
                         return;

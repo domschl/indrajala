@@ -112,7 +112,7 @@ impl AsyncTaskReceiver for Mqtt {
                 break;
             }
             if self.config.active {
-                debug!("MQTT::sender (publisher): {:?}", msg);
+                debug!("MQTT::sender (publisher): {}", msg.domain);
             }
         }
     }
