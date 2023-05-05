@@ -63,6 +63,7 @@ pub struct DingDongConfig {
 pub struct SignalConfig {
     pub name: String,
     pub active: bool,
+    pub shutdown_delay_ms: u64,
     pub capa: Vec<TaskCapability>,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
