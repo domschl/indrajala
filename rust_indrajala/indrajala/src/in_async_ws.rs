@@ -74,7 +74,12 @@ impl AsyncTaskReceiver for Ws {
                 recp.unbounded_send(wmsg.clone()).unwrap();
             }
             */
-            debug!("Ws: Sending msg {}->{} to {} peers.", msg.from_instance, msg.domain, peers.len());
+            debug!(
+                "Ws: Sending msg {}->{} to {} peers.",
+                msg.from_instance,
+                msg.domain,
+                peers.len()
+            );
             for recp_tuple in peers.iter() {
                 let (addr, ws_sink) = recp_tuple;
                 ws_sink.unbounded_send(wmsg.clone()).unwrap();
@@ -83,7 +88,7 @@ impl AsyncTaskReceiver for Ws {
                     msg.from_instance,
                     msg.domain,
                     addr,
-//                    msg.data.to_string(),
+                    //                    msg.data.to_string(),
                 );
             }
         }
@@ -97,7 +102,10 @@ async fn handle_connection(
     sender: async_channel::Sender<IndraEvent>,
     name: String,
 ) {
-    info!("Incoming TCP connection from: {}, I am {}, sender is {:?}", addr, name, sender);
+    info!(
+        "Incoming TCP connection from: {}, I am {}, sender is {:?}",
+        addr, name, sender
+    );
 
     let ws_stream = async_tungstenite::accept_async(raw_stream)
         .await

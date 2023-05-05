@@ -253,7 +253,7 @@ fn build_ui(app: &Application) {
                                 let ie_txt = ie.to_json().unwrap();
                                 socket.write_message(ie_txt.into()).unwrap();
                             }
-                                println!("Temperature at {}: {}", time, value);
+                            println!("Temperature at {}: {}", time, value);
                             if !known_topics.contains(&text.clone()) {
                                 known_topics.push(text.clone());
                                 Arc::new(&sender)
@@ -261,8 +261,11 @@ fn build_ui(app: &Application) {
                                     .unwrap();
                             }
                         } else {
-                            println!("We got some reply! {} {} for {}", ier.domain, ier.from_instance, ier.to_scope);  
-                            let res: Vec<(f64,f64)>;
+                            println!(
+                                "We got some reply! {} {} for {}",
+                                ier.domain, ier.from_instance, ier.to_scope
+                            );
+                            let res: Vec<(f64, f64)>;
                             let text: String = ier.to_scope.to_string();
                             res = serde_json::from_str(ier.data.to_string().as_str()).unwrap();
                             println!("res: {}", res.len());
@@ -273,7 +276,6 @@ fn build_ui(app: &Application) {
                                         .get_mut(text.as_str())
                                         .unwrap()
                                         .push((IndraEvent::julian_to_datetime(r.0), r.1));
-
                                 }
                                 // sort array
                                 time_series_lock
