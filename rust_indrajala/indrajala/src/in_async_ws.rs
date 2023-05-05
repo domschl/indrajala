@@ -9,6 +9,10 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+//use env_logger::Env;
+//use log::{debug, error, info, warn};
+use log::{debug, error, info, warn};
+
 use futures::prelude::*;
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
@@ -50,11 +54,11 @@ impl Ws {
 
 impl AsyncTaskReceiver for Ws {
     async fn async_receiver(mut self) {
-        // println!("IndraTask Ws::receiver");
+        debug!("IndraTask Ws::receiver");
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {
-                println!("Ws: Received quit command, quiting receive-loop.");
+                debug!("Ws: Received quit command, quiting receive-loop.");
                 if self.config.active {
                     self.config.active = false;
                 }
@@ -74,7 +78,7 @@ impl AsyncTaskReceiver for Ws {
                 let (addr, ws_sink) = recp_tuple;
                 ws_sink.unbounded_send(wmsg.clone()).unwrap();
                 let cur_dt = chrono::Utc::now();
-                println!(
+                info!(
                     "{} WS-ROUTE: {} to {} [{}]",
                     cur_dt,
                     msg.domain,
@@ -93,12 +97,12 @@ async fn handle_connection(
     sender: async_channel::Sender<IndraEvent>,
     name: String,
 ) {
-    //println!("Incoming TCP connection from: {}, I am {}, sender is {:?}", addr, name, sender);
+    info!("Incoming TCP connection from: {}, I am {}, sender is {:?}", addr, name, sender);
 
     let ws_stream = async_tungstenite::accept_async(raw_stream)
         .await
         .expect("Error during the websocket handshake occurred");
-    //println!("WebSocket connection established: {}", addr);
+    debug!("WebSocket connection established: {}", addr);
 
     // Insert the write part of this peer to the peer map.
     let (tx, rx) = unbounded();
@@ -117,17 +121,15 @@ async fn handle_connection(
         })
         .try_for_each(move |msg| {
             if let Message::Text(text) = msg.clone() {
-                //println!("Received: {}", text);
+                debug!("Received: {}", text);
                 let mut iero = IndraEvent::from_json(&text).unwrap();
                 task::block_on(async {
                     iero.from_instance = format!("{}/{}", name, addr).to_string().clone();
-                    //println!("Received->Send: {:?}", iero);
+                    debug!("Received->Send: {:?}", iero);
                     if sender.send(iero.clone()).await.is_err() {
-                        println!("Ws: Error sending message to channel, assuming shutdown.");
+                        error!("Ws: Error sending message to channel, assuming shutdown.");
                         return;
                     }
-                    //let _res = sender.send(iero.clone()).await.unwrap();
-                    //println!("Send result: {:?} {:?} {:?}", sender, iero, res);
                 });
                 let peers = p2.clone();
 
@@ -140,7 +142,7 @@ async fn handle_connection(
                 for recp in broadcast_recipients {
                     recp.unbounded_send(msg.clone()).unwrap();
                     let cur_dt = chrono::Utc::now();
-                    println!(
+                    info!(
                         "{} WS-PEER-ROUTE: {} to {} [{}]",
                         cur_dt,
                         iero.domain,
@@ -158,7 +160,7 @@ async fn handle_connection(
     pin_mut!(broadcast_incoming, receive_from_others);
     future::select(broadcast_incoming, receive_from_others).await;
 
-    //println!("{} disconnected", &addr);
+    warn!("{} disconnected", &addr);
     peer_map.write().unwrap().remove(&addr);
 }
 
@@ -170,7 +172,7 @@ pub async fn init_websocket_server(
 ) {
     let addr = address.as_str();
     let listener = TcpListener::bind(&addr).await.expect("Can't listen");
-    //println!("Listening on: {}", addr);
+    info!("Listening on: {}", addr);
 
     // Let's spawn the handling of each connection in a separate task.
     while let Ok((stream, addr)) = listener.accept().await {

@@ -1,6 +1,9 @@
 #![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
 
+use env_logger::Env;
+use log::{debug, error, info, warn};
+
 use async_channel;
 use async_std::task;
 
@@ -46,12 +49,12 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
         let ie = msg.unwrap();
         let mut from_ident = false;
         if ie.from_instance == "" {
-            println!(
+            error!(
                 "ERROR: ignoring {:#?}, from_instance is not set, can't avoid recursion.",
                 ie
             );
         }
-        //println!("{} {} {}", ie.time_jd_start, ie.domain, ie.data);
+        debug!("IE-Event: {} {} {}", ie.time_jd_start, ie.domain, ie.data);
         for task in &tsk {
             let ot: Vec<String>;
             let ob: Vec<String>;
@@ -108,7 +111,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
             let name_subs = name.clone() + "/#";
             if IndraEvent::mqcmp(&ie.from_instance, &name_subs) || (&ie.from_instance == &name) {
                 if ie.domain != "$cmd/quit" {
-                    //println!("NOT sending {} to {}, recursion avoidance.", ie.from_instance, name);
+                    debug!("NOT sending {} to {}, recursion avoidance.", ie.from_instance, name);
                     from_ident = true;
                     continue;
                 } else {
@@ -116,13 +119,11 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                 }
                 from_ident = true;
             } else {
-                //println!("{}, {} no match", ie.from_instance, name_subs);
+                debug!("{}, {} no match", ie.from_instance, name_subs);
             }
             if IndraEvent::check_route(&ie.domain, &name, &ot, &ob) || ie.domain == "$cmd/quit" {
-                let cur_dt = chrono::Utc::now();
-                println!(
-                    "{} ROUTE: {} to {} [{}]",
-                    cur_dt,
+                info!(
+                    "ROUTE: {} to {} [{}]",
                     ie.domain,
                     name,
                     ie.data.to_string()
@@ -131,13 +132,13 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
             }
         }
         if from_ident == false {
-            println!(
+            error!(
                 "ERROR: invalid from_instance in {:#?}, could not identify originating task!",
                 ie
             );
         }
         if quit_cmd_received == true {
-            println!("Router: QUIT command received, exiting.");
+            warn!("Router: QUIT command received, exiting.");
             break;
         }
     }
@@ -147,6 +148,8 @@ fn main() {
     //let indra_config: IndraConfig = IndraConfig::new();
 
     let indra_config = IndraConfig::new();
+
+    env_logger::Builder::from_env(Env::default().default_filter_or("indrajala=info")).init();
 
     let mut tsk: Vec<IndraTask> = vec![];
 

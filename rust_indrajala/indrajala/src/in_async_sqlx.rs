@@ -5,6 +5,10 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::time::Duration;
 //use std::path::Path;
 
+//use env_logger::Env;
+//use log::{debug, error, info, warn};
+use log::{debug, error, info, warn};
+
 use crate::indra_config::{DbSync, SQLxConfig};
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
@@ -50,7 +54,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
         }
     }
     let options = SqliteConnectOptions::new()
-        .filename(fnam)
+        .filename(fnam.clone())
         .create_if_missing(true)
         .pragma("journal_mode", "WAL") // alternative: DELETE, TRUNCATE, PERSIST, MEMORY, OFF
         //  This line sets the page size of the memory to 4096 bytes. This is the size of a single page in the memory.
@@ -69,11 +73,11 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     let pool_res = sqlx::SqlitePool::connect_with(options).await;
     match pool_res {
         Ok(pool_res) => {
-            //println!("SQLx::init: Connected to database");
+            info!("SQLx::init: Connected to database {}", fnam.clone());
             pool = Some(pool_res);
         }
         Err(e) => {
-            println!("SQLx::init: Error connecting to database: {:?}", e);
+            error!("SQLx::init: Error connecting to database {}: {:?}", fnam.clone(), e);
             config.active = false;
             pool = None;
             return pool;
@@ -102,10 +106,10 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     .await;
     match q_res {
         Ok(_) => {
-            // println!("SQLx::init: Table created");
+            debug!("SQLx::init: Table created");
         }
         Err(e) => {
-            println!("SQLx::init: Error creating table: {:?}", e);
+            error!("SQLx::init: Error creating table: {:?}", e);
             config.active = false;
             pool = None;
         }
@@ -123,10 +127,10 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     .await;
     match q_res2 {
         Ok(_) => {
-            //println!("SQLx::init: Indices created");
+            debug!("SQLx::init: Indices created");
         }
         Err(e) => {
-            println!("SQLx::init: Error creating indices: {:?}", e);
+            error!("SQLx::init: Error creating indices: {:?}", e);
             config.active = false;
             pool = None;
         }
@@ -139,15 +143,15 @@ impl AsyncTaskReceiver for SQLx {
         if self.config.active == false {
             return;
         }
-        //println!("IndraTask SQLx::sender");
+        debug!("IndraTask SQLx::sender");
         let pool = self.pool;
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {
-                println!("SQLx: Received quit command, quiting receive-loop.");
+                debug!("SQLx: Received quit command, quiting receive-loop.");
                 if self.config.active {
                     let _ret = &pool.unwrap().close().await;
-                    println!("SQLx: Database connection closed.");
+                    info!("SQLx: Database connection closed.");
                     self.config.active = false;
                 }
                 break;
@@ -155,7 +159,7 @@ impl AsyncTaskReceiver for SQLx {
             if msg.domain.starts_with("$cmd/") {
                 if msg.domain.starts_with("$cmd/db/req/") {
                     let remainder = &msg.domain[12..];
-                    println!(
+                    debug!(
                         "SQLx: Received db/req command from {} search for: {}",
                         msg.from_instance, remainder
                     );
@@ -167,7 +171,7 @@ impl AsyncTaskReceiver for SQLx {
                     .fetch_all(&pool)
                     .await
                     .unwrap();
-                    println!("Found {} items", rows.len());
+                    debug!("Found {} items", rows.len());
                     let res: Vec<(f64, f64)> = rows
                         .iter()
                         .map(|row| {
@@ -179,21 +183,20 @@ impl AsyncTaskReceiver for SQLx {
                             (time_jd_start, data_f64)
                         })
                         .collect();
-                    println!("Found {} items: {:?}", res.len(), res);
+                    debug!("Found {} items: {:?}", res.len(), res);
                     for row in res {
-                        println!("Found item: {:?}", row);
+                        debug!("Found item: {:?}", row);
                     }
                     continue;
                 }
-                println!("SQLx: Received unknown command: {:?}", msg.domain);
+                warn!("SQLx: Received unknown command: {:?}", msg.domain);
                 continue;
             }
 
-            //println!("received route");
             if self.config.active {
-                //println!("SQLx::sender: {:?}", msg);
+                debug!("SQLx::sender: {:?}", msg);
                 // Insert a new record into the table
-                let _rows_affected = sqlx::query(
+                let rows_affected = sqlx::query(
                         r#"
                             INSERT INTO indra_events (domain, from_instance, from_uuid4, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -212,7 +215,7 @@ impl AsyncTaskReceiver for SQLx {
                     .await.unwrap()
                     .rows_affected();
 
-                //println!("Inserted {} row(s)", rows_affected);
+                debug!("Inserted {} row(s)", rows_affected);
             }
         }
     }
@@ -223,8 +226,6 @@ impl AsyncTaskSender for SQLx {
         loop {
             let _dd: IndraEvent;
             _dd = IndraEvent::new();
-            //dd.data = serde_json(b);
-            //println!("SQLx::sender: {:?}", dd);
             async_std::task::sleep(Duration::from_millis(1000)).await;
             if self.config.active {
                 //sender.send(dd).await.unwrap();

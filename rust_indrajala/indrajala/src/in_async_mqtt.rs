@@ -5,6 +5,10 @@ use std::time::Duration;
 use async_std::stream::StreamExt;
 use uuid::Uuid;
 
+//use env_logger::Env;
+//use log::{debug, error, info, warn};
+use log::{debug, error, warn};
+
 use crate::indra_config::MqttConfig;
 use crate::IndraEvent;
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
@@ -39,8 +43,8 @@ impl AsyncTaskSender for Mqtt {
             .finalize();
 
         let mut client = AsyncClient::new(create_opts).unwrap_or_else(|err| {
-            println!("Error creating the client: {:?}", err);
-            std::process::exit(1);
+            error!("Error creating the MQTT client: {:?}", err);
+            std::process::exit(1);  // XXX exit really?
         });
 
         let mut strm = client.get_stream(25);
@@ -50,8 +54,8 @@ impl AsyncTaskSender for Mqtt {
             .finalize();
 
         client.connect(conn_opts).await.unwrap_or_else(|err| {
-            println!("Error connecting: {:?}", err);
-            std::process::exit(1);
+            error!("Error connecting: {:?}", err);
+            std::process::exit(1);  // XXX exit really?
         });
         let qos = vec![0; self.config.topics.len()];
         client
@@ -81,12 +85,12 @@ impl AsyncTaskSender for Mqtt {
                         }
                     }
                 }
-                // println!("{}", msg);
+                debug!("MQTT message: {}", msg);
             } else {
                 // A "None" means we were disconnected. Try to reconnect...
-                println!("Lost connection. Attempting reconnect.");
+                warn!("MQTT: Lost connection. Attempting reconnect.");
                 while let Err(err) = client.reconnect().await {
-                    println!("Error reconnecting: {}", err);
+                    warn!("MQTT Error reconnecting: {}", err);
                     // For tokio use: tokio::time::delay_for()
                     async_std::task::sleep(Duration::from_millis(1000)).await;
                 }
@@ -103,12 +107,12 @@ impl AsyncTaskReceiver for Mqtt {
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {
-                println!("Mqtt: Received quit command, quiting receive-loop.");
+                debug!("Mqtt: Received quit command, quiting receive-loop.");
                 self.config.active = false;
                 break;
             }
             if self.config.active {
-                // println!("MQTT::sender (publisher): {:?}", msg);
+                debug!("MQTT::sender (publisher): {:?}", msg);
             }
         }
     }
