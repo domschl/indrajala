@@ -3,7 +3,7 @@ use async_std::task;
 //use chrono::format;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::time::Duration;
-use std::path::Path;
+//use std::path::Path;
 
 use crate::indra_config::{DbSync, SQLxConfig};
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
@@ -14,10 +14,9 @@ pub struct SQLx {
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
     pub pool: Option<SqlitePool>,
-    pub seq_max: i64,
 }
 
-pub const INDRA_EVENT_DB_VERSION: i64 = 1;
+//pub const INDRA_EVENT_DB_VERSION: i64 = 1;
 
 impl SQLx {
     pub fn new(mut config: SQLxConfig) -> Self {
@@ -26,30 +25,19 @@ impl SQLx {
         (s1, r1) = async_channel::unbounded();
 
         task::block_on(async {
-            let (pool, seq_max )= async_init(&mut config).await;
+            let pool= async_init(&mut config).await;
             SQLx {
                 config: config.clone(),
                 receiver: r1,
                 sender: s1,
                 pool: pool,
-                seq_max: seq_max,
             }
         })
     }
 }
 
-async fn check_migration(config: &mut SQLxConfig) -> bool {
-    // Check if migration is needed: does a file named indrajala.db exist?
-    if Path::new("config/db/indrajala.db").exists() {
-        println!("Migration needed");
-        return false;
-    }
-    return false;
-}
-
-async fn async_init(config: &mut SQLxConfig) -> (Option<SqlitePool>, i64) {
-    let ver_str = format!("{}", INDRA_EVENT_DB_VERSION);
-    let fnam = config.database_url.replace("{version}", ver_str.as_str());
+async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
+    let fnam = config.database_url.clone();
     let db_sync: &str;
 
 
@@ -60,10 +48,6 @@ async fn async_init(config: &mut SQLxConfig) -> (Option<SqlitePool>, i64) {
         DbSync::Async => {
             db_sync = "OFF";
         }
-    }
-    if !check_migration(config).await {
-        config.active = false;
-        return (None, 0);
     }
     let options = SqliteConnectOptions::new()
         .filename(fnam)
@@ -92,7 +76,7 @@ async fn async_init(config: &mut SQLxConfig) -> (Option<SqlitePool>, i64) {
             println!("SQLx::init: Error connecting to database: {:?}", e);
             config.active = false;
             pool = None;
-            return (pool, 0);
+            return pool;
         }
     }
     // let pool = self.pool.clone().unwrap();
@@ -102,11 +86,7 @@ async fn async_init(config: &mut SQLxConfig) -> (Option<SqlitePool>, i64) {
         r#"
                     CREATE TABLE IF NOT EXISTS indra_events (
                         id INTEGER PRIMARY KEY,
-                        version INTEGER NOT NULL,
-                        seq_no INTEGER NOT NULL UNIQUE,
                         domain TEXT NOT NULL,
-                        rev_domain TEXT NOT NULL,
-                        location TEXT NOT NULL,
                         from_instance TEXT NOT NULL,
                         from_uuid4 UUID NOT NULL,
                         to_scope TEXT NOT NULL,
@@ -133,10 +113,7 @@ async fn async_init(config: &mut SQLxConfig) -> (Option<SqlitePool>, i64) {
 
     let q_res2 = sqlx::query(
         r#"
-                    CREATE INDEX IF NOT EXISTS indra_events_seq_no ON indra_events (seq_no);
                     CREATE INDEX IF NOT EXISTS indra_events_domain ON indra_events (domain);
-                    CREATE INDEX IF NOT EXISTS indra_events_rev_domain ON indra_events (rev_domain);
-                    CREATE INDEX IF NOT EXISTS indra_events_location ON indra_events (location);
                     CREATE INDEX IF NOT EXISTS indra_events_time_start ON indra_events (time_jd_start);
                     CREATE INDEX IF NOT EXISTS indra_events_data_type ON indra_events (data_type);
                     CREATE INDEX IF NOT EXISTS indra_events_time_end ON indra_events (time_jd_end);
@@ -154,12 +131,7 @@ async fn async_init(config: &mut SQLxConfig) -> (Option<SqlitePool>, i64) {
             pool = None;
         }
     }
-    let pool2 = pool.clone().unwrap();
-    let seq_max= sqlx::query_scalar("SELECT MAX(seq_no) FROM indra_events")
-        .fetch_one(&pool2)
-        .await
-        .unwrap_or(0);
-    return (pool, seq_max);
+    return pool;
 }
 
 impl AsyncTaskReceiver for SQLx {

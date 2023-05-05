@@ -52,7 +52,7 @@ impl AsyncTaskReceiver for Signal {
 impl Signal {
     async fn destruct(self) {
         println!("Exit in 2 seconds...");
-        async_std::task::sleep(Duration::from_millis(2000)).await;
+        async_std::task::sleep(Duration::from_millis(self.config.shutdown_delay_ms)).await;
         println!("Exit...");
         std::process::exit(0);
     }
@@ -64,9 +64,9 @@ impl Signal {
         mut signals: Signals,
         sender: async_channel::Sender<IndraEvent>,
     ) {
-        println!("Signal handler!");
+        //println!("Signal handler!");
         while let Some(signal) = signals.next().await {
-            println!("SIG EVENT");
+            //println!("SIG EVENT");
             match signal {
                 SIGHUP => {
                     println!("SIGHUP!");
@@ -75,7 +75,7 @@ impl Signal {
                 }
                 SIGTERM | SIGINT | SIGQUIT => {
                     // Shutdown the system;
-                    println!("SIGTERM | SIGINT | SIGQUIT!");
+                    //println!("SIGTERM | SIGINT | SIGQUIT!");
                     self.config.active = false;
                     let a = "$cmd/quit".to_string();
                     let b = "".to_string();
@@ -103,11 +103,11 @@ impl AsyncTaskSender for Signal {
         loop {
             async_std::task::sleep(Duration::from_millis(100)).await;
             if !self.config.active {
-                println!("XXXX QUIT");
+                //println!("XXXX QUIT");
                 break;
             }
         }
-        println!("Sig close");
+        //println!("Sig close");
 
         // Terminate the signal stream.
         handle.close();
