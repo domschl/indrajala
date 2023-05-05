@@ -80,7 +80,7 @@ impl AsyncTaskSender for Mqtt {
                         dd.from_instance = self.config.name.clone();
                         dd.data = serde_json::json!(payload.to_string());
                         if sender.send(dd).await.is_err() {
-                            println!("Mqtt: Error sending message to channel, assuming shutdown.");
+                            error!("Mqtt: Error sending message to channel, assuming shutdown.");
                             break;
                         }
                     }
