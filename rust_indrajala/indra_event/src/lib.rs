@@ -98,6 +98,13 @@ pub struct IndraEvent {
     pub time_jd_end: Option<f64>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct IndraEventRequest {
+    pub domain: String,
+    pub time_jd_start: Option<f64>,
+    pub time_jd_end: Option<f64>,
+}
+
 impl IndraEvent {
     pub fn new(// domain: String,
        // from_instance: String,

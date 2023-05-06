@@ -42,8 +42,14 @@ impl Ws {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
+        let mut ws_config = config.clone();
+        let def_addr = format!("{}/#", config.name);
+        if !config.out_topics.contains(&def_addr) {
+            ws_config.out_topics.push(def_addr);
+        }
+
         Ws {
-            config: config.clone(),
+            config: ws_config.clone(),
             //connections: PeerMap::new(Mutex::new(HashMap::new())),
             connections: PeerMap::new(RwLock::new(HashMap::new())),
             receiver: r1,
@@ -74,7 +80,12 @@ impl AsyncTaskReceiver for Ws {
                 recp.unbounded_send(wmsg.clone()).unwrap();
             }
             */
-            debug!("Ws: Sending msg {}->{} to {} peers.", msg.from_instance, msg.domain, peers.len());
+            debug!(
+                "Ws: Sending msg {}->{} to {} peers.",
+                msg.from_instance,
+                msg.domain,
+                peers.len()
+            );
             for recp_tuple in peers.iter() {
                 let (addr, ws_sink) = recp_tuple;
                 ws_sink.unbounded_send(wmsg.clone()).unwrap();
@@ -83,7 +94,7 @@ impl AsyncTaskReceiver for Ws {
                     msg.from_instance,
                     msg.domain,
                     addr,
-//                    msg.data.to_string(),
+                    //                    msg.data.to_string(),
                 );
             }
         }
@@ -97,7 +108,10 @@ async fn handle_connection(
     sender: async_channel::Sender<IndraEvent>,
     name: String,
 ) {
-    info!("Incoming TCP connection from: {}, I am {}, sender is {:?}", addr, name, sender);
+    info!(
+        "Incoming TCP connection from: {}, I am {}, sender is {:?}",
+        addr, name, sender
+    );
 
     let ws_stream = async_tungstenite::accept_async(raw_stream)
         .await

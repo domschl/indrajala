@@ -1,4 +1,4 @@
-use crate::IndraEvent;
+use indra_event::{IndraEvent, IndraEventRequest};
 use async_std::task;
 use chrono::Utc;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
@@ -28,9 +28,14 @@ impl SQLx {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
+        let mut sq_config = config.clone();
+        let def_addr = "$cmd/db/event/#".to_string();
+        if !config.out_topics.contains(&def_addr) {
+            sq_config.out_topics.push(def_addr);
+        }
 
         task::block_on(async {
-            let pool= async_init(&mut config).await;
+            let pool = async_init(&mut config).await;
             SQLx {
                 config: config.clone(),
                 receiver: r1,
@@ -45,7 +50,6 @@ impl SQLx {
 async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     let fnam = config.database_url.clone();
     let db_sync: &str;
-
 
     match config.db_sync {
         DbSync::Sync => {
@@ -79,7 +83,11 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
             pool = Some(pool_res);
         }
         Err(e) => {
-            error!("SQLx::init: Error connecting to database {}: {:?}", fnam.clone(), e);
+            error!(
+                "SQLx::init: Error connecting to database {}: {:?}",
+                fnam.clone(),
+                e
+            );
             config.active = false;
             pool = None;
             return pool;
@@ -157,22 +165,56 @@ impl AsyncTaskReceiver for SQLx {
                     self.config.active = false;
                 }
                 break;
-            }
-            if msg.domain.starts_with("$cmd/") {
-                if msg.domain.starts_with("$cmd/db/req/") {
-                    let remainder = &msg.domain[12..];
+            } else if msg.domain.starts_with("$cmd/") {
+                if msg.domain.starts_with("$cmd/db/event/scalar/req") {
+                    let req: IndraEventRequest = serde_json::from_value(msg.data).unwrap();
                     debug!(
-                        "SQLx: Received db/req command from {} search for: {}",
-                        msg.from_instance, remainder
+                        "SQLx: Received db/req command from {} search for: {:?}",
+                        msg.from_instance, req
                     );
+                    let rows: Vec<(i64, f64, String)>;
                     let pool = pool.clone().unwrap();
-                    let rows: Vec<(i64, f64, String)> = sqlx::query_as(
-                        "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ?",
-                    )
-                    .bind(remainder.to_string())
-                    .fetch_all(&pool)
-                    .await
-                    .unwrap();
+                    if req.time_jd_start.is_none() && req.time_jd_end.is_none() {
+                        rows = sqlx::query_as(
+                            "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ?",
+                        )
+                        .bind(req.domain.to_string())
+                        .fetch_all(&pool)
+                        .await
+                        .unwrap();
+                    } else if !req.time_jd_start.is_none() && req.time_jd_end.is_none() {
+                        rows = sqlx::query_as(
+                            "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ? AND time_jd_start >= ?",
+                        )
+                        .bind(req.domain.to_string())
+                        .bind(req.time_jd_start.unwrap())
+                        .fetch_all(&pool)
+                        .await
+                        .unwrap();
+                    } else if req.time_jd_start.is_none() && !req.time_jd_end.is_none() {
+                        rows = sqlx::query_as(
+                            "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ? AND time_jd_start <= ?",
+                        )
+                        .bind(req.domain.to_string())
+                        .bind(req.time_jd_end.unwrap())
+                        .fetch_all(&pool)
+                        .await
+                        .unwrap();
+                    } else if !req.time_jd_start.is_none() && !req.time_jd_end.is_none() {
+                        rows = sqlx::query_as(
+                            "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ? AND time_jd_start >= ? AND time_jd_start <= ?",
+                        )
+                        .bind(req.domain.to_string())
+                        .bind(req.time_jd_start.unwrap())
+                        .bind(req.time_jd_end.unwrap())
+                        .fetch_all(&pool)
+                        .await
+                        .unwrap();
+                    } else  {
+                        error!("SQLx: Received invalid db/req command from {} search for: {:?}",
+                            msg.from_instance, req);
+                        continue;
+                    }
                     debug!("Found {} items", rows.len());
                     let res: Vec<(f64, f64)> = rows
                         .iter()
@@ -185,7 +227,7 @@ impl AsyncTaskReceiver for SQLx {
                             (time_jd_start, data_f64)
                         })
                         .collect();
-                    info!("Found {} items for {}", res.len(), remainder);
+                    info!("Found {} items for {}", res.len(), msg.domain);
                     for _row in res.clone() {
                         // debug!("Found item: {:?}", row);
                     }
@@ -194,7 +236,7 @@ impl AsyncTaskReceiver for SQLx {
                         domain: msg.from_instance.clone(),
                         from_instance: self.config.name.clone(),
                         from_uuid4: msg.from_uuid4.clone(),
-                        to_scope: remainder.to_string().clone(),
+                        to_scope: req.domain.clone(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
                         data_type: "f64".to_string(),
                         data: serde_json::to_value(res).unwrap(),
@@ -207,44 +249,46 @@ impl AsyncTaskReceiver for SQLx {
                     //} else {
                     println!("Sending: {}->{}", rmsg.from_instance, rmsg.domain);
                     if sender.send(rmsg.clone()).await.is_err() {
-                            error!("SQLx: Error sending reply-message to channel {}", rmsg.domain);
-                            //break;
-                        }
+                        error!(
+                            "SQLx: Error sending reply-message to channel {}",
+                            rmsg.domain
+                        );
+                        //break;
+                    }
                     //}
                     continue;
                 }
                 warn!("SQLx: Received unknown command: {:?}", msg.domain);
                 continue;
-            }
+            } else if msg.domain.starts_with("$event/") {
+                let domain = &msg.domain[7..];
+                if self.config.active {
+                    // ignore Ws* domains
+                    debug!("SQLx::sender: {:?}", msg);
+                    // Insert a new record into the table
+                    let rows_affected = sqlx::query(
+                            r#"
+                                INSERT INTO indra_events (domain, from_instance, from_uuid4, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                "#,
+                        )
+                        .bind(domain)
+                        .bind(msg.from_instance)
+                        .bind(msg.from_uuid4)
+                        .bind(msg.to_scope)
+                        .bind(msg.time_jd_start)
+                        .bind(msg.data_type)
+                        .bind(msg.data.to_string())
+                        .bind(msg.auth_hash)
+                        .bind(msg.time_jd_end)
+                        .execute(&pool.clone().unwrap())
+                        .await.unwrap()
+                        .rows_affected();
 
-            if self.config.active {
-                // ignore Ws* domains
-                if msg.domain.starts_with("Ws") {
-                    warn!("SQLx: Received Ws* domain: {:?}", msg.domain);
-                    continue;
+                    debug!("Inserted {} row(s)", rows_affected);
                 }
-                debug!("SQLx::sender: {:?}", msg);
-                // Insert a new record into the table
-                let rows_affected = sqlx::query(
-                        r#"
-                            INSERT INTO indra_events (domain, from_instance, from_uuid4, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            "#,
-                    )
-                    .bind(msg.domain)
-                    .bind(msg.from_instance)
-                    .bind(msg.from_uuid4)
-                    .bind(msg.to_scope)
-                    .bind(msg.time_jd_start)
-                    .bind(msg.data_type)
-                    .bind(msg.data.to_string())
-                    .bind(msg.auth_hash)
-                    .bind(msg.time_jd_end)
-                    .execute(&pool.clone().unwrap())
-                    .await.unwrap()
-                    .rows_affected();
-
-                debug!("Inserted {} row(s)", rows_affected);
+            } else {
+                warn!("SQLx::sender: Received unknown domain: {:?}", msg.domain);
             }
         }
     }
