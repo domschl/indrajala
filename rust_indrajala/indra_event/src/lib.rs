@@ -103,6 +103,7 @@ pub struct IndraEventRequest {
     pub domain: String,
     pub time_jd_start: Option<f64>,
     pub time_jd_end: Option<f64>,
+    pub max_count: Option<usize>,
 }
 
 impl IndraEvent {
