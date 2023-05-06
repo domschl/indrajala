@@ -4,7 +4,7 @@ use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 //use env_logger::Env;
 //use log::{debug, error, info, warn};
-use log::{debug};
+use log::debug;
 
 use tide;
 use tide_rustls::TlsListener;
