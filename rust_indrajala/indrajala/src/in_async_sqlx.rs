@@ -1,6 +1,6 @@
-use indra_event::{IndraEvent, IndraEventRequest};
 use async_std::task;
 use chrono::Utc;
+use indra_event::{IndraEvent, IndraEventRequest};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::time::Duration;
 //use std::path::Path;
@@ -210,14 +210,27 @@ impl AsyncTaskReceiver for SQLx {
                         .fetch_all(&pool)
                         .await
                         .unwrap();
-                    } else  {
-                        error!("SQLx: Received invalid db/req command from {} search for: {:?}",
-                            msg.from_instance, req);
+                    } else {
+                        error!(
+                            "SQLx: Received invalid db/req command from {} search for: {:?}",
+                            msg.from_instance, req
+                        );
                         continue;
                     }
                     debug!("Found {} items", rows.len());
+                    let step: usize;
+                    if req.max_count.is_none() {
+                        step = 1;
+                    } else {
+                        if rows.len() > req.max_count.unwrap() {
+                            step = rows.len() / req.max_count.unwrap();
+                        } else {
+                            step = 1;
+                        }
+                    }
                     let res: Vec<(f64, f64)> = rows
                         .iter()
+                        .step_by(step)
                         .map(|row| {
                             let data: serde_json::Value = serde_json::from_str(&row.2).unwrap();
                             let num_text: String = data.to_string().replace("\"", "");
@@ -227,7 +240,12 @@ impl AsyncTaskReceiver for SQLx {
                             (time_jd_start, data_f64)
                         })
                         .collect();
-                    info!("Found {} items for {}", res.len(), msg.domain);
+                    info!(
+                        "Found {} items out of raw {} for {}",
+                        res.len(),
+                        rows.len(),
+                        msg.domain
+                    );
                     for _row in res.clone() {
                         // debug!("Found item: {:?}", row);
                     }
