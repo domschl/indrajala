@@ -104,7 +104,8 @@ impl AsyncTaskSender for Signal {
 
         let signals_task = async_std::task::spawn(self.clone().handle_signals(signals, sender));
 
-        loop {  // XXX remove this loop
+        loop {
+            // XXX remove this loop
             async_std::task::sleep(Duration::from_millis(100)).await;
             if !self.config.active {
                 debug!("Signal handler not active, quitting sender-loop.");

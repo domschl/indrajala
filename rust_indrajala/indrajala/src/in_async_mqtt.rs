@@ -25,8 +25,13 @@ impl Mqtt {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
+        let mut mqtt_config = config.clone();
+        let def_addr = format!("{}/#", config.name);
+        if !config.out_topics.contains(&def_addr) {
+            mqtt_config.out_topics.push(def_addr);
+        }
         Mqtt {
-            config: config.clone(),
+            config: mqtt_config.clone(),
             receiver: r1,
             sender: s1,
         }
@@ -44,7 +49,7 @@ impl AsyncTaskSender for Mqtt {
 
         let mut client = AsyncClient::new(create_opts).unwrap_or_else(|err| {
             error!("Error creating the MQTT client: {:?}", err);
-            std::process::exit(1);  // XXX exit really?
+            std::process::exit(1); // XXX exit really?
         });
 
         let mut strm = client.get_stream(25);
@@ -55,7 +60,7 @@ impl AsyncTaskSender for Mqtt {
 
         client.connect(conn_opts).await.unwrap_or_else(|err| {
             error!("Error connecting: {:?}", err);
-            std::process::exit(1);  // XXX exit really?
+            std::process::exit(1); // XXX exit really?
         });
         let qos = vec![0; self.config.topics.len()];
         client
@@ -76,7 +81,12 @@ impl AsyncTaskSender for Mqtt {
                 } else {
                     if self.config.active {
                         let mut dd = IndraEvent::new();
-                        dd.domain = topic.to_string();
+                        if topic.starts_with("$") {
+                            dd.domain = topic.to_string();
+                        } else {
+                            dd.domain = "$event/".to_string() + topic;
+                        }
+                        dd.domain = "$event/".to_string() + topic;
                         dd.from_instance = self.config.name.clone();
                         dd.data = serde_json::json!(payload.to_string());
                         if sender.send(dd).await.is_err() {

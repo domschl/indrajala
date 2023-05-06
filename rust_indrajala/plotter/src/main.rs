@@ -21,7 +21,7 @@ use plotters::style::WHITE;
 //{ChartBuilder, IntoDrawingArea, LabelAreaPosition, LineSeries};
 use plotters_cairo::CairoBackend;
 
-use indra_event::IndraEvent;
+use indra_event::{IndraEvent, IndraEventRequest};
 
 //use std::time;
 //use chrono::prelude::*;
@@ -205,8 +205,11 @@ fn build_ui(app: &Application) {
             while let Ok(msg) = socket.read_message() {
                 // If the message is text, parse it as a record
                 if let Message::Text(text) = msg {
-                    // println!("Received: {}", text);
-                    let ier: IndraEvent = IndraEvent::from_json(&text).unwrap();
+                    println!("Received: {}", text);
+                    let mut ier: IndraEvent = IndraEvent::from_json(&text).unwrap();
+                    if ier.domain.starts_with("$event/") {
+                        ier.domain = ier.domain.replace("$event/", "");
+                    }
                     let mut matched = false;
                     let mut reply = false;
                     for domain in cfg.default_domains.iter() {
@@ -226,62 +229,68 @@ fn build_ui(app: &Application) {
                     if matched == true {
                         if reply == false {
                             let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
-                            let text: String = ier.domain.to_string(); //.replace("\"", "");
-                            println!("text: >{}<", text);
+                            let domain = ier.domain.clone();
+                            println!("domain: >{}<", domain);
                             let num_text: String = ier.data.to_string().replace("\"", "");
                             let value: f64 = num_text.trim().parse().unwrap();
                             let mut time_series_lock = shared_time_series.lock().unwrap();
                             // time_series_lock.push((time.with_timezone(&Local), value));
-                            if time_series_lock.contains_key(&text.clone()) {
+                            if time_series_lock.contains_key(&domain.clone()) {
                                 time_series_lock
-                                    .get_mut(text.as_str())
+                                    .get_mut(domain.as_str())
                                     .unwrap()
                                     .push((time, value));
                             } else {
-                                time_series_lock.insert(text.clone(), Vec::new());
+                                time_series_lock.insert(domain.clone(), Vec::new());
                                 time_series_lock
-                                    .get_mut(text.as_str())
+                                    .get_mut(domain.as_str())
                                     .unwrap()
                                     .push((time, value));
                                 // request history
                                 let mut ie: IndraEvent = IndraEvent::new();
-                                ie.domain = "$cmd/db/req/".to_string() + &text.clone();
+                                ie.domain = "$cmd/db/event/scalar/req".to_string();
                                 ie.from_instance = "ws/plotter".to_string();
                                 ie.data_type = "cmd".to_string();
-                                let s1 = r#"{"req":"history"}"#.to_string();
-                                ie.data = serde_json::from_str(s1.as_str()).unwrap();
+                                let req: IndraEventRequest = IndraEventRequest {
+                                    domain: domain.clone(),
+                                    time_jd_start: None,
+                                    time_jd_end: None,
+                                };
+                                ie.data = serde_json::to_value(req).unwrap();
                                 let ie_txt = ie.to_json().unwrap();
                                 socket.write_message(ie_txt.into()).unwrap();
                             }
-                                println!("Temperature at {}: {}", time, value);
-                            if !known_topics.contains(&text.clone()) {
-                                known_topics.push(text.clone());
+                            println!("Temperature at {}: {}", time, value);
+                            if !known_topics.contains(&domain.clone()) {
+                                known_topics.push(domain.clone());
                                 Arc::new(&sender)
-                                    .send(ChMessage::UpdateListBox(text.clone()))
+                                    .send(ChMessage::UpdateListBox(domain.clone()))
                                     .unwrap();
                             }
                         } else {
-                            println!("We got some reply! {} {} for {}", ier.domain, ier.from_instance, ier.to_scope);  
-                            let res: Vec<(f64,f64)>;
-                            let text: String = ier.to_scope.to_string();
+                            println!(
+                                "We got some reply! {} {} for {}",
+                                ier.domain, ier.from_instance, ier.to_scope
+                            );
+                            let res: Vec<(f64, f64)>;
+                            let domain: String = ier.to_scope.to_string();
                             res = serde_json::from_str(ier.data.to_string().as_str()).unwrap();
                             println!("res: {}", res.len());
                             let mut time_series_lock = shared_time_series.lock().unwrap();
-                            if time_series_lock.contains_key(&text.clone()) {
+                            if time_series_lock.contains_key(&domain.clone()) {
                                 for r in res.iter() {
                                     time_series_lock
-                                        .get_mut(text.as_str())
+                                        .get_mut(domain.as_str())
                                         .unwrap()
                                         .push((IndraEvent::julian_to_datetime(r.0), r.1));
-
                                 }
                                 // sort array
                                 time_series_lock
-                                    .get_mut(text.as_str())
+                                    .get_mut(domain.as_str())
                                     .unwrap()
                                     .sort_by(|a, b| a.0.cmp(&b.0));
                             } else {
-                                println!("Can't find {}", text.clone());
+                                println!("Can't find {}", domain.clone());
                             }
                             continue;
                         }

@@ -21,8 +21,13 @@ impl Web {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
+        let mut web_config = config.clone();
+        let def_addr = format!("{}/#", config.name);
+        if !config.out_topics.contains(&def_addr) {
+            web_config.out_topics.push(def_addr);
+        }
         Web {
-            config: config.clone(),
+            config: web_config.clone(),
             receiver: r1,
             sender: s1,
         }
@@ -88,6 +93,12 @@ impl AsyncTaskSender for Web {
                     auth_hash,
                     time_jd_end,
                 } = req.body_json().await.unwrap();
+                let mut domain = domain;
+                if domain.starts_with("$") {
+                    domain = domain.to_string();
+                } else {
+                    domain = "$event/".to_string() + domain.as_str();
+                }
                 let ie = {
                     let mut ie = st.ie.clone();
                     ie.domain = domain;
