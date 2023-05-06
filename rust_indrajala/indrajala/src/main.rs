@@ -111,7 +111,10 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
             let name_subs = name.clone() + "/#";
             if IndraEvent::mqcmp(&ie.from_instance, &name_subs) || (&ie.from_instance == &name) {
                 if ie.domain != "$cmd/quit" {
-                    debug!("NOT sending {} to {}, recursion avoidance.", ie.from_instance, name);
+                    debug!(
+                        "NOT sending {} to {}, recursion avoidance.",
+                        ie.from_instance, name
+                    );
                     from_ident = true;
                     continue;
                 } else {
@@ -129,10 +132,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                 }
                 info!(
                     "ROUTE: from: {} to: {} task {} [{}]",
-                    ie.from_instance,
-                    ie.domain,
-                    name,
-                    sdata,
+                    ie.from_instance, ie.domain, name, sdata,
                 );
                 let _ = acs.send(ie.clone()).await;
             }
@@ -155,7 +155,9 @@ fn main() {
 
     let indra_config = IndraConfig::new();
 
-    env_logger::Builder::from_env(Env::default().default_filter_or("indrajala=info")).format_timestamp(Some(env_logger::TimestampPrecision::Millis)).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("indrajala=info"))
+        .format_timestamp(Some(env_logger::TimestampPrecision::Millis))
+        .init();
 
     let mut tsk: Vec<IndraTask> = vec![];
 
