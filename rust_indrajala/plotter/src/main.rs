@@ -194,13 +194,21 @@ fn build_ui(app: &Application) {
             let mut ie: IndraEvent = IndraEvent::new();
             ie.domain = "$cmd/ws/subs".to_string();
             ie.from_instance = "ws/plotter".to_string();
-            ie.data_type = "cmd".to_string();
+            ie.data_type = "$cmd/subs".to_string();
             let s1 = r#"{"subs":[""#.to_string();
             let s2 = r#""]}"#.to_string();
             ie.data = serde_json::from_str((s1 + &domain_topic2 + &s2).as_str()).unwrap();
             let ie_txt = ie.to_json().unwrap();
             socket.write_message(ie_txt.into()).unwrap();
-            println!("sent message");
+            println!("sent message $cmd/subs");
+            let mut ie: IndraEvent = IndraEvent::new();
+            ie.domain = "$cmd/db/req/event/uniquedomains".to_string();
+            ie.from_instance = "ws/plotter".to_string();
+            ie.data_type = "db/req/event/uniquedomains".to_string();
+            ie.data = serde_json::from_str("{}").unwrap();
+            let ie_txt = ie.to_json().unwrap();
+            socket.write_message(ie_txt.into()).unwrap();
+            println!("sent message req/uniquedomains");
             // Loop over the messages from the server
             while let Ok(msg) = socket.read_message() {
                 // If the message is text, parse it as a record
@@ -230,9 +238,25 @@ fn build_ui(app: &Application) {
                         if reply == false {
                             let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
                             let domain = ier.domain.clone();
-                            println!("domain: >{}<", domain);
                             let num_text: String = ier.data.to_string().replace("\"", "");
-                            let value: f64 = num_text.trim().parse().unwrap();
+                            let value_opt = num_text.trim().parse();
+                            let value: f64;
+                            if value_opt.is_err() {
+                                if ["on", "ON", "On", "True", "TRUE", "true"]
+                                    .contains(&num_text.as_str())
+                                {
+                                    value = 1.0;
+                                } else if ["off", "OFF", "Off", "False", "FALSE", "false"]
+                                    .contains(&num_text.as_str())
+                                {
+                                    value = 0.0;
+                                } else {
+                                    value = 0.0;
+                                }
+                            } else {
+                                value = value_opt.unwrap();
+                            }
+                            println!("domain: >{}<, value: {}", domain, value);
                             let mut time_series_lock = shared_time_series.lock().unwrap();
                             // time_series_lock.push((time.with_timezone(&Local), value));
                             if time_series_lock.contains_key(&domain.clone()) {
@@ -248,9 +272,9 @@ fn build_ui(app: &Application) {
                                     .push((time, value));
                                 // request history
                                 let mut ie: IndraEvent = IndraEvent::new();
-                                ie.domain = "$cmd/db/event/scalar/req".to_string();
+                                ie.domain = "$cmd/db/req/event/history".to_string();
                                 ie.from_instance = "ws/plotter".to_string();
-                                ie.data_type = "cmd".to_string();
+                                ie.data_type = "db/req/event/history".to_string();
                                 let req: IndraEventRequest = IndraEventRequest {
                                     domain: domain.clone(),
                                     time_jd_start: None,
@@ -260,6 +284,7 @@ fn build_ui(app: &Application) {
                                 ie.data = serde_json::to_value(req).unwrap();
                                 let ie_txt = ie.to_json().unwrap();
                                 socket.write_message(ie_txt.into()).unwrap();
+                                println!("sent message request history of {}", domain);
                             }
                             // println!("Temperature at {}: {}", time, value);
                             if !known_topics.contains(&domain.clone()) {
@@ -270,47 +295,83 @@ fn build_ui(app: &Application) {
                             }
                         } else {
                             println!(
-                                "We got some reply! {} {} for {}",
-                                ier.domain, ier.from_instance, ier.to_scope
+                                "We got some reply! {} {} for {}: {}",
+                                ier.domain, ier.from_instance, ier.to_scope, ier.data_type
                             );
-                            let res: Vec<(f64, f64)>;
-                            let domain: String = ier.to_scope.to_string();
-                            res = serde_json::from_str(ier.data.to_string().as_str()).unwrap();
-                            println!("res: {}", res.len());
-                            let mut time_series_lock = shared_time_series.lock().unwrap();
-                            if time_series_lock.contains_key(&domain.clone()) {
-                                for r in res.iter() {
-                                    time_series_lock
-                                        .get_mut(domain.as_str())
-                                        .unwrap()
-                                        .push((IndraEvent::julian_to_datetime(r.0), r.1));
+                            if ier.data_type == "db/reply/event/history" {
+                                let res: Vec<(f64, f64)>;
+                                let domain: String = ier.to_scope.to_string();
+                                res = serde_json::from_str(ier.data.to_string().as_str()).unwrap();
+                                println!("res: {}", res.len());
+                                let mut time_series_lock = shared_time_series.lock().unwrap();
+                                if time_series_lock.contains_key(&domain.clone()) {
+                                    for r in res.iter() {
+                                        time_series_lock
+                                            .get_mut(domain.as_str())
+                                            .unwrap()
+                                            .push((IndraEvent::julian_to_datetime(r.0), r.1));
+                                    }
+                                    // sort array
+                                    let arr = time_series_lock.get_mut(domain.as_str()).unwrap();
+                                    arr.sort_by(|a, b| a.0.cmp(&b.0));
+                                    let arr2 = &mut arr
+                                        .windows(2)
+                                        .filter_map(|w| {
+                                            if w[0].0 == w[1].0 {
+                                                None
+                                            } else {
+                                                Some(w[0].clone())
+                                            }
+                                        })
+                                        .chain(arr.last().cloned())
+                                        .collect::<Vec<(DateTime<Utc>, f64)>>();
+                                    if arr.len() != arr2.len() {
+                                        println!(
+                                            "XXXXXXX arr: {}, arr2: {}",
+                                            arr.len(),
+                                            arr2.len()
+                                        );
+                                    } else {
+                                        println!("XYX no dups");
+                                    }
+                                    arr.clear();
+                                    arr.append(arr2);
+                                } else {
+                                    println!("Can't find {}", domain.clone());
                                 }
-                                // sort array
-                                let arr = time_series_lock.get_mut(domain.as_str()).unwrap();
-                                arr.sort_by(|a, b| a.0.cmp(&b.0));
-                                let arr2 = &mut arr
-                                    .windows(2)
-                                    .filter_map(|w| {
-                                        if w[0].0 == w[1].0 {
-                                            None
-                                        } else {
-                                            Some(w[0].clone())
-                                        }
-                                    })
-                                    .chain(arr.last().cloned())
-                                    .collect::<Vec<(DateTime<Utc>, f64)>>();
-                                if arr.len() != arr2.len() {
-                                    println!("XXXXXXX arr: {}, arr2: {}", arr.len(), arr2.len());
+                                continue;
+                            } else if ier.data_type == "db/reply/event/uniquedomains" {
+                                println!("UNIQUE reply! {}.", ier.data_type);
+                                let domains: Vec<String> =
+                                    serde_json::from_str(ier.data.to_string().as_str()).unwrap();
+                                let mut time_series_lock = shared_time_series.lock().unwrap();
+                                for domain in domains.iter() {
+                                    if !time_series_lock.contains_key(&domain.clone()) {
+                                        time_series_lock.insert(domain.clone(), Vec::new());
+                                        // request history
+                                        let mut ie: IndraEvent = IndraEvent::new();
+                                        ie.domain = "$cmd/db/req/event/history".to_string();
+                                        ie.from_instance = "ws/plotter".to_string();
+                                        ie.data_type = "db/req/event/history".to_string();
+                                        let req: IndraEventRequest = IndraEventRequest {
+                                            domain: domain.clone(),
+                                            time_jd_start: None,
+                                            time_jd_end: None,
+                                            max_count: Some(1000),
+                                        };
+                                        ie.data = serde_json::to_value(req).unwrap();
+                                        let ie_txt = ie.to_json().unwrap();
+                                        socket.write_message(ie_txt.into()).unwrap();
+                                        println!("sent message request history of {}", domain);
+                                    }
+                                    Arc::new(&sender)
+                                        .send(ChMessage::UpdateListBox(domain.clone()))
+                                        .unwrap();
                                 }
-                                arr.clear();
-                                arr.append(arr2);
                             } else {
-                                println!("Can't find {}", domain.clone());
+                                println!("Unknown reply type: {}", ier.data_type);
                             }
-                            continue;
                         }
-                        //time_series_lock[text.clone().as_str()].push((time, value));
-
                         // Check if text in known_topics:
                         if matched == true {
                             Arc::new(&sender).send(ChMessage::UpdateGraph()).unwrap();
