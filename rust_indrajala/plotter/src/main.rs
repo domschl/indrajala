@@ -286,10 +286,24 @@ fn build_ui(app: &Application) {
                                         .push((IndraEvent::julian_to_datetime(r.0), r.1));
                                 }
                                 // sort array
-                                time_series_lock
-                                    .get_mut(domain.as_str())
-                                    .unwrap()
-                                    .sort_by(|a, b| a.0.cmp(&b.0));
+                                let arr = time_series_lock.get_mut(domain.as_str()).unwrap();
+                                arr.sort_by(|a, b| a.0.cmp(&b.0));
+                                let arr2 = &mut arr
+                                    .windows(2)
+                                    .filter_map(|w| {
+                                        if w[0].0 == w[1].0 {
+                                            None
+                                        } else {
+                                            Some(w[0].clone())
+                                        }
+                                    })
+                                    .chain(arr.last().cloned())
+                                    .collect::<Vec<(DateTime<Utc>, f64)>>();
+                                if arr.len() != arr2.len() {
+                                    println!("XXXXXXX arr: {}, arr2: {}", arr.len(), arr2.len());
+                                }
+                                arr.clear();
+                                arr.append(arr2);
                             } else {
                                 println!("Can't find {}", domain.clone());
                             }
