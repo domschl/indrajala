@@ -255,6 +255,7 @@ fn build_ui(app: &Application) {
                                     domain: domain.clone(),
                                     time_jd_start: None,
                                     time_jd_end: None,
+                                    max_count: Some(1000),
                                 };
                                 ie.data = serde_json::to_value(req).unwrap();
                                 let ie_txt = ie.to_json().unwrap();
