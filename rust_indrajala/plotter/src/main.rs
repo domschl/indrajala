@@ -205,7 +205,7 @@ fn build_ui(app: &Application) {
             while let Ok(msg) = socket.read_message() {
                 // If the message is text, parse it as a record
                 if let Message::Text(text) = msg {
-                    println!("Received: {}", text);
+                    println!("Received: len={}", text.len());
                     let mut ier: IndraEvent = IndraEvent::from_json(&text).unwrap();
                     if ier.domain.starts_with("$event/") {
                         ier.domain = ier.domain.replace("$event/", "");
@@ -260,7 +260,7 @@ fn build_ui(app: &Application) {
                                 let ie_txt = ie.to_json().unwrap();
                                 socket.write_message(ie_txt.into()).unwrap();
                             }
-                            println!("Temperature at {}: {}", time, value);
+                            // println!("Temperature at {}: {}", time, value);
                             if !known_topics.contains(&domain.clone()) {
                                 known_topics.push(domain.clone());
                                 Arc::new(&sender)
