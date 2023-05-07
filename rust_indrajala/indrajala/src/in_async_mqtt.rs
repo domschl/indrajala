@@ -88,7 +88,22 @@ impl AsyncTaskSender for Mqtt {
                         }
                         dd.domain = "$event/".to_string() + topic;
                         dd.from_instance = self.config.name.clone();
-                        dd.data = serde_json::json!(payload.to_string());
+                        let float = payload.parse::<f64>();
+                        if float.is_ok() {
+                            dd.data_type = "event/number".to_string();
+                            dd.data = serde_json::json!(payload.to_string());
+                        } else {
+                            if ["on", "true", "active"].contains(&payload.to_lowercase().as_str()) {
+                                dd.data_type = "event/number".to_string();
+                                dd.data = serde_json::json!("1".to_string());
+                            } else if ["off", "false", "inactive"].contains(&payload.to_lowercase().as_str()) {
+                                dd.data_type = "event/number".to_string();
+                                dd.data = serde_json::json!("0".to_string());
+                            } else {
+                                dd.data_type = "event/string".to_string();
+                                dd.data = serde_json::json!(payload.to_string());
+                            }
+                        } 
                         if sender.send(dd).await.is_err() {
                             error!("Mqtt: Error sending message to channel, assuming shutdown.");
                             break;
