@@ -2,6 +2,7 @@ use async_std::task;
 use chrono::Utc;
 use indra_event::{IndraEvent, IndraEventRequest};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
+use sqlx::Row;
 use std::time::Duration;
 //use std::path::Path;
 
@@ -166,10 +167,10 @@ impl AsyncTaskReceiver for SQLx {
                 }
                 break;
             } else if msg.domain.starts_with("$cmd/") {
-                if msg.domain.starts_with("$cmd/db/event/scalar/req") {
+                if msg.domain.starts_with("$cmd/db/req/event/history") {
                     let req: IndraEventRequest = serde_json::from_value(msg.data).unwrap();
                     debug!(
-                        "SQLx: Received db/req command from {} search for: {:?}",
+                        "SQLx: Received db/scalar/req command from {} search for: {:?}",
                         msg.from_instance, req
                     );
                     let rows: Vec<(i64, f64, String)>;
@@ -234,7 +235,13 @@ impl AsyncTaskReceiver for SQLx {
                         .map(|row| {
                             let data: serde_json::Value = serde_json::from_str(&row.2).unwrap();
                             let num_text: String = data.to_string().replace("\"", "");
-                            let data_f64: f64 = num_text.trim().parse().unwrap();
+                            let data_f64_opt = num_text.trim().parse();
+                            let data_f64: f64;
+                            if data_f64_opt.is_err() {
+                                data_f64 = 0.0;
+                            } else {
+                                data_f64 = data_f64_opt.unwrap();
+                            }
                             let time_jd_start: f64 = row.1;
                             // let time_jd_end: f64 = serde_json::from_value(data["time_jd_end"].clone()).unwrap();
                             (time_jd_start, data_f64)
@@ -256,7 +263,7 @@ impl AsyncTaskReceiver for SQLx {
                         from_uuid4: msg.from_uuid4.clone(),
                         to_scope: req.domain.clone(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
-                        data_type: "f64".to_string(),
+                        data_type: "db/reply/event/history".to_string(),
                         data: serde_json::to_value(res).unwrap(),
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
@@ -265,7 +272,7 @@ impl AsyncTaskReceiver for SQLx {
                     //    error!("SQLx: Error sending reply-message to channel {}, r_sender NOT AVAILABLE", rmsg.domain);
                     //    //break;
                     //} else {
-                    println!("Sending: {}->{}", rmsg.from_instance, rmsg.domain);
+                    debug!("Sending: {}->{}", rmsg.from_instance, rmsg.domain);
                     if sender.send(rmsg.clone()).await.is_err() {
                         error!(
                             "SQLx: Error sending reply-message to channel {}",
@@ -274,6 +281,44 @@ impl AsyncTaskReceiver for SQLx {
                         //break;
                     }
                     //}
+                    continue;
+                } else if msg.domain.starts_with("$cmd/db/req/event/uniquedomains") {
+                    debug!(
+                        "SQLx: Received db/unq/req command from {}",
+                        msg.from_instance
+                    );
+                    //let rows: Vec<(String)>;
+                    let pool = pool.clone().unwrap();
+                    let rows: Vec<String> =
+                        sqlx::query("SELECT DISTINCT domain FROM indra_events;")
+                            .fetch_all(&pool)
+                            .await
+                            .unwrap()
+                            .iter()
+                            .map(|rowi| rowi.try_get(0).unwrap())
+                            .collect();
+                    let ut_now = Utc::now();
+                    let rmsg = IndraEvent {
+                        domain: msg.from_instance.clone(),
+                        from_instance: self.config.name.clone(),
+                        from_uuid4: msg.from_uuid4.clone(),
+                        to_scope: "domain_list".to_string(),
+                        time_jd_start: IndraEvent::datetime_to_julian(ut_now),
+                        data_type: "db/reply/event/uniquedomains".to_string(),
+                        data: serde_json::to_value(rows).unwrap(),
+                        auth_hash: Default::default(),
+                        time_jd_end: Default::default(),
+                    };
+                    warn!(
+                        "Sending domain-list: {}->{}",
+                        rmsg.from_instance, rmsg.domain
+                    );
+                    if sender.send(rmsg.clone()).await.is_err() {
+                        error!(
+                            "SQLx: Error sending reply-message to channel {}",
+                            rmsg.domain
+                        );
+                    }
                     continue;
                 }
                 warn!("SQLx: Received unknown command: {:?}", msg.domain);
