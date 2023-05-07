@@ -290,7 +290,7 @@ impl AsyncTaskReceiver for SQLx {
                     //let rows: Vec<(String)>;
                     let pool = pool.clone().unwrap();
                     let rows: Vec<String> =
-                        sqlx::query("SELECT DISTINCT domain FROM indra_events;")
+                        sqlx::query("SELECT DISTINCT domain FROM indra_events WHERE data_type = 'event/number';")
                             .fetch_all(&pool)
                             .await
                             .unwrap()
