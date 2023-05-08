@@ -277,7 +277,7 @@ impl AsyncTaskReceiver for SQLx {
                         from_uuid4: msg.from_uuid4.clone(),
                         to_scope: req.domain.clone(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
-                        data_type: "db/reply/event/number/history".to_string(),
+                        data_type: "db/reply/event/number/float/history".to_string(),
                         data: serde_json::to_value(res).unwrap(),
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
