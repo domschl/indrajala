@@ -193,7 +193,7 @@ fn build_ui(app: &Application) {
             //let delta = time::Duration::from_millis(500);
             let mut ie: IndraEvent = IndraEvent::new();
             ie.domain = "$cmd/ws/subs".to_string();
-            ie.from_instance = "ws/plotter".to_string();
+            ie.from_id = "ws/plotter".to_string();
             ie.data_type = "cmd/subs".to_string();
             let s1 = r#"{"subs":[""#.to_string();
             let s2 = r#""]}"#.to_string();
@@ -203,7 +203,7 @@ fn build_ui(app: &Application) {
             println!("sent message $cmd/subs");
             let mut ie: IndraEvent = IndraEvent::new();
             ie.domain = "$cmd/db/req/event/number/float/uniquedomains".to_string();
-            ie.from_instance = "ws/plotter".to_string();
+            ie.from_id = "ws/plotter".to_string();
             ie.data_type = "db/req/event/uniquedomains".to_string();
             ie.data = serde_json::from_str("{}").unwrap();
             let ie_txt = serde_json::to_string(&ie).unwrap();
@@ -265,7 +265,7 @@ fn build_ui(app: &Application) {
                                 // request history
                                 let mut ie: IndraEvent = IndraEvent::new();
                                 ie.domain = "$cmd/db/req/event/number/float/history".to_string();
-                                ie.from_instance = "ws/plotter".to_string();
+                                ie.from_id = "ws/plotter".to_string();
                                 ie.data_type = "db/req/event/history".to_string();
                                 let req: IndraEventRequest = IndraEventRequest {
                                     domain: domain.clone(),
@@ -288,7 +288,7 @@ fn build_ui(app: &Application) {
                         } else {
                             println!(
                                 "We got some reply! {} {} for {}: {}",
-                                ier.domain, ier.from_instance, ier.to_scope, ier.data_type
+                                ier.domain, ier.from_id, ier.to_scope, ier.data_type
                             );
                             if ier.data_type == "db/reply/event/number/float/history" {
                                 let res: Vec<(f64, f64)>;
@@ -342,8 +342,9 @@ fn build_ui(app: &Application) {
                                         time_series_lock.insert(domain.clone(), Vec::new());
                                         // request history
                                         let mut ie: IndraEvent = IndraEvent::new();
-                                        ie.domain = "$cmd/db/req/event/number/float/history".to_string();
-                                        ie.from_instance = "ws/plotter".to_string();
+                                        ie.domain =
+                                            "$cmd/db/req/event/number/float/history".to_string();
+                                        ie.from_id = "ws/plotter".to_string();
                                         ie.data_type = "db/req/event/history".to_string();
                                         let req: IndraEventRequest = IndraEventRequest {
                                             domain: domain.clone(),

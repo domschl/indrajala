@@ -102,12 +102,12 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
                     CREATE TABLE IF NOT EXISTS indra_events (
                         id INTEGER PRIMARY KEY,
                         domain TEXT NOT NULL,
-                        from_instance TEXT NOT NULL,
-                        from_uuid4 UUID NOT NULL,
+                        from_id TEXT NOT NULL,
+                        uuid4 UUID NOT NULL,
                         to_scope TEXT NOT NULL,
                         time_jd_start DOUBLE,
                         data_type TEXT NOT NULL,
-                        data TEXT,
+                        data TEXT NOT NULL,
                         auth_hash TEXT,
                         time_jd_end DOUBLE
                     )
@@ -174,7 +174,7 @@ impl AsyncTaskReceiver for SQLx {
                     let req: IndraEventRequest = serde_json::from_value(msg.data).unwrap();
                     debug!(
                         "SQLx: Received db/scalar/req command from {} search for: {:?}",
-                        msg.from_instance, req
+                        msg.from_id, req
                     );
                     let rows: Vec<(i64, f64, String)>;
                     let pool = pool.clone().unwrap();
@@ -227,7 +227,7 @@ impl AsyncTaskReceiver for SQLx {
                     } else {
                         error!(
                             "SQLx: Received invalid db/req command from {} search for: {:?}",
-                            msg.from_instance, req
+                            msg.from_id, req
                         );
                         continue;
                     }
@@ -272,9 +272,9 @@ impl AsyncTaskReceiver for SQLx {
                     }
                     let ut_now = Utc::now();
                     let rmsg = IndraEvent {
-                        domain: msg.from_instance.clone(),
-                        from_instance: self.config.name.clone(),
-                        from_uuid4: msg.from_uuid4.clone(),
+                        domain: msg.from_id.clone(),
+                        from_id: self.config.name.clone(),
+                        uuid4: msg.uuid4.clone(),
                         to_scope: req.domain.clone(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
                         data_type: "db/reply/event/number/float/history".to_string(),
@@ -286,7 +286,7 @@ impl AsyncTaskReceiver for SQLx {
                     //    error!("SQLx: Error sending reply-message to channel {}, r_sender NOT AVAILABLE", rmsg.domain);
                     //    //break;
                     //} else {
-                    debug!("Sending: {}->{}", rmsg.from_instance, rmsg.domain);
+                    debug!("Sending: {}->{}", rmsg.from_id, rmsg.domain);
                     if sender.send(rmsg.clone()).await.is_err() {
                         error!(
                             "SQLx: Error sending reply-message to channel {}",
@@ -300,10 +300,7 @@ impl AsyncTaskReceiver for SQLx {
                     .domain
                     .starts_with("$cmd/db/req/event/number/float/uniquedomains")
                 {
-                    debug!(
-                        "SQLx: Received db/unq/req command from {}",
-                        msg.from_instance
-                    );
+                    debug!("SQLx: Received db/unq/req command from {}", msg.from_id);
                     //let rows: Vec<(String)>;
                     let pool = pool.clone().unwrap();
                     let rows: Vec<String> =
@@ -316,9 +313,9 @@ impl AsyncTaskReceiver for SQLx {
                             .collect();
                     let ut_now = Utc::now();
                     let rmsg = IndraEvent {
-                        domain: msg.from_instance.clone(),
-                        from_instance: self.config.name.clone(),
-                        from_uuid4: msg.from_uuid4.clone(),
+                        domain: msg.from_id.clone(),
+                        from_id: self.config.name.clone(),
+                        uuid4: msg.uuid4.clone(),
                         to_scope: "domain_list".to_string(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
                         data_type: "db/reply/event/number/float/uniquedomains".to_string(),
@@ -326,10 +323,7 @@ impl AsyncTaskReceiver for SQLx {
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
                     };
-                    warn!(
-                        "Sending domain-list: {}->{}",
-                        rmsg.from_instance, rmsg.domain
-                    );
+                    warn!("Sending domain-list: {}->{}", rmsg.from_id, rmsg.domain);
                     if sender.send(rmsg.clone()).await.is_err() {
                         error!(
                             "SQLx: Error sending reply-message to channel {}",
@@ -349,13 +343,13 @@ impl AsyncTaskReceiver for SQLx {
                     // Insert a new record into the table
                     let rows_affected = sqlx::query(
                             r#"
-                                INSERT INTO indra_events (domain, from_instance, from_uuid4, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
+                                INSERT INTO indra_events (domain, from_id, uuid4, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                                 "#,
                         )
                         .bind(domain)
-                        .bind(msg.from_instance)
-                        .bind(msg.from_uuid4)
+                        .bind(msg.from_id)
+                        .bind(msg.uuid4)
                         .bind(msg.to_scope)
                         .bind(msg.time_jd_start)
                         .bind(msg.data_type)
