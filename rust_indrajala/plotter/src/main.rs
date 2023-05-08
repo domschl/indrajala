@@ -140,7 +140,7 @@ fn build_ui(app: &Application) {
                 });
 
             let mut ctx = ChartBuilder::on(&root_area)
-                .set_label_area_size(LabelAreaPosition::Left, 40)
+                .set_label_area_size(LabelAreaPosition::Left, 100)
                 .set_label_area_size(LabelAreaPosition::Bottom, 40)
                 .caption("Indrajala/muWerk Temperature", ("sans-serif", 14))
                 .build_cartesian_2d(min_datetime..max_datetime, min_f64 as f32..max_f64 as f32)
