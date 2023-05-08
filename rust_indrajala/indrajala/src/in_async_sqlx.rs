@@ -167,13 +167,16 @@ impl AsyncTaskReceiver for SQLx {
                 }
                 break;
             } else if msg.domain.starts_with("$cmd/") {
-                if msg.domain.starts_with("$cmd/db/req/event/number/float/history") {
+                if msg
+                    .domain
+                    .starts_with("$cmd/db/req/event/number/float/history")
+                {
                     let req: IndraEventRequest = serde_json::from_value(msg.data).unwrap();
                     debug!(
                         "SQLx: Received db/scalar/req command from {} search for: {:?}",
                         msg.from_instance, req
                     );
-                    let rows: Vec<(i64, f64, f64)>;
+                    let rows: Vec<(i64, f64, _)>;
                     let pool = pool.clone().unwrap();
                     if req.time_jd_start.is_none() && req.time_jd_end.is_none() {
                         let rows_res = sqlx::query_as(
@@ -190,8 +193,7 @@ impl AsyncTaskReceiver for SQLx {
                                 rows_res.err().unwrap()
                             );
                             continue;
-                        }
-                        else {
+                        } else {
                             rows = rows_res.unwrap();
                         }
                     } else if !req.time_jd_start.is_none() && req.time_jd_end.is_none() {
@@ -294,7 +296,10 @@ impl AsyncTaskReceiver for SQLx {
                     }
                     //}
                     continue;
-                } else if msg.domain.starts_with("$cmd/db/req/event/number/float/uniquedomains") {
+                } else if msg
+                    .domain
+                    .starts_with("$cmd/db/req/event/number/float/uniquedomains")
+                {
                     debug!(
                         "SQLx: Received db/unq/req command from {}",
                         msg.from_instance
