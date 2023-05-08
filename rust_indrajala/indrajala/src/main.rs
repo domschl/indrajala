@@ -131,8 +131,8 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                     sdata += "...";
                 }
                 info!(
-                    "ROUTE: from: {} to: {} task {} [{}]",
-                    ie.from_instance, ie.domain, name, sdata,
+                    "ROUTE: from: {} to: {} task {} [{}:{}]",
+                    ie.from_instance, ie.domain, name, sdata, ie.data_type,
                 );
                 let _ = acs.send(ie.clone()).await;
             }

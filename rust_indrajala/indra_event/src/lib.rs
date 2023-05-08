@@ -1,6 +1,6 @@
 use chrono::{DateTime, Datelike, TimeZone, Timelike, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::Result;
+//use serde_json::Result;
 
 /*
 struct IndraTime {
@@ -135,13 +135,13 @@ impl IndraEvent {
         }
     }
 
-    pub fn to_json(&self) -> Result<String> {
-        serde_json::to_string(self)
-    }
+    //pub fn to_json(&self) -> Result<String> {
+    //    serde_json::to_string(self)
+    //}
 
-    pub fn from_json(text: &String) -> Result<IndraEvent> {
-        serde_json::from_str(text.as_str())
-    }
+    //pub fn from_json(text: &String) -> Result<IndraEvent> {
+    //    serde_json::from_str(text.as_str())
+    //}
 
     pub fn datetime_to_julian(dt: DateTime<Utc>) -> f64 {
         // XXX unchecked copilot mess

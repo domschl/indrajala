@@ -198,23 +198,23 @@ fn build_ui(app: &Application) {
             let s1 = r#"{"subs":[""#.to_string();
             let s2 = r#""]}"#.to_string();
             ie.data = serde_json::from_str((s1 + &domain_topic2 + &s2).as_str()).unwrap();
-            let ie_txt = ie.to_json().unwrap();
+            let ie_txt = serde_json::to_string(&ie).unwrap();
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message $cmd/subs");
             let mut ie: IndraEvent = IndraEvent::new();
-            ie.domain = "$cmd/db/req/event/uniquedomains".to_string();
+            ie.domain = "$cmd/db/req/event/number/float/uniquedomains".to_string();
             ie.from_instance = "ws/plotter".to_string();
             ie.data_type = "db/req/event/uniquedomains".to_string();
             ie.data = serde_json::from_str("{}").unwrap();
-            let ie_txt = ie.to_json().unwrap();
+            let ie_txt = serde_json::to_string(&ie).unwrap();
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message req/uniquedomains");
             // Loop over the messages from the server
             while let Ok(msg) = socket.read_message() {
                 // If the message is text, parse it as a record
                 if let Message::Text(text) = msg {
-                    println!("Received: len={}", text.len());
-                    let mut ier: IndraEvent = IndraEvent::from_json(&text).unwrap();
+                    //println!("Received: len={}", text.len());
+                    let mut ier: IndraEvent = serde_json::from_str(&text.as_str()).unwrap();
                     if ier.domain.starts_with("$event/") {
                         ier.domain = ier.domain.replace("$event/", "");
                     }
@@ -237,29 +237,17 @@ fn build_ui(app: &Application) {
                     if matched == true {
                         if reply == false {
                             let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
-                            if ier.data_type != "event/number" {
+                            if !ier.data_type.starts_with("number/float") {
                                 continue;
                             }
-                            
+
                             let domain = ier.domain.clone();
-                            let num_text: String = ier.data.to_string().replace("\"", "");
-                            let value_opt = num_text.trim().parse();
+                            //let num_text: String = ier.data.to_string().replace("\"", "");
+                            //let value_opt = num_text.trim().parse();
+                            let value_opt: Result<f64, serde_json::Error> =
+                                serde_json::from_value(ier.data);
                             let value: f64;
-                            if value_opt.is_err() {
-                                if ["on", "ON", "On", "True", "TRUE", "true"]
-                                    .contains(&num_text.as_str())
-                                {
-                                    value = 1.0;
-                                } else if ["off", "OFF", "Off", "False", "FALSE", "false"]
-                                    .contains(&num_text.as_str())
-                                {
-                                    value = 0.0;
-                                } else {
-                                    value = 0.0;
-                                }
-                            } else {
-                                value = value_opt.unwrap();
-                            }
+                            value = value_opt.unwrap();
                             println!("domain: >{}<, value: {}", domain, value);
                             let mut time_series_lock = shared_time_series.lock().unwrap();
                             // time_series_lock.push((time.with_timezone(&Local), value));
@@ -276,7 +264,7 @@ fn build_ui(app: &Application) {
                                     .push((time, value));
                                 // request history
                                 let mut ie: IndraEvent = IndraEvent::new();
-                                ie.domain = "$cmd/db/req/event/history".to_string();
+                                ie.domain = "$cmd/db/req/event/number/float/history".to_string();
                                 ie.from_instance = "ws/plotter".to_string();
                                 ie.data_type = "db/req/event/history".to_string();
                                 let req: IndraEventRequest = IndraEventRequest {
@@ -286,7 +274,7 @@ fn build_ui(app: &Application) {
                                     max_count: Some(1000),
                                 };
                                 ie.data = serde_json::to_value(req).unwrap();
-                                let ie_txt = ie.to_json().unwrap();
+                                let ie_txt = serde_json::to_string(&ie).unwrap();
                                 socket.write_message(ie_txt.into()).unwrap();
                                 println!("sent message request history of {}", domain);
                             }
@@ -302,7 +290,7 @@ fn build_ui(app: &Application) {
                                 "We got some reply! {} {} for {}: {}",
                                 ier.domain, ier.from_instance, ier.to_scope, ier.data_type
                             );
-                            if ier.data_type == "db/reply/event/history" {
+                            if ier.data_type == "db/reply/event/number/float/history" {
                                 let res: Vec<(f64, f64)>;
                                 let domain: String = ier.to_scope.to_string();
                                 res = serde_json::from_str(ier.data.to_string().as_str()).unwrap();
@@ -344,7 +332,7 @@ fn build_ui(app: &Application) {
                                     println!("Can't find {}", domain.clone());
                                 }
                                 continue;
-                            } else if ier.data_type == "db/reply/event/uniquedomains" {
+                            } else if ier.data_type == "db/reply/event/number/float/uniquedomains" {
                                 println!("UNIQUE reply! {}.", ier.data_type);
                                 let domains: Vec<String> =
                                     serde_json::from_value(ier.data).unwrap(); //.to_string().as_str()).unwrap();
@@ -354,7 +342,7 @@ fn build_ui(app: &Application) {
                                         time_series_lock.insert(domain.clone(), Vec::new());
                                         // request history
                                         let mut ie: IndraEvent = IndraEvent::new();
-                                        ie.domain = "$cmd/db/req/event/history".to_string();
+                                        ie.domain = "$cmd/db/req/event/number/float/history".to_string();
                                         ie.from_instance = "ws/plotter".to_string();
                                         ie.data_type = "db/req/event/history".to_string();
                                         let req: IndraEventRequest = IndraEventRequest {
@@ -364,7 +352,7 @@ fn build_ui(app: &Application) {
                                             max_count: Some(1000),
                                         };
                                         ie.data = serde_json::to_value(req).unwrap();
-                                        let ie_txt = ie.to_json().unwrap();
+                                        let ie_txt = serde_json::to_string(&ie).unwrap();
                                         socket.write_message(ie_txt.into()).unwrap();
                                         println!("sent message request history of {}", domain);
                                     }
