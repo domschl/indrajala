@@ -185,7 +185,7 @@ fn build_ui(app: &Application) {
         //websocket_client
         let shared_time_series = Arc::clone(&time_series);
         move || {
-            let mut known_topics: Vec<String> = Vec::new();
+            //let mut known_topics: Vec<String> = Vec::new();
             let (mut socket, _response) =
                 connect(Url::parse(host2.as_str()).unwrap()).expect("Should work.");
             println!("Connected to the server");
@@ -262,6 +262,9 @@ fn build_ui(app: &Application) {
                                     .get_mut(domain.as_str())
                                     .unwrap()
                                     .push((time, value));
+                                Arc::new(&sender)
+                                    .send(ChMessage::UpdateListBox(domain.clone()))
+                                    .unwrap();
                                 // request history
                                 let mut ie: IndraEvent = IndraEvent::new();
                                 ie.domain = "$cmd/db/req/event/number/float/history".to_string();
@@ -279,12 +282,14 @@ fn build_ui(app: &Application) {
                                 println!("sent message request history of {}", domain);
                             }
                             // println!("Temperature at {}: {}", time, value);
+                            /* 
                             if !known_topics.contains(&domain.clone()) {
                                 known_topics.push(domain.clone());
                                 Arc::new(&sender)
                                     .send(ChMessage::UpdateListBox(domain.clone()))
                                     .unwrap();
                             }
+                            */
                         } else {
                             println!(
                                 "We got some reply! {} {} for {}: {}",
@@ -340,6 +345,9 @@ fn build_ui(app: &Application) {
                                 for domain in domains.iter() {
                                     if !time_series_lock.contains_key(&domain.clone()) {
                                         time_series_lock.insert(domain.clone(), Vec::new());
+                                        Arc::new(&sender)
+                                            .send(ChMessage::UpdateListBox(domain.clone()))
+                                            .unwrap();
                                         // request history
                                         let mut ie: IndraEvent = IndraEvent::new();
                                         ie.domain =
@@ -356,9 +364,6 @@ fn build_ui(app: &Application) {
                                         let ie_txt = serde_json::to_string(&ie).unwrap();
                                         socket.write_message(ie_txt.into()).unwrap();
                                         println!("sent message request history of {}", domain);
-                                        Arc::new(&sender)
-                                            .send(ChMessage::UpdateListBox(domain.clone()))
-                                            .unwrap();
                                     }
                                 }
                             } else {
