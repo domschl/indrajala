@@ -342,6 +342,7 @@ impl AsyncTaskReceiver for SQLx {
                 continue;
             } else if msg.domain.starts_with("$event/") {
                 let domain = &msg.domain[7..];
+                let data_str = serde_json::to_string(&msg.data).unwrap();
                 if self.config.active {
                     // ignore Ws* domains
                     debug!("SQLx::sender: {:?}", msg);
@@ -358,7 +359,7 @@ impl AsyncTaskReceiver for SQLx {
                         .bind(msg.to_scope)
                         .bind(msg.time_jd_start)
                         .bind(msg.data_type)
-                        .bind(msg.data.to_string())
+                        .bind(data_str)
                         .bind(msg.auth_hash)
                         .bind(msg.time_jd_end)
                         .execute(&pool.clone().unwrap())
