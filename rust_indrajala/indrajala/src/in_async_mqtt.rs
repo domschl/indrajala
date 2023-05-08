@@ -88,23 +88,23 @@ impl AsyncTaskSender for Mqtt {
                         }
                         dd.domain = "$event/".to_string() + topic;
                         dd.from_instance = self.config.name.clone();
-                        let num_int: Result<i64, _> = payload.parse::<i64>();
+                        let num_int: Result<i64, _> = payload.trim().parse::<i64>();
                         if num_int.is_ok() {
                             dd.data_type = "number/int".to_string();
                             dd.data = serde_json::to_value(num_int.unwrap()).unwrap();
                         } else {
-                            let num_float: Result<f64, _> = payload.parse::<f64>();
+                            let num_float: Result<f64, _> = payload.trim().parse::<f64>();
                             if num_float.is_ok() {
                                 dd.data_type = "number/float".to_string();
                                 dd.data = serde_json::to_value(num_float.unwrap()).unwrap();
                             } else {
                                 if ["on", "true", "active"]
-                                    .contains(&payload.to_lowercase().as_str())
+                                    .contains(&payload.trim().to_lowercase().as_str())
                                 {
                                     dd.data_type = "bool".to_string();
                                     dd.data = serde_json::to_value(true).unwrap();
                                 } else if ["off", "false", "inactive"]
-                                    .contains(&payload.to_lowercase().as_str())
+                                    .contains(&payload.trim().to_lowercase().as_str())
                                 {
                                     dd.data_type = "bool".to_string();
                                     dd.data = serde_json::to_value(false).unwrap();
