@@ -84,8 +84,8 @@ impl AsyncTaskSender for Web {
                 let st = req.state().clone();
                 let IndraEvent {
                     domain,
-                    from_instance,
-                    from_uuid4,
+                    from_id,
+                    uuid4,
                     to_scope,
                     time_jd_start,
                     data_type,
@@ -102,8 +102,8 @@ impl AsyncTaskSender for Web {
                 let ie = {
                     let mut ie = st.ie.clone();
                     ie.domain = domain;
-                    ie.from_instance = from_instance;
-                    ie.from_uuid4 = from_uuid4;
+                    ie.from_id = from_id;
+                    ie.uuid4 = uuid4;
                     ie.to_scope = to_scope;
                     ie.time_jd_start = time_jd_start;
                     ie.data_type = data_type;
@@ -121,8 +121,8 @@ impl AsyncTaskSender for Web {
                 let st = req.state().clone();
                 let IndraEvent {
                     domain,
-                    from_instance: _,
-                    from_uuid4: _,
+                    from_id: _,
+                    uuid4: _,
                     to_scope: _,
                     time_jd_start,
                     data_type: _,
@@ -133,8 +133,8 @@ impl AsyncTaskSender for Web {
                 let ie = {
                     let mut ie = st.ie.clone();
                     ie.domain = domain;
-                    ie.from_instance = "indrajala/web".to_string();
-                    ie.from_uuid4 = "23432234".to_string();
+                    ie.from_id = "indrajala/web".to_string();
+                    ie.uuid4 = "23432234".to_string();
                     ie.to_scope = "#".to_string();
                     ie.time_jd_start = time_jd_start;
                     ie.data_type = "data".to_string();

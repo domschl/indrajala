@@ -48,7 +48,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
         let msg = receiver.recv().await;
         let ie = msg.unwrap();
         let mut from_ident = false;
-        if ie.from_instance == "" {
+        if ie.from_id == "" {
             error!(
                 "ERROR: ignoring {:#?}, from_instance is not set, can't avoid recursion.",
                 ie
@@ -109,11 +109,11 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                 continue;
             }
             let name_subs = name.clone() + "/#";
-            if IndraEvent::mqcmp(&ie.from_instance, &name_subs) || (&ie.from_instance == &name) {
+            if IndraEvent::mqcmp(&ie.from_id, &name_subs) || (&ie.from_id == &name) {
                 if ie.domain != "$cmd/quit" {
                     debug!(
                         "NOT sending {} to {}, recursion avoidance.",
-                        ie.from_instance, name
+                        ie.from_id, name
                     );
                     from_ident = true;
                     continue;
@@ -122,7 +122,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                 }
                 from_ident = true;
             } else {
-                debug!("{}, {} no match", ie.from_instance, name_subs);
+                debug!("{}, {} no match", ie.from_id, name_subs);
             }
             if IndraEvent::check_route(&ie.domain, &name, &ot, &ob) || ie.domain == "$cmd/quit" {
                 let mut sdata = ie.data.to_string();
@@ -132,7 +132,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                 }
                 info!(
                     "ROUTE: from: {} to: {} task {} [{}:{}]",
-                    ie.from_instance, ie.domain, name, sdata, ie.data_type,
+                    ie.from_id, ie.domain, name, sdata, ie.data_type,
                 );
                 let _ = acs.send(ie.clone()).await;
             }

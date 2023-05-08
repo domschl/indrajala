@@ -88,8 +88,8 @@ pub const INDRA_EVENT_VERSION: i64 = 1;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IndraEvent {
     pub domain: String,
-    pub from_instance: String,
-    pub from_uuid4: String,
+    pub from_id: String,
+    pub uuid4: String,
     pub to_scope: String,
     pub time_jd_start: f64,
     pub data_type: String,
@@ -124,8 +124,8 @@ impl IndraEvent {
         // println!("{}", iso_string);
         IndraEvent {
             domain: "".to_string(),
-            from_instance: "".to_string(),
-            from_uuid4: "".to_string(),
+            from_id: "".to_string(),
+            uuid4: "".to_string(),
             to_scope: "".to_string(),
             time_jd_start: Self::datetime_to_julian(now),
             data_type: "".to_string(),

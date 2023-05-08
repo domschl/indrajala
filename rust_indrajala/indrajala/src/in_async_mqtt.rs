@@ -87,7 +87,7 @@ impl AsyncTaskSender for Mqtt {
                             dd.domain = "$event/".to_string() + topic;
                         }
                         dd.domain = "$event/".to_string() + topic;
-                        dd.from_instance = self.config.name.clone();
+                        dd.from_id = self.config.name.clone();
                         let num_int: Result<i64, _> = payload.trim().parse::<i64>();
                         if num_int.is_ok() {
                             dd.data_type = "number/int".to_string();

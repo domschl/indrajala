@@ -83,7 +83,7 @@ impl AsyncTaskReceiver for Ws {
             */
             debug!(
                 "Ws: Sending msg {}->{} to {} peers.",
-                msg.from_instance,
+                msg.from_id,
                 msg.domain,
                 peers.len()
             );
@@ -92,7 +92,7 @@ impl AsyncTaskReceiver for Ws {
                 ws_sink.unbounded_send(wmsg.clone()).unwrap();
                 info!(
                     "WS-ROUTE: from: {} to: {} via {}",
-                    msg.from_instance,
+                    msg.from_id,
                     msg.domain,
                     addr,
                     //                    msg.data.to_string(),
@@ -137,9 +137,9 @@ async fn handle_connection(
         .try_for_each(move |msg| {
             if let Message::Text(text) = msg.clone() {
                 //debug!("Received: {}", text);
-                let mut iero:IndraEvent = serde_json::from_str(&text).unwrap();
+                let mut iero: IndraEvent = serde_json::from_str(&text).unwrap();
                 task::block_on(async {
-                    iero.from_instance = format!("{}/{}", name, addr).to_string().clone();
+                    iero.from_id = format!("{}/{}", name, addr).to_string().clone();
                     if sender.send(iero.clone()).await.is_err() {
                         error!("Ws: Error sending message to channel, assuming shutdown.");
                         return;
@@ -157,7 +157,7 @@ async fn handle_connection(
                     recp.unbounded_send(msg.clone()).unwrap();
                     info!(
                         "WS-PEER-ROUTE: from: {} to: {} to {}", // [{}]",
-                        iero.from_instance,
+                        iero.from_id,
                         iero.domain,
                         addr,
                         //iero.data.to_string().truncate(16),
