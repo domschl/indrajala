@@ -194,7 +194,7 @@ fn build_ui(app: &Application) {
             let mut ie: IndraEvent = IndraEvent::new();
             ie.domain = "$cmd/ws/subs".to_string();
             ie.from_instance = "ws/plotter".to_string();
-            ie.data_type = "$cmd/subs".to_string();
+            ie.data_type = "cmd/subs".to_string();
             let s1 = r#"{"subs":[""#.to_string();
             let s2 = r#""]}"#.to_string();
             ie.data = serde_json::from_str((s1 + &domain_topic2 + &s2).as_str()).unwrap();
@@ -237,6 +237,10 @@ fn build_ui(app: &Application) {
                     if matched == true {
                         if reply == false {
                             let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
+                            if ier.data_type != "event/number" {
+                                continue;
+                            }
+                            
                             let domain = ier.domain.clone();
                             let num_text: String = ier.data.to_string().replace("\"", "");
                             let value_opt = num_text.trim().parse();
