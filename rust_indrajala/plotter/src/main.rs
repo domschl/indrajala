@@ -356,10 +356,10 @@ fn build_ui(app: &Application) {
                                         let ie_txt = serde_json::to_string(&ie).unwrap();
                                         socket.write_message(ie_txt.into()).unwrap();
                                         println!("sent message request history of {}", domain);
+                                        Arc::new(&sender)
+                                            .send(ChMessage::UpdateListBox(domain.clone()))
+                                            .unwrap();
                                     }
-                                    Arc::new(&sender)
-                                        .send(ChMessage::UpdateListBox(domain.clone()))
-                                        .unwrap();
                                 }
                             } else {
                                 println!("Unknown reply type: {}", ier.data_type);
