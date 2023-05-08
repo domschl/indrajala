@@ -39,6 +39,7 @@ pub struct MqttConfig {
     pub username: String,
     pub password: String,
     pub client_id: String,
+    pub to_scope: String,
     pub topics: Vec<String>,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
