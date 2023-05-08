@@ -107,7 +107,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
                         to_scope TEXT NOT NULL,
                         time_jd_start DOUBLE,
                         data_type TEXT NOT NULL,
-                        data JSON NOT NULL,
+                        data TEXT,
                         auth_hash TEXT,
                         time_jd_end DOUBLE
                     )
@@ -176,7 +176,7 @@ impl AsyncTaskReceiver for SQLx {
                         "SQLx: Received db/scalar/req command from {} search for: {:?}",
                         msg.from_instance, req
                     );
-                    let rows: Vec<(i64, f64, _)>;
+                    let rows: Vec<(i64, f64, String)>;
                     let pool = pool.clone().unwrap();
                     if req.time_jd_start.is_none() && req.time_jd_end.is_none() {
                         let rows_res = sqlx::query_as(
@@ -255,7 +255,7 @@ impl AsyncTaskReceiver for SQLx {
                             //} else {
                             //    data_f64 = data_f64_opt.unwrap();
                             //}
-                            let data_f64 = row.2;
+                            let data_f64 = row.2.parse::<f64>().unwrap();
                             let time_jd_start: f64 = row.1;
                             // let time_jd_end: f64 = serde_json::from_value(data["time_jd_end"].clone()).unwrap();
                             (time_jd_start, data_f64)
