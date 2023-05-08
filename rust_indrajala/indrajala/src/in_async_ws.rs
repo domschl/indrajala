@@ -71,7 +71,8 @@ impl AsyncTaskReceiver for Ws {
                 break;
             }
 
-            let msg_text = msg.to_json().unwrap();
+            // let msg_text = msg.to_json().unwrap();
+            let msg_text = serde_json::to_string(&msg).unwrap();
             let wmsg = Message::Text(msg_text);
             let conns = self.connections.clone();
             let peers = conns.read().unwrap().clone();
@@ -136,7 +137,7 @@ async fn handle_connection(
         .try_for_each(move |msg| {
             if let Message::Text(text) = msg.clone() {
                 //debug!("Received: {}", text);
-                let mut iero = IndraEvent::from_json(&text).unwrap();
+                let mut iero:IndraEvent = serde_json::from_str(&text).unwrap();
                 task::block_on(async {
                     iero.from_instance = format!("{}/{}", name, addr).to_string().clone();
                     if sender.send(iero.clone()).await.is_err() {

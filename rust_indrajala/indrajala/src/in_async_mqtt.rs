@@ -88,22 +88,39 @@ impl AsyncTaskSender for Mqtt {
                         }
                         dd.domain = "$event/".to_string() + topic;
                         dd.from_instance = self.config.name.clone();
-                        let float = payload.parse::<f64>();
-                        if float.is_ok() {
-                            dd.data_type = "event/number".to_string();
-                            dd.data = serde_json::json!(payload.to_string());
+                        let num_int: Result<i64, _> = payload.parse::<i64>();
+                        if num_int.is_ok() {
+                            dd.data_type = "number/int".to_string();
+                            dd.data = serde_json::to_value(num_int.unwrap()).unwrap();
                         } else {
-                            if ["on", "true", "active"].contains(&payload.to_lowercase().as_str()) {
-                                dd.data_type = "event/number".to_string();
-                                dd.data = serde_json::json!("1".to_string());
-                            } else if ["off", "false", "inactive"].contains(&payload.to_lowercase().as_str()) {
-                                dd.data_type = "event/number".to_string();
-                                dd.data = serde_json::json!("0".to_string());
+                            let num_float: Result<f64, _> = payload.parse::<f64>();
+                            if num_float.is_ok() {
+                                dd.data_type = "number/float".to_string();
+                                dd.data = serde_json::to_value(num_float.unwrap()).unwrap();
                             } else {
-                                dd.data_type = "event/string".to_string();
-                                dd.data = serde_json::json!(payload.to_string());
+                                if ["on", "true", "active"]
+                                    .contains(&payload.to_lowercase().as_str())
+                                {
+                                    dd.data_type = "bool".to_string();
+                                    dd.data = serde_json::to_value(true).unwrap();
+                                } else if ["off", "false", "inactive"]
+                                    .contains(&payload.to_lowercase().as_str())
+                                {
+                                    dd.data_type = "bool".to_string();
+                                    dd.data = serde_json::to_value(false).unwrap();
+                                } else {
+                                    let val_json: Result<serde_json::Value, serde_json::Error> =
+                                        serde_json::from_str(payload.to_string().as_str());
+                                    if val_json.is_ok() {
+                                        dd.data_type = "json".to_string();
+                                        dd.data = val_json.unwrap();
+                                    } else {
+                                        dd.data_type = "string".to_string();
+                                        dd.data = serde_json::json!(payload.to_string());
+                                    }
+                                }
                             }
-                        } 
+                        }
                         if sender.send(dd).await.is_err() {
                             error!("Mqtt: Error sending message to channel, assuming shutdown.");
                             break;

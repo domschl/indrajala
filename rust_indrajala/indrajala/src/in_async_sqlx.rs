@@ -167,22 +167,33 @@ impl AsyncTaskReceiver for SQLx {
                 }
                 break;
             } else if msg.domain.starts_with("$cmd/") {
-                if msg.domain.starts_with("$cmd/db/req/event/history") {
+                if msg.domain.starts_with("$cmd/db/req/event/number/float/history") {
                     let req: IndraEventRequest = serde_json::from_value(msg.data).unwrap();
                     debug!(
                         "SQLx: Received db/scalar/req command from {} search for: {:?}",
                         msg.from_instance, req
                     );
-                    let rows: Vec<(i64, f64, String)>;
+                    let rows: Vec<(i64, f64, f64)>;
                     let pool = pool.clone().unwrap();
                     if req.time_jd_start.is_none() && req.time_jd_end.is_none() {
-                        rows = sqlx::query_as(
+                        let rows_res = sqlx::query_as(
                             "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ?",
                         )
                         .bind(req.domain.to_string())
                         .fetch_all(&pool)
-                        .await
-                        .unwrap();
+                        .await;
+                        if rows_res.is_err() {
+                            error!(
+                                "SQLx: Error executing query on {}, {:?}: {:?}",
+                                msg.domain,
+                                req,
+                                rows_res.err().unwrap()
+                            );
+                            continue;
+                        }
+                        else {
+                            rows = rows_res.unwrap();
+                        }
                     } else if !req.time_jd_start.is_none() && req.time_jd_end.is_none() {
                         rows = sqlx::query_as(
                             "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ? AND time_jd_start >= ?",
@@ -233,15 +244,16 @@ impl AsyncTaskReceiver for SQLx {
                         .iter()
                         .step_by(step)
                         .map(|row| {
-                            let data: serde_json::Value = serde_json::from_str(&row.2).unwrap();
-                            let num_text: String = data.to_string().replace("\"", "");
-                            let data_f64_opt = num_text.trim().parse();
-                            let data_f64: f64;
-                            if data_f64_opt.is_err() {
-                                data_f64 = 0.0;
-                            } else {
-                                data_f64 = data_f64_opt.unwrap();
-                            }
+                            //let data: serde_json::Value = serde_json::from_str(&row.2).unwrap();
+                            //let num_text: String = data.to_string().replace("\"", "");
+                            //let data_f64_opt = num_text.trim().parse();
+                            //let data_f64: f64;
+                            //if data_f64_opt.is_err() {
+                            //    data_f64 = 0.0;
+                            //} else {
+                            //    data_f64 = data_f64_opt.unwrap();
+                            //}
+                            let data_f64 = row.2;
                             let time_jd_start: f64 = row.1;
                             // let time_jd_end: f64 = serde_json::from_value(data["time_jd_end"].clone()).unwrap();
                             (time_jd_start, data_f64)
@@ -263,7 +275,7 @@ impl AsyncTaskReceiver for SQLx {
                         from_uuid4: msg.from_uuid4.clone(),
                         to_scope: req.domain.clone(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
-                        data_type: "db/reply/event/history".to_string(),
+                        data_type: "db/reply/event/number/history".to_string(),
                         data: serde_json::to_value(res).unwrap(),
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
@@ -282,7 +294,7 @@ impl AsyncTaskReceiver for SQLx {
                     }
                     //}
                     continue;
-                } else if msg.domain.starts_with("$cmd/db/req/event/uniquedomains") {
+                } else if msg.domain.starts_with("$cmd/db/req/event/number/float/uniquedomains") {
                     debug!(
                         "SQLx: Received db/unq/req command from {}",
                         msg.from_instance
@@ -290,7 +302,7 @@ impl AsyncTaskReceiver for SQLx {
                     //let rows: Vec<(String)>;
                     let pool = pool.clone().unwrap();
                     let rows: Vec<String> =
-                        sqlx::query("SELECT DISTINCT domain FROM indra_events WHERE data_type = 'event/number';")
+                        sqlx::query("SELECT DISTINCT domain FROM indra_events WHERE data_type LIKE 'number/float%';")
                             .fetch_all(&pool)
                             .await
                             .unwrap()
@@ -304,7 +316,7 @@ impl AsyncTaskReceiver for SQLx {
                         from_uuid4: msg.from_uuid4.clone(),
                         to_scope: "domain_list".to_string(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
-                        data_type: "db/reply/event/uniquedomains".to_string(),
+                        data_type: "db/reply/event/number/float/uniquedomains".to_string(),
                         data: serde_json::to_value(rows).unwrap(),
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
