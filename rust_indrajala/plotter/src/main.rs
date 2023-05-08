@@ -343,7 +343,7 @@ fn build_ui(app: &Application) {
                             } else if ier.data_type == "db/reply/event/uniquedomains" {
                                 println!("UNIQUE reply! {}.", ier.data_type);
                                 let domains: Vec<String> =
-                                    serde_json::from_str(ier.data.to_string().as_str()).unwrap();
+                                    serde_json::from_value(ier.data).unwrap(); //.to_string().as_str()).unwrap();
                                 let mut time_series_lock = shared_time_series.lock().unwrap();
                                 for domain in domains.iter() {
                                     if !time_series_lock.contains_key(&domain.clone()) {
