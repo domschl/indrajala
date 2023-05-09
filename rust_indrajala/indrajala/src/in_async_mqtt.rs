@@ -63,11 +63,12 @@ impl AsyncTaskSender for Mqtt {
             std::process::exit(1); // XXX exit really?
         });
         let qos = vec![0; self.config.topics.len()];
-        client
-            .subscribe_many(&self.config.topics, &qos)
-            .await
-            .unwrap();
-
+        if self.config.active {
+            client
+                .subscribe_many(&self.config.topics, &qos)
+                .await
+                .unwrap();
+        }
         while let Some(msg_opt) = strm.next().await {
             if let Some(msg) = msg_opt {
                 // get topic
