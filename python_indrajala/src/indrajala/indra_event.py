@@ -30,8 +30,8 @@ class IndraEvent:
     def __init__(
         self,
         domain,
-        from_instance,
-        from_uuid4,
+        from_id,
+        uuid4,
         to_scope,
         time_start,
         data_type,
@@ -42,8 +42,8 @@ class IndraEvent:
         """Create an IndraEvent json object
 
         :param domain:        MQTT-like path
-        :param from_instance: originator-path
-        :param from_uuid4:    unique id for originator
+        :param from_id:       originator-path
+        :param uuid4:         unique id for originator
         :param to_scope:      security context
         :param auth_hash:     security auth (optional)
         :param time_start:    event time in ISO UTC XXXX paleo scale!
@@ -52,8 +52,8 @@ class IndraEvent:
         :param data           JSON data (note: simple values are valid)
         """
         self.domain = domain
-        self.from_instance = from_instance
-        self.from_uuid4 = from_uuid4
+        self.from_id = from_id
+        self.uuid4 = uuid4
         self.to_scope = to_scope
         self.auth_hash = auth_hash
         self.time_start = time_start

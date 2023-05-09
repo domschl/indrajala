@@ -8,6 +8,7 @@ use log::debug;
 
 use tide;
 use tide_rustls::TlsListener;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct Web {
@@ -134,7 +135,7 @@ impl AsyncTaskSender for Web {
                     let mut ie = st.ie.clone();
                     ie.domain = domain;
                     ie.from_id = "indrajala/web".to_string();
-                    ie.uuid4 = "23432234".to_string();
+                    ie.uuid4 = Uuid::new_v4().to_string();
                     ie.to_scope = "#".to_string();
                     ie.time_jd_start = time_jd_start;
                     ie.data_type = "data".to_string();
