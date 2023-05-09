@@ -122,13 +122,14 @@ async fn handle_connection(
     // Insert the write part of this peer to the peer map.
     let (tx, rx) = unbounded();
     //peer_map.lock().unwrap().insert(addr, tx);
-    peer_map.write().unwrap().insert(addr, tx);
+    peer_map.write().unwrap().insert(addr, tx.clone());
     let p2 = peer_map.read().unwrap().clone();
 
     let (outgoing, incoming) = ws_stream.split();
     //let sx = sender.clone();
 
     let broadcast_incoming = incoming
+        // XXX remove close
         .try_filter(move |msg| {
             // Broadcasting a Close message from one client
             // will close the other clients.
@@ -137,31 +138,39 @@ async fn handle_connection(
         .try_for_each(move |msg| {
             if let Message::Text(text) = msg.clone() {
                 //debug!("Received: {}", text);
-                let mut iero: IndraEvent = serde_json::from_str(&text).unwrap();
-                task::block_on(async {
-                    iero.from_id = format!("{}/{}", name, addr).to_string().clone();
-                    if sender.send(iero.clone()).await.is_err() {
-                        error!("Ws: Error sending message to channel, assuming shutdown.");
-                        return;
+                let iero_res: Result<IndraEvent, serde_json::Error> = serde_json::from_str(&text);
+                let mut iero: IndraEvent;
+                if iero_res.is_err() {
+                    warn!("WS: Received invalid IndraEvent: {}", text);
+                    tx.unbounded_send("error - not a valid IndraEvent".into())
+                        .unwrap();
+                } else {
+                    iero = iero_res.unwrap();
+                    task::block_on(async {
+                        iero.from_id = format!("{}/{}", name, addr).to_string().clone();
+                        if sender.send(iero.clone()).await.is_err() {
+                            error!("Ws: Error sending message to channel, assuming shutdown.");
+                            return;
+                        }
+                    });
+                    let peers = p2.clone();
+
+                    // We want to broadcast the message to everyone except ourselves.
+                    let broadcast_recipients = peers
+                        .iter()
+                        .filter(|(peer_addr, _)| peer_addr != &&addr)
+                        .map(|(_, ws_sink)| ws_sink);
+
+                    for recp in broadcast_recipients {
+                        recp.unbounded_send(msg.clone()).unwrap();
+                        info!(
+                            "WS-PEER-ROUTE: from: {} to: {} to {}", // [{}]",
+                            iero.from_id,
+                            iero.domain,
+                            addr,
+                            //iero.data.to_string().truncate(16),
+                        );
                     }
-                });
-                let peers = p2.clone();
-
-                // We want to broadcast the message to everyone except ourselves.
-                let broadcast_recipients = peers
-                    .iter()
-                    .filter(|(peer_addr, _)| peer_addr != &&addr)
-                    .map(|(_, ws_sink)| ws_sink);
-
-                for recp in broadcast_recipients {
-                    recp.unbounded_send(msg.clone()).unwrap();
-                    info!(
-                        "WS-PEER-ROUTE: from: {} to: {} to {}", // [{}]",
-                        iero.from_id,
-                        iero.domain,
-                        addr,
-                        //iero.data.to_string().truncate(16),
-                    );
                 }
             }
 
