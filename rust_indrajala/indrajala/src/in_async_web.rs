@@ -4,7 +4,7 @@ use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 //use env_logger::Env;
 //use log::{debug, error, info, warn};
-use log::debug;
+use log::{debug, info, warn};
 
 use tide;
 use tide_rustls::TlsListener;
@@ -67,7 +67,8 @@ impl WebState {
 }
 
 // Test with:
-// curl --cacert ~/Nextcloud/Security/Certs/ca-root.pem  https://pergamon:8081/api/v1/event/full -d '{"domain": "test/ok/XXXXXXXXXXXXXXXX", "from_instance":"world-wide-web", "from_uuid4":"ui324234234234", "to_scope":"to-all-my-friend", "time_start":"2023-04-15T11:28:00CET", "data_type":"test", "data":"lots-of-data", "auth_hash":"XXX", "time_end":"never"}'
+// curl --cacert ~/Nextcloud/Security/Certs/ca-root.pem  https://localhost:8081/api/v1/event/full -d '{"domain": "test/ok/XXXXXXXXXXXXXXXX", "from_id":"world-wide-web", "uuid4":"ui324234234234", "to_scope":"to-all-my-friend", "time_start":3.13145, "data_type":"test", "data":"lots-of-data", "auth_hash":"XXX", "time_end":3.2342}'
+// curl --cacert ~/Nextcloud/Security/Certs/ca-root.pem  https://localhost:8081/api/v1/event/simple -d '{"domain": "test/ok/XXXXXXXXXXXXXXXX", "from_instance":"world-wide-web", "from_uuid4":"ui324234234234", "to_scope":"to-all-my-friend", "time_start":"2023-04-15T11:28:00CET", "data_type":"test", "data":"lots-of-data", "auth_hash":"XXX", "time_end":"never"}'
 
 impl AsyncTaskSender for Web {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
@@ -82,40 +83,26 @@ impl AsyncTaskSender for Web {
         let ptsimple = evpathsimple.as_str();
         app.at(pt)
             .post(|mut req: tide::Request<WebState>| async move {
+                warn!("POST");
                 let st = req.state().clone();
-                let IndraEvent {
-                    domain,
-                    from_id,
-                    uuid4,
-                    to_scope,
-                    time_jd_start,
-                    data_type,
-                    data,
-                    auth_hash,
-                    time_jd_end,
-                } = req.body_json().await.unwrap();
-                let mut domain = domain;
-                if domain.starts_with("$") {
-                    domain = domain.to_string();
+                let ie_res: Result<IndraEvent, tide::Error> = req.body_json().await;
+                let mut res: tide::Response = tide::Response::new(tide::StatusCode::Ok);
+                let mut ie: IndraEvent;
+                if ie_res.is_err() {
+                    res.set_body(format!("bad request: {}", ie_res.err().unwrap()));
+                    res.set_status(tide::StatusCode::BadRequest);
+                    warn!("bad request");
                 } else {
-                    domain = "$event/".to_string() + domain.as_str();
+                    ie = ie_res.unwrap();
+                    if !ie.domain.starts_with("$") {
+                        ie.domain = "$event/".to_string() + ie.domain.as_str();
+                    }
+                    debug!("SENDING POST: {:?}", ie);
+                    res.set_body("Ok");
+                    res.set_status(tide::StatusCode::Ok);
+                    st.sender.send(ie.clone()).await?;
                 }
-                let ie = {
-                    let mut ie = st.ie.clone();
-                    ie.domain = domain;
-                    ie.from_id = from_id;
-                    ie.uuid4 = uuid4;
-                    ie.to_scope = to_scope;
-                    ie.time_jd_start = time_jd_start;
-                    ie.data_type = data_type;
-                    ie.data = data;
-                    ie.auth_hash = auth_hash;
-                    ie.time_jd_end = time_jd_end;
-                    ie
-                };
-                debug!("SENDING POST: {:?}", ie);
-                st.sender.send(ie.clone()).await?;
-                Ok("Indrajala!".to_string())
+                Ok(res)
             });
         app.at(ptsimple)
             .post(|mut req: tide::Request<WebState>| async move {
@@ -149,16 +136,19 @@ impl AsyncTaskSender for Web {
                 Ok("Indrajala!".to_string())
             });
         if self.config.ssl {
+            info!("Web: Listening on {} (ssl)", self.config.address);
             app.listen(
                 TlsListener::build()
-                    .addrs(self.config.address)
+                    .addrs(self.config.address.clone())
                     .cert(self.config.cert)
                     .key(self.config.key),
             )
             .await
             .unwrap();
         } else {
+            info!("Web: Listening on {}", self.config.address);
             app.listen(self.config.address).await.unwrap();
         }
+        info!("Web: Quitting.");
     }
 }
