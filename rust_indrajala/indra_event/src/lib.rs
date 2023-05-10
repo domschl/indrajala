@@ -99,8 +99,12 @@ pub struct IndraEvent {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum IndraEventRequestMode { Intervall, Latest }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IndraEventRequest {
     pub domain: String,
+    pub mode: IndraEventRequestMode,
     pub time_jd_start: Option<f64>,
     pub time_jd_end: Option<f64>,
     pub max_count: Option<usize>,
@@ -123,15 +127,15 @@ impl IndraEvent {
         //let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         // println!("{}", iso_string);
         IndraEvent {
-            domain: "".to_string(),
-            from_id: "".to_string(),
-            uuid4: "".to_string(),
-            to_scope: "".to_string(),
-            time_jd_start: Self::datetime_to_julian(now),
-            data_type: "".to_string(),
-            data: serde_json::json!(""),
-            auth_hash: Default::default(),
-            time_jd_end: Default::default(),
+            domain: "".to_string(),   // The recipient domain, PUBLISHER topic which can be subscribed to
+            from_id: "".to_string(),  // The sender instance domain , a reverse PUBLISHER topic which can be used to reply, if used in transaction mode
+            uuid4: "".to_string(),    // A uuid for the event, used to prevent duplicate events
+            to_scope: "".to_string(), // A session scope, used to group events into sessions and to allow authentication hierachies. Domain-like syntax.
+            time_jd_start: Self::datetime_to_julian(now), // The start time of the event, in Julian Date
+            data_type: "".to_string(), // The type of the data, used to allow filtering, domain-like syntax, e.g. "number/float"
+            data: serde_json::json!(""), // The data, can be any JSON value, described by data_type
+            auth_hash: Default::default(), // A hash of the data, used to authenticate the data
+            time_jd_end: Default::default(), // The end time of the event, in Julian Date
         }
     }
 

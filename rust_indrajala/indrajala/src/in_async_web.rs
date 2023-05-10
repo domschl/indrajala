@@ -5,12 +5,13 @@ use crate::{AsyncTaskReceiver, AsyncTaskSender};
 //use env_logger::Env;
 //use log::{debug, error, info, warn};
 use log::{debug, info, warn};
-
+use async_channel;
 use tide;
 use tide_rustls::TlsListener;
 use tide::http::{convert::Deserialize};
+use std::collections::HashMap;
 //use tide::Request;
-//use uuid::Uuid;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct Web {
@@ -60,11 +61,12 @@ impl AsyncTaskReceiver for Web {
 struct WebState {
     sender: async_channel::Sender<IndraEvent>,
     ie: IndraEvent,
+    sessions: HashMap<String, async_channel::Sender<IndraEvent>>,
 }
 
 impl WebState {
-    fn new(sender: async_channel::Sender<IndraEvent>, ie: IndraEvent  ) -> Self {
-        WebState { sender, ie  }
+    fn new(sender: async_channel::Sender<IndraEvent>, ie: IndraEvent, sessions: HashMap<String, async_channel::Sender<IndraEvent>>  ) -> Self {
+        WebState { sender, ie, sessions  }
     }
 }
 
@@ -74,7 +76,7 @@ impl WebState {
 impl AsyncTaskSender for Web {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         let evpath = self.config.url.clone() + "/event";
-        let astate = WebState::new(sender.clone(), IndraEvent::new());
+        let astate = WebState::new(sender.clone(), IndraEvent::new(), HashMap::new());
         let mut app = tide::with_state(astate); //new();
         let mut ie: IndraEvent = IndraEvent::new();
         ie.domain = "web".to_string();
@@ -114,6 +116,11 @@ impl AsyncTaskSender for Web {
                 let q: Query = q_res.unwrap();
                 let domain = q.domain;
                 info!("url {} domain {}", req.url(), domain);
+                let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
+                let uuid = Uuid::new_v4().to_string();
+                // db req.
+                // wait on receiver.
+                st.sessions.insert(uuid.clone(), sender);
                 Ok(format!("Indrajala! domain={}", domain).to_string())
             });
         if self.config.ssl {
