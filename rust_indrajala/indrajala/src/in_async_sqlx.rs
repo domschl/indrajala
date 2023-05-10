@@ -129,6 +129,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     let q_res2 = sqlx::query(
         r#"
                     CREATE INDEX IF NOT EXISTS indra_events_domain ON indra_events (domain);
+                    CREATE INDEX IF NOT EXISTS indra_events_from_id ON indra_events (to_scope);
                     CREATE INDEX IF NOT EXISTS indra_events_time_start ON indra_events (time_jd_start);
                     CREATE INDEX IF NOT EXISTS indra_events_data_type ON indra_events (data_type);
                     CREATE INDEX IF NOT EXISTS indra_events_time_end ON indra_events (time_jd_end);

@@ -21,7 +21,7 @@ use plotters::style::WHITE;
 //{ChartBuilder, IntoDrawingArea, LabelAreaPosition, LineSeries};
 use plotters_cairo::CairoBackend;
 
-use indra_event::{IndraEvent, IndraEventRequest};
+use indra_event::{IndraEvent, IndraEventRequest, IndraEventRequestMode};
 
 //use std::time;
 //use chrono::prelude::*;
@@ -272,6 +272,7 @@ fn build_ui(app: &Application) {
                                 ie.data_type = "db/req/event/history".to_string();
                                 let req: IndraEventRequest = IndraEventRequest {
                                     domain: domain.clone(),
+                                    mode: IndraEventRequestMode::Intervall,
                                     time_jd_start: None,
                                     time_jd_end: None,
                                     max_count: Some(1000),
@@ -356,6 +357,7 @@ fn build_ui(app: &Application) {
                                         ie.data_type = "db/req/event/history".to_string();
                                         let req: IndraEventRequest = IndraEventRequest {
                                             domain: domain.clone(),
+                                            mode: IndraEventRequestMode::Intervall,
                                             time_jd_start: None,
                                             time_jd_end: None,
                                             max_count: Some(1000),
