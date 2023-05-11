@@ -135,10 +135,10 @@ impl AsyncTaskSender for Mqtt {
                 // A "None" means we were disconnected. Try to reconnect...
                 warn!("MQTT: Lost connection. Attempting reconnect.");
                 while let Err(err) = client.reconnect().await {
-                    warn!("MQTT Error reconnecting: {}", err);
+                    debug!("MQTT Error reconnecting: {}", err);
                     // For tokio use: tokio::time::delay_for()
                     async_std::task::sleep(Duration::from_millis(1000)).await;
-                    info!("MQTT: Reconnect attempt failed. Retrying...");
+                    debug!("MQTT: Reconnect attempt failed. Retrying...");
                 }
                 warn!("MQTT: Reconnected.");
                 let qos = vec![0; self.config.topics.len()];
