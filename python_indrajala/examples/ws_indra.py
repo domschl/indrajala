@@ -25,21 +25,21 @@ class IndraEvent:
         :param from_id:       originator-path
         :param uuid4:         unique id
         :param to_scope:      security scope or context
-        :param time_start:    event time as float julian date
+        :param time_jd_start:    event time as float julian date
         :param data_type      short descriptor-path
         :param data           JSON data (note: simple values are valid)
         :param auth_hash:     security auth (optional)
-        :param time_end:      end-of-event jd (optional)
+        :param time_jd_end:      end-of-event jd (optional)
         """
         self.domain = domain
         self.from_id = from_id
         self.uuid4 = uuid4
         self.to_scope = to_scope
-        self.time_start = time_start
+        self.time_jd_start = time_start
         self.data_type = data_type
         self.data = data
         self.auth_hash = auth_hash
-        self.time_end = time_end
+        self.time_jd_end = time_end
 
     def to_json(self):
         """Convert to JSON string"""

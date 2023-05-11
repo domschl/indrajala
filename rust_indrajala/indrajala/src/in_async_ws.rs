@@ -141,7 +141,7 @@ async fn handle_connection(
                 let iero_res: Result<IndraEvent, serde_json::Error> = serde_json::from_str(&text);
                 let mut iero: IndraEvent;
                 if iero_res.is_err() {
-                    warn!("WS: Received invalid IndraEvent: {}", text);
+                    warn!("WS: Received invalid IndraEvent: {}, {}", text, iero_res.err().unwrap());
                     tx.unbounded_send("error - not a valid IndraEvent".into())
                         .unwrap();
                 } else {
