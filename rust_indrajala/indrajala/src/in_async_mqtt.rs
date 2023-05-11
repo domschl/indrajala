@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 //use env_logger::Env;
 //use log::{debug, error, info, warn};
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 
 use crate::indra_config::MqttConfig;
 use crate::IndraEvent;
@@ -138,6 +138,15 @@ impl AsyncTaskSender for Mqtt {
                     warn!("MQTT Error reconnecting: {}", err);
                     // For tokio use: tokio::time::delay_for()
                     async_std::task::sleep(Duration::from_millis(1000)).await;
+                    info!("MQTT: Reconnect attempt failed. Retrying...");
+                }
+                warn!("MQTT: Reconnected.");
+                let qos = vec![0; self.config.topics.len()];
+                if self.config.active {
+                    client
+                        .subscribe_many(&self.config.topics, &qos)
+                        .await
+                        .unwrap();
                 }
             }
         }

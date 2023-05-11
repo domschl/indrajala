@@ -1,7 +1,7 @@
 import json
 import datetime
 import asyncio
-from websockets.sync.client import connect
+from websockets import connect
 import logging
 import ssl
 import uuid
@@ -80,11 +80,21 @@ class IndraEvent:
         microsecond = 1000000 * (second - int(second))
         return datetime.datetime(year, month, int(day), int(hour), int(minute), int(second), int(microsecond))
     
-    
-if __name__ == "__main__":
-    url = "ws://localhost:8082"
-    with connect(url) as ws:
+async def indra(url):
+    """Connect to Indra server, use TLS"""
+    async with connect(url) as websocket:  #, ssl=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT )) as websocket:
         ie = IndraEvent("$event/python/test", "ws/python", str(uuid.uuid4()), "to/test", IndraEvent.datetime2julian(datetime.datetime.utcnow()),
                         "string/test", "3.1325", "hash", IndraEvent.datetime2julian(datetime.datetime.utcnow()))
-        print(ie.to_json())
-        ws.send(ie.to_json())
+        await websocket.send(ie.to_json())
+
+        #while True:
+        #    try:
+        #        message = await websocket.recv()
+        #        print(message)
+        #    except Exception as e:
+        #        print(e)
+        #        break    
+
+if __name__ == "__main__":
+    url = "ws://localhost:8082"
+    asyncio.run(indra(url))
