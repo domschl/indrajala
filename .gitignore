@@ -3,3 +3,4 @@ csv_tree/
 target
 Cargo.lock
 plotter.toml
+.vscode/
