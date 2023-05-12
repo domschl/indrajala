@@ -1,17 +1,22 @@
 use crate::indra_config::WsConfig;
 use crate::IndraEvent;
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
+
 use std::{
     collections::HashMap,
-    // io::Error as IoError,
+    fs::File,
+    io::BufReader,
     net::SocketAddr,
-    // sync::{Arc, Mutex, RwLock},
     sync::{Arc, RwLock},
 };
 
-//use env_logger::Env;
-//use log::{debug, error, info, warn};
-use log::{debug, error, info, warn};
+use async_channel;
+use async_std::net::{TcpListener, TcpStream};
+use async_std::task;
+//use async_tungstenite::tungstenite::protocol::Message;
+use async_tungstenite::{async_std::connect_async, tungstenite::Message};
+
+// use tide_rustls::TlsListener;
 
 use futures::prelude::*;
 use futures::{
@@ -19,14 +24,14 @@ use futures::{
     future, pin_mut,
 };
 
-use async_std::net::{TcpListener, TcpStream};
-use async_std::task;
-use async_tungstenite::tungstenite::protocol::Message;
+use log::{debug, error, info, warn};
 
-// use std::time::Duration;
+use rustls::internal::pemfile::{certs, pkcs8_private_keys};  // rsa_private_keys
+use rustls::{NoClientAuth, ServerConfig};
+
+use async_tls::TlsAcceptor;
 
 type Tx = UnboundedSender<Message>;
-//type PeerMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
 type PeerMap = Arc<RwLock<HashMap<SocketAddr, Tx>>>;
 
 #[derive(Clone)]
@@ -104,17 +109,14 @@ impl AsyncTaskReceiver for Ws {
 
 async fn handle_connection(
     peer_map: PeerMap,
-    raw_stream: TcpStream,
+    stream: TcpStream,
     addr: SocketAddr,
     sender: async_channel::Sender<IndraEvent>,
     name: String,
 ) {
-    info!(
-        "Incoming TCP connection from: {}, I am {}, sender is {:?}",
-        addr, name, sender
-    );
+    info!("Incoming TCP connection from: {}, I am {}", addr, name);
 
-    let ws_stream = async_tungstenite::accept_async(raw_stream)
+    let ws_stream = async_tungstenite::accept_async(stream)
         .await
         .expect("Error during the websocket handshake occurred");
     debug!("WebSocket connection established: {}", addr);
@@ -141,7 +143,11 @@ async fn handle_connection(
                 let iero_res: Result<IndraEvent, serde_json::Error> = serde_json::from_str(&text);
                 let mut iero: IndraEvent;
                 if iero_res.is_err() {
-                    warn!("WS: Received invalid IndraEvent: {}, {}", text, iero_res.err().unwrap());
+                    warn!(
+                        "WS: Received invalid IndraEvent: {}, {}",
+                        text,
+                        iero_res.err().unwrap()
+                    );
                     tx.unbounded_send("error - not a valid IndraEvent".into())
                         .unwrap();
                 } else {
@@ -182,7 +188,7 @@ async fn handle_connection(
     pin_mut!(broadcast_incoming, receive_from_others);
     future::select(broadcast_incoming, receive_from_others).await;
 
-    warn!("{} disconnected", &addr);
+    info!("{} disconnected", &addr);
     peer_map.write().unwrap().remove(&addr);
 }
 
@@ -190,24 +196,49 @@ pub async fn init_websocket_server(
     connections: PeerMap,
     address: String,
     sender: async_channel::Sender<IndraEvent>,
-    name: String,
-) {
-    let addr = address.as_str();
-    let listener = TcpListener::bind(&addr).await.expect("Can't listen");
+    wsconfig: WsConfig,
+)  {
+    let url = format!("wss://{}", address);
+
+    let stream_res = connect_async(url).await;
+    if stream_res.is_err() {
+        error!("Error connecting to websocket server: {}", stream_res.err().unwrap());
+        return;
+    }
+    let ws_stream = stream_res.unwrap().0;
+    // Convert ws_stream to TcpStream:
+    let stream = ws_stream.into_parts().0;
+
+    task::spawn(handle_connection(
+        connections.clone(),
+        stream,
+        "websocket".parse().unwrap(),
+        sender.clone(),
+        wsconfig.name.clone(),
+    ));
+
+}
+    /* 
+    // let listener = TcpListener::bind(&addr).await.expect("Can't listen");
+    let listener = TlsListener::build()
+                    .addrs(wsconfig.address.clone())
+                    .cert(wsconfig.cert)
+                    .key(wsconfig.key);
     info!("Listening on: {}", addr);
 
     // Let's spawn the handling of each connection in a separate task.
-    while let Ok((stream, addr)) = listener.accept().await {
+    while let Ok((stream, addr)) = listener.tls_acceptor(acceptor).await {  //.accept().await {
         task::spawn(handle_connection(
             connections.clone(),
             stream,
             addr,
             sender.clone(),
-            name.clone(),
+            wsconfig.name.clone(),
         ));
     }
     //Ok(())
 }
+*/
 
 impl AsyncTaskSender for Ws {
     async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {

@@ -96,5 +96,5 @@ async def indra(url):
         #        break    
 
 if __name__ == "__main__":
-    url = "ws://localhost:8082"
+    url = "wss://localhost:8082"
     asyncio.run(indra(url))

@@ -27,7 +27,7 @@ sslconfig = MbedTLS.SSLConfig(false)
 println("Opening...")
 WebSockets.open("ws://localhost:8082", sslconfig=sslconfig) do ws
     x=0.0;
-    for i in 1:10000
+    for i in 1:10
         jd=datetime2julian(now(UTC))
         x = x + (rand()-0.5)/10.0;
         msg = IndraEvent("\$event/julia/test", "", UUIDs.uuid4(), "data/test", jd, "number/float", x, "", jd)  
