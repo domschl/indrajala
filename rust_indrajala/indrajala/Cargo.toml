@@ -18,9 +18,13 @@ serde_json = "*"
 chrono = "*"
 chrono-tz = "*"
 tide = "*"
+rustls = "*"
+rustls-pemfile = "*"
 tide-rustls = "*"
 sqlx = { version = "*", features = ["runtime-async-std-rustls", "sqlite", "macros"] }
-async-tungstenite = { version = "*", features = ["async-tls"] }
+# native-tls = "*"
+async-tls = { version = "*", features = ["server"]}
+async-tungstenite = { version = "*", features = ["async-tls", "async-std-runtime"] }
 futures = "*"
 signal-hook = "*"
 signal-hook-async-std = "*"

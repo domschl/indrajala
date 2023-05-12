@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 //use env_logger::Env;
 //use log::{debug, error, info, warn};
-use log::{debug, error, info, warn};
+use log::{debug, error, warn};
 
 use crate::indra_config::MqttConfig;
 use crate::IndraEvent;
@@ -40,6 +40,10 @@ impl Mqtt {
 
 impl AsyncTaskSender for Mqtt {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            debug!("MQTT is not active");
+            return;
+        }
         let server_uri = format!("tcp://{}:{}", self.config.host, self.config.port);
         let client_id = format!("{}_{}", &self.config.client_id, Uuid::new_v4().to_string());
         let create_opts = CreateOptionsBuilder::new()
