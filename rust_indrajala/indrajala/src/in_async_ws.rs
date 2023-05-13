@@ -2,6 +2,8 @@ use crate::indra_config::WsConfig;
 use crate::IndraEvent;
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
+use std::io;
+use std::path::{Path, PathBuf};
 use std::{
     collections::HashMap,
     fs::File,
@@ -26,10 +28,17 @@ use futures::{
 
 use log::{debug, error, info, warn};
 
-use rustls::internal::pemfile::{certs, pkcs8_private_keys};  // rsa_private_keys
-use rustls::{NoClientAuth, ServerConfig};
+use rustls::internal::pemfile::{certs, pkcs8_private_keys}; // rsa_private_keys
+use rustls::NoClientAuth;
+use rustls::{Certificate, PrivateKey, ServerConfig};
+use rustls_pemfile::{read_one, Item};
 
 use async_tls::TlsAcceptor;
+
+use async_std::stream::StreamExt;
+//use futures_lite::io::AsyncWriteExt;
+use std::net::ToSocketAddrs;
+//use structopt::StructOpt;
 
 type Tx = UnboundedSender<Message>;
 type PeerMap = Arc<RwLock<HashMap<SocketAddr, Tx>>>;
@@ -192,33 +201,44 @@ async fn handle_connection(
     peer_map.write().unwrap().remove(&addr);
 }
 
+fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
+    Ok(certs(&mut BufReader::new(File::open(path)?))
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))?
+        .into_iter()
+        .map(Certificate.into())
+        .collect())
+}
+fn load_keys(path: &Path) -> io::Result<PrivateKey> {
+    match read_one(&mut BufReader::new(File::open(path)?)) {
+        Ok(Some(Item::RSAKey(data) | Item::PKCS8Key(data))) => Ok(PrivateKey(data)),
+        Ok(_) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("invalid key in {}", path.display()),
+        )),
+        Err(e) => Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
+    }
+}
+
 pub async fn init_websocket_server(
     connections: PeerMap,
     address: String,
     sender: async_channel::Sender<IndraEvent>,
     wsconfig: WsConfig,
-)  {
+) {
     let url = format!("wss://{}", address);
 
-    let stream_res = connect_async(url).await;
-    if stream_res.is_err() {
-        error!("Error connecting to websocket server: {}", stream_res.err().unwrap());
-        return;
-    }
-    let ws_stream = stream_res.unwrap().0;
-    // Convert ws_stream to TcpStream:
-    let stream = ws_stream.into_parts().0;
+    let certs = load_certs(&Path::new(wsconfig.cert.as_str())).unwrap();
+    let mut keys = load_keys(&Path::new(wsconfig.key.as_str())).unwrap();
 
-    task::spawn(handle_connection(
-        connections.clone(),
-        stream,
-        "websocket".parse().unwrap(),
-        sender.clone(),
-        wsconfig.name.clone(),
-    ));
-
+    // we don't use client authentication
+    let mut config = ServerConfig::new(NoClientAuth::new());
+    config
+        // set this server to use one cert together with the loaded private key
+        .set_single_cert(certs, keys) //  .remove(0))
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))
+        .unwrap();
 }
-    /* 
+/*
     // let listener = TcpListener::bind(&addr).await.expect("Can't listen");
     let listener = TlsListener::build()
                     .addrs(wsconfig.address.clone())
