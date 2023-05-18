@@ -23,8 +23,8 @@ rustls-pemfile = "*"
 tide-rustls = "*"
 sqlx = { version = "*", features = ["runtime-async-std-rustls", "sqlite", "macros"] }
 # native-tls = "*"
-async-tls = { version = "*", features = ["server"]}
-async-tungstenite = { version = "*", features = ["async-tls", "async-std-runtime"] }
+async-tls = "*"  # { version = "*", features = ["server"]}
+async-tungstenite = "*"  # { version = "*", features = ["async-tls", "async-std-runtime"] }
 futures = "*"
 signal-hook = "*"
 signal-hook-async-std = "*"
