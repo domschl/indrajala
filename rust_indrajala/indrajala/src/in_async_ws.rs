@@ -93,6 +93,11 @@ pub async fn init_websocket_server(
         info!("Connected session to peer address: {}", peer_address);
         while let Some(msg) = websocket.next().await {
             let msg = msg?;
+            // check for close message:
+            if msg.is_close() {
+                info!("Received close message from client: {:?}", msg);
+                break;
+            }
             info!("Received a message from the client: {:?}", msg);
             let msg_text = msg.to_string();
             let ie: Result<IndraEvent, serde_json::Error> = serde_json::from_str(&msg_text);
@@ -100,7 +105,10 @@ pub async fn init_websocket_server(
                 warn!("Failed to parse message from client: {:?}", msg_text);
                 continue;
             }
-            sender.send(ie.unwrap()).await.unwrap();
+            let name = "Ws.1"; // XXX!
+            let mut ie = ie.unwrap();
+            ie.from_id = format!("{}/{}", name, peer_address.to_string());
+            sender.send(ie).await.unwrap();
             //if msg.is_text() || msg.is_binary() {
             //    websocket.send(msg).await?;
             //}
@@ -119,7 +127,12 @@ pub async fn init_websocket_server(
             let sx = sender.clone();
             async_std::task::spawn(async move {
                 //let peer_addr = stream.peer_addr().unwrap();
-                let stream = tls_acceptor.accept(stream).await.unwrap();
+                let stream_res = tls_acceptor.accept(stream).await;
+                if stream_res.is_err() {
+                    error!("failed to accept TLS stream: {}", stream_res.err().unwrap());
+                    return;
+                }
+                let stream = stream_res.unwrap();
                 if let Err(e) = handle_connection(stream, peer_addr, sx).await {
                     error!("failed to handle connection: {}", e);
                 }
