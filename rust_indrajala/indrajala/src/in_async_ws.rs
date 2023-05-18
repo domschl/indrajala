@@ -3,6 +3,7 @@ use crate::IndraEvent;
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 use async_channel;
+use std::net::SocketAddr;
 use std::{
     fs::File,
     io::BufReader,
@@ -85,33 +86,49 @@ pub async fn init_websocket_server(
     let url = format!("wss://{}", address);
 }
 
-async fn handle_connection(stream: TlsStream<TcpStream>) -> Result<(), Box<dyn std::error::Error>> {
-    let mut websocket = accept_async(stream).await?;
-    while let Some(msg) = websocket.next().await {
-        let msg = msg?;
-        warn!("Received a message from the client: {:?}", msg);
-        //if msg.is_text() || msg.is_binary() {
-        //    websocket.send(msg).await?;
-        //}
-    }
-    Ok(())
-}
-
-async fn accept_loop(listener: TcpListener, tls_acceptor: Arc<TlsAcceptor>) {
-    loop {
-        let (stream, _) = listener.accept().await.expect("failed to accept");
-        let tls_acceptor = tls_acceptor.clone();
-        async_std::task::spawn(async move {
-            let stream = tls_acceptor.accept(stream).await.unwrap();
-            if let Err(e) = handle_connection(stream).await {
-                error!("failed to handle connection: {}", e);
+    async fn handle_connection( stream: TlsStream<TcpStream>, peer_address: SocketAddr, sender: async_channel::Sender<IndraEvent>) -> Result<(), Box<dyn std::error::Error>> {
+        let mut websocket = accept_async(stream).await?;
+        // Get peer address:
+        // let peer_addr = websocket.get_ref().peer_addr().unwrap();
+        info!("Connected session to peer address: {}", peer_address);
+        while let Some(msg) = websocket.next().await {
+            let msg = msg?;
+            info!("Received a message from the client: {:?}", msg);
+            let msg_text = msg.to_string();
+            let ie: Result<IndraEvent, serde_json::Error> = serde_json::from_str(&msg_text);
+            if ie.is_err() {
+                warn!("Failed to parse message from client: {:?}", msg_text);
+                continue;
             }
-        });
+            sender.send(ie.unwrap()).await.unwrap();
+            //if msg.is_text() || msg.is_binary() {
+            //    websocket.send(msg).await?;
+            //}
+        }
+        info!("Disconnected session from peer address: {}", peer_address);
+        Ok(())
     }
-}
+
+    async fn accept_loop(listener: TcpListener, tls_acceptor: Arc<TlsAcceptor>, sender: async_channel::Sender<IndraEvent>) {
+        loop {
+            let (stream, _) = listener.accept().await.expect("failed to accept");
+            let tls_acceptor = tls_acceptor.clone();
+            // get ip address from originator:
+            let peer_addr = stream.peer_addr().unwrap();
+            info!("Connected to peer address: {}", peer_addr);
+            let sx = sender.clone();
+            async_std::task::spawn(async move {
+                //let peer_addr = stream.peer_addr().unwrap();
+                let stream = tls_acceptor.accept(stream).await.unwrap();
+                if let Err(e) = handle_connection(stream, peer_addr, sx).await {
+                    error!("failed to handle connection: {}", e);
+                }
+            });
+        }
+    }
 
 impl AsyncTaskSender for Ws {
-    async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         if self.config.active == false {
             return;
         }
@@ -145,7 +162,7 @@ impl AsyncTaskSender for Ws {
 
     let listener = TcpListener::bind("0.0.0.0:8082").await.unwrap();
     let tls_acceptor = TlsAcceptor::from(Arc::new(config));
-    accept_loop(listener, Arc::new(tls_acceptor)).await;
+    accept_loop(listener, Arc::new(tls_acceptor), sender).await;
 
     }
 }
