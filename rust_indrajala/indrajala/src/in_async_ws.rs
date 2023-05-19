@@ -31,6 +31,7 @@ use futures::sink::SinkExt;  // for websocket.send()
 
 // 
 struct WsConnections {
+type PeerMap = Arc<RwLock<HashMap<SocketAddr, Tx>>>;
     
 }
 #[derive(Clone)]
