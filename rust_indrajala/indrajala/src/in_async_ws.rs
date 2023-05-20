@@ -102,7 +102,7 @@ pub async fn init_websocket_server(
         // split websocket into sender and receiver:
         let (ws_sink, mut ws_stream) = websocket.split();
         connections.write().await.insert(peer_address, Box::new(ws_sink));
-        while let Some(msg) = ws_stream.next().await {     // websocket.next().await {
+        while let Some(msg) = ws_stream.next().await { 
             let msg = msg?;
             // check for close message:
             if msg.is_close() {
@@ -119,9 +119,6 @@ pub async fn init_websocket_server(
             let mut ie = ie.unwrap();
             ie.from_id = format!("{}/{}", name, peer_address.to_string());
             sender.send(ie).await.unwrap();
-            //if msg.is_text() || msg.is_binary() {
-            //    websocket.send(msg).await?;
-            //}
         }
         // remove connection from active
         connections.write().await.remove(&peer_address);
@@ -138,18 +135,17 @@ pub async fn init_websocket_server(
             let sx = sender.clone();
             let xname = name.to_string().clone();
             let conns = connections.clone();
-            //async_std::task::spawn(async move {
+            async_std::task::spawn(async move {
                 let stream_res = tls_acceptor.accept(stream).await;
                 if stream_res.is_err() {
                     error!("failed to accept TLS stream: {}", stream_res.err().unwrap());
                     return;
                 }
                 let stream = stream_res.unwrap();
-                //let tx, rx = async_channel::unbounded();
                 if let Err(e) = handle_connection(stream, xname.as_str(), conns, peer_addr, sx).await {
                     error!("failed to handle connection: {}", e);
                 }
-            //});
+            });
         }
     }
 
@@ -159,8 +155,6 @@ impl AsyncTaskSender for Ws {
             return;
         }
         debug!("IndraTask Ws::sender");
-    //let data = include_bytes!("voyager.pem");
-    //let mut cert_reader = BufReader::new(&data[..]);
     let f = File::open(self.config.cert).unwrap();
     let mut cert_reader = BufReader::new(f);
     let cert_chain = certs(&mut cert_reader)
@@ -168,9 +162,6 @@ impl AsyncTaskSender for Ws {
         .iter()
         .map(|v| rustls::Certificate(v.clone()))
         .collect();
-
-    //let dataKey = include_bytes!("voyager.key");
-    //let mut key_reader = BufReader::new(&dataKey[..]);
     let f = File::open(self.config.key).unwrap();
     let mut key_reader = BufReader::new(f);
     let mut keys = pkcs8_private_keys(&mut key_reader)
