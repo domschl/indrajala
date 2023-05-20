@@ -8,20 +8,18 @@ use std::net::SocketAddr;
 use std::{
     fs::File,
     io::BufReader,
-    sync::{Arc, RwLock},
+    sync::{Arc},
     collections::HashMap,
-    //net::{TcpListener},
 };
 
 use async_std::{
     net::{TcpListener, TcpStream},
-    prelude::*,
-    //prelude::StreamExt,
+    sync::{RwLock},
 };
 
 use log::{debug, error, info, warn};
 
-use rustls_pemfile::{certs, pkcs8_private_keys, rsa_private_keys};
+use rustls_pemfile::{certs, pkcs8_private_keys}; //, rsa_private_keys};
 use rustls::{ServerConfig};
 
 use async_tls::{
@@ -29,44 +27,20 @@ use async_tls::{
     server::TlsStream,
 };
 
-//use tungstenite;
-use async_tungstenite::{accept_async, WebSocketStream, Message};
+use async_tungstenite::{accept_async, WebSocketStream};
+use async_tungstenite::tungstenite::protocol::Message;
+
 use futures::sink::{SinkExt};  // for websocket.send()
 use futures::StreamExt;
 
-// 
-/* 
-type PeerMap = Arc<RwLock<HashMap<SocketAddr, Tx>>>;
-            let conns = self.connections.clone();
-            let peers = conns.read().unwrap().clone();
-            for recp_tuple in peers.iter() {
-                let (addr, ws_sink) = recp_tuple;
-                ws_sink.unbounded_send(wmsg.clone()).unwrap();
-
-
-    let ws_stream = async_tungstenite::accept_async(raw_stream)
-        .await
-        .expect("Error during the websocket handshake occurred");
-    debug!("WebSocket connection established: {}", addr);
-
-    // Insert the write part of this peer to the peer map.
-    let (tx, rx) = unbounded();
-    //peer_map.lock().unwrap().insert(addr, tx);
-    peer_map.write().unwrap().insert(addr, tx.clone());
-    let p2 = peer_map.read().unwrap().clone();
-*/
-struct ConnDesc{
-    websocket: async_tungstenite::WebSocketStream<TlsStream<async_std::net::TcpStream>>,
-}
-//type ActiveConnections = Arc<RwLock<HashMap<SocketAddr, async_tungstenite::WebSocketStream<TlsStream<async_std::net::TcpStream>>>>>;
-type ActiveConnections = Arc<RwLock<HashMap<SocketAddr, SplitSink<WebSocketStream<TlsStream<TcpStream>>>>>>;
-
+type ActiveConnections = Arc<RwLock<HashMap<SocketAddr, Box<SplitSink<WebSocketStream<TlsStream<TcpStream>>, Message>>>>>;
 
 #[derive(Clone)]
 pub struct Ws {
     pub config: WsConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
+    pub connections: ActiveConnections,
 }
 
 impl Ws {
@@ -82,9 +56,9 @@ impl Ws {
 
         Ws {
             config: ws_config.clone(),
-            //connections: PeerMap::new(Mutex::new(HashMap::new())),
             receiver: r1,
             sender: s1,
+            connections: ActiveConnections::new(RwLock::new(HashMap::new())),
         }
     }
 }
@@ -101,11 +75,14 @@ impl AsyncTaskReceiver for Ws {
                 }
                 break;
             }
-
-            // let msg_text = msg.to_json().unwrap();
             let msg_text = serde_json::to_string(&msg).unwrap();
-
-
+            let mut peers = self.connections.write().await; //.unwrap();
+            for (_key, value) in peers.iter_mut() {
+                let msg = Message::Text(msg_text.clone());
+                let mut ws_sink = Box::new(value);
+                ws_sink.send(msg).await.unwrap();
+            }
+            peers.clear();
         }
     }
 }
@@ -113,19 +90,19 @@ impl AsyncTaskReceiver for Ws {
 
 pub async fn init_websocket_server(
     address: String,
-    sender: async_channel::Sender<IndraEvent>,
-    wsconfig: WsConfig,
+    _sender: async_channel::Sender<IndraEvent>,
+    _wsconfig: WsConfig,
 ) {
-    let url = format!("wss://{}", address);
+    let _url = format!("wss://{}", address);
 }
 
     async fn handle_connection( stream: TlsStream<TcpStream>, name: &str, connections: ActiveConnections , peer_address: SocketAddr, sender: async_channel::Sender<IndraEvent>) -> Result<(), Box<dyn std::error::Error>> {
-        let mut websocket = accept_async(stream).await?;
+        let websocket = accept_async(stream).await?;
         info!("Connected session to peer address: {}", peer_address);
         // split websocket into sender and receiver:
-        let (mut ws_sink, mut ws_stream) = websocket.split();
-        connections.write().unwrap().insert(peer_address, ws_sink);
-        while let Some(msg) = websocket.next().await {
+        let (ws_sink, mut ws_stream) = websocket.split();
+        connections.write().await.insert(peer_address, Box::new(ws_sink));
+        while let Some(msg) = ws_stream.next().await {     // websocket.next().await {
             let msg = msg?;
             // check for close message:
             if msg.is_close() {
@@ -146,33 +123,33 @@ pub async fn init_websocket_server(
             //    websocket.send(msg).await?;
             //}
         }
+        // remove connection from active
+        connections.write().await.remove(&peer_address);
         info!("Disconnected session from peer address: {}", peer_address);
         Ok(())
     }
 
-    async fn accept_loop(listener: TcpListener, tls_acceptor: Arc<TlsAcceptor>, name: &str, sender: async_channel::Sender<IndraEvent>) {
+    async fn accept_loop(connections:ActiveConnections, listener: TcpListener, tls_acceptor: Arc<TlsAcceptor>, name: &str, sender: async_channel::Sender<IndraEvent>) {
         loop {
             let (stream, _) = listener.accept().await.expect("failed to accept");
             let tls_acceptor = tls_acceptor.clone();
-            let connections: ActiveConnections = Arc::new(RwLock::new(HashMap::new()));
-            // get ip address from originator:
             let peer_addr = stream.peer_addr().unwrap();
             info!("Connected to peer address: {}", peer_addr);
             let sx = sender.clone();
             let xname = name.to_string().clone();
-            async_std::task::spawn(async move {
-                //let peer_addr = stream.peer_addr().unwrap();
-                //let xname = name.to_string().clone();
+            let conns = connections.clone();
+            //async_std::task::spawn(async move {
                 let stream_res = tls_acceptor.accept(stream).await;
                 if stream_res.is_err() {
                     error!("failed to accept TLS stream: {}", stream_res.err().unwrap());
                     return;
                 }
                 let stream = stream_res.unwrap();
-                if let Err(e) = handle_connection(stream, xname.as_str(), connections, peer_addr, sx).await {
+                //let tx, rx = async_channel::unbounded();
+                if let Err(e) = handle_connection(stream, xname.as_str(), conns, peer_addr, sx).await {
                     error!("failed to handle connection: {}", e);
                 }
-            });
+            //});
         }
     }
 
@@ -203,15 +180,16 @@ impl AsyncTaskSender for Ws {
         .collect::<Vec<_>>();
     let key = keys.remove(0);
 
-    let config = ServerConfig::builder()
+    let ws_config = ServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(cert_chain, key)
         .expect("bad certificate/key");
 
     let listener = TcpListener::bind("0.0.0.0:8082").await.unwrap();
-    let tls_acceptor = TlsAcceptor::from(Arc::new(config));
-    accept_loop(listener, Arc::new(tls_acceptor), self.config.name.as_str(), sender).await;
+    let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
+
+    accept_loop(self.connections, listener, Arc::new(tls_acceptor), self.config.name.as_str(), sender).await;
 
     }
 }
