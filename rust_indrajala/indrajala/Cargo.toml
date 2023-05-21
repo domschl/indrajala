@@ -18,7 +18,7 @@ serde_json = "*"
 chrono = "*"
 chrono-tz = "*"
 tide = "*"
-rustls = "*"
+rustls = "0.20"
 rustls-pemfile = "*"
 tide-rustls = "*"
 sqlx = { version = "*", features = ["runtime-async-std-rustls", "sqlite", "macros"] }
