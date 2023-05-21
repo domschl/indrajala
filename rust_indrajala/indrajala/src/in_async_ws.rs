@@ -33,14 +33,20 @@ use async_tungstenite::tungstenite::protocol::Message;
 use futures::sink::{SinkExt};  // for websocket.send()
 use futures::StreamExt;
 
-type ActiveConnections = Arc<RwLock<HashMap<SocketAddr, Box<SplitSink<WebSocketStream<TlsStream<TcpStream>>, Message>>>>>;
+pub struct WssConnection {
+    pub subs: Vec<String>,
+    pub tx: Box<SplitSink<WebSocketStream<TlsStream<TcpStream>>, Message>>,
+}
+
+// type ActiveWssConnections = Arc<RwLock<HashMap<SocketAddr, Box<SplitSink<WebSocketStream<TlsStream<TcpStream>>, Message>>>>>;
+type ActiveWssConnections = Arc<RwLock<HashMap<SocketAddr, WssConnection>>>;
 
 #[derive(Clone)]
 pub struct Ws {
     pub config: WsConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
-    pub connections: ActiveConnections,
+    pub connections: ActiveWssConnections,
 }
 
 impl Ws {
@@ -58,7 +64,7 @@ impl Ws {
             config: ws_config.clone(),
             receiver: r1,
             sender: s1,
-            connections: ActiveConnections::new(RwLock::new(HashMap::new())),
+            connections: ActiveWssConnections::new(RwLock::new(HashMap::new())),
         }
     }
 }
@@ -79,8 +85,8 @@ impl AsyncTaskReceiver for Ws {
             let mut peers = self.connections.write().await; //.unwrap();
             for (_key, value) in peers.iter_mut() {
                 let msg = Message::Text(msg_text.clone());
-                let mut ws_sink = Box::new(value);
-                ws_sink.send(msg).await.unwrap();
+                let ws_sink = Box::new(value);
+                ws_sink.tx.send(msg).await.unwrap();
             }
         }
     }
@@ -95,12 +101,16 @@ pub async fn init_websocket_server(
     let _url = format!("wss://{}", address);
 }
 
-    async fn handle_connection( stream: TlsStream<TcpStream>, name: &str, connections: ActiveConnections , peer_address: SocketAddr, sender: async_channel::Sender<IndraEvent>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn wss_handle_connection( stream: TlsStream<TcpStream>, name: &str, connections: ActiveWssConnections , peer_address: SocketAddr, sender: async_channel::Sender<IndraEvent>) -> Result<(), Box<dyn std::error::Error>> {
         let websocket = accept_async(stream).await?;
         info!("Connected session to peer address: {}", peer_address);
         // split websocket into sender and receiver:
         let (ws_sink, mut ws_stream) = websocket.split();
-        connections.write().await.insert(peer_address, Box::new(ws_sink));
+        let wss_connection: WssConnection = WssConnection{
+            subs: Vec::new(),
+            tx: Box::new(ws_sink),
+        };
+        connections.write().await.insert(peer_address, wss_connection);   // Box::new(ws_sink));
         while let Some(msg) = ws_stream.next().await { 
             let msg = msg?;
             // check for close message:
@@ -125,7 +135,7 @@ pub async fn init_websocket_server(
         Ok(())
     }
 
-    async fn accept_loop(connections:ActiveConnections, listener: TcpListener, tls_acceptor: Arc<TlsAcceptor>, name: &str, sender: async_channel::Sender<IndraEvent>) {
+    async fn wss_accept_loop(connections:ActiveWssConnections, listener: TcpListener, tls_acceptor: Arc<TlsAcceptor>, name: &str, sender: async_channel::Sender<IndraEvent>) {
         loop {
             let (stream, _) = listener.accept().await.expect("failed to accept");
             let tls_acceptor = tls_acceptor.clone();
@@ -141,7 +151,7 @@ pub async fn init_websocket_server(
                     return;
                 }
                 let stream = stream_res.unwrap();
-                if let Err(e) = handle_connection(stream, xname.as_str(), conns, peer_addr, sx).await {
+                if let Err(e) = wss_handle_connection(stream, xname.as_str(), conns, peer_addr, sx).await {
                     error!("failed to handle connection: {}", e);
                 }
             });
@@ -153,33 +163,38 @@ impl AsyncTaskSender for Ws {
         if self.config.active == false {
             return;
         }
-        debug!("IndraTask Ws::sender");
-    let f = File::open(self.config.cert).unwrap();
-    let mut cert_reader = BufReader::new(f);
-    let cert_chain = certs(&mut cert_reader)
-        .unwrap()
-        .iter()
-        .map(|v| rustls::Certificate(v.clone()))
-        .collect();
-    let f = File::open(self.config.key).unwrap();
-    let mut key_reader = BufReader::new(f);
-    let mut keys = pkcs8_private_keys(&mut key_reader)
-        .unwrap()
-        .iter()
-        .map(|v| rustls::PrivateKey(v.clone()))
-        .collect::<Vec<_>>();
-    let key = keys.remove(0);
+        if self.config.ssl == true {
+            debug!("IndraTask Ws::sender: SSL enabled");
+        
+            let f = File::open(self.config.cert).unwrap();
+            let mut cert_reader = BufReader::new(f);
+            let cert_chain = certs(&mut cert_reader)
+                .unwrap()
+                .iter()
+                .map(|v| rustls::Certificate(v.clone()))
+                .collect();
+            let f = File::open(self.config.key).unwrap();
+            let mut key_reader = BufReader::new(f);
+            let mut keys = pkcs8_private_keys(&mut key_reader)
+                .unwrap()
+                .iter()
+                .map(|v| rustls::PrivateKey(v.clone()))
+                .collect::<Vec<_>>();
+            let key = keys.remove(0);
 
-    let ws_config = ServerConfig::builder()
-        .with_safe_defaults()
-        .with_no_client_auth()
-        .with_single_cert(cert_chain, key)
-        .expect("bad certificate/key");
+            let ws_config = ServerConfig::builder()
+                .with_safe_defaults()
+                .with_no_client_auth()
+                .with_single_cert(cert_chain, key)
+                .expect("bad certificate/key");
 
-    let listener = TcpListener::bind("0.0.0.0:8082").await.unwrap();
-    let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
+            let listener = TcpListener::bind(self.config.address.as_str()).await.unwrap();
+            info!("Ws: Listening on {} (ssl)", self.config.address.as_str());
+            let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
 
-    accept_loop(self.connections, listener, Arc::new(tls_acceptor), self.config.name.as_str(), sender).await;
-
+            wss_accept_loop(self.connections, listener, Arc::new(tls_acceptor), self.config.name.as_str(), sender).await;
+        } else {
+            debug!("IndraTask Ws::sender: SSL disabled");
+        }
     }
 }
