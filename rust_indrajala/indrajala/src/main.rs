@@ -21,7 +21,7 @@ use in_async_web::Web;
 mod in_async_sqlx;
 use in_async_sqlx::SQLx;
 mod in_async_ws;
-use in_async_ws::{init_websocket_server, Ws};
+use in_async_ws::Ws; // {init_websocket_server, Ws};
 mod in_async_signal;
 use in_async_signal::Signal;
 
@@ -222,11 +222,6 @@ fn main() {
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
                 IndraTask::Ws(st) => {
-                    join_handles.push(task::spawn(init_websocket_server(
-                        st.clone().config.address,
-                        sender.clone(),
-                        st.config.clone(),
-                    )));
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
