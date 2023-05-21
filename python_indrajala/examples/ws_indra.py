@@ -114,13 +114,13 @@ async def indra(config):
         )
         await websocket.send(ie.to_json())
 
-        # while True:
-        #    try:
-        #        message = await websocket.recv()
-        #        print(message)
-        #    except Exception as e:
-        #        print(e)
-        #        break
+        while True:
+            try:
+                message = await websocket.recv()
+                print(message)
+            except Exception as e:
+                print(e)
+                break
 
 
 if __name__ == "__main__":
