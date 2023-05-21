@@ -82,7 +82,6 @@ impl AsyncTaskReceiver for Ws {
                 let mut ws_sink = Box::new(value);
                 ws_sink.send(msg).await.unwrap();
             }
-            peers.clear();
         }
     }
 }
