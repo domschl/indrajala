@@ -195,9 +195,8 @@ fn build_ui(app: &Application) {
             ie.domain = "$cmd/ws/subs".to_string();
             ie.from_id = "ws/plotter".to_string();
             ie.data_type = "cmd/subs".to_string();
-            let s1 = r#"{"subs":[""#.to_string();
-            let s2 = r#""]}"#.to_string();
-            ie.data = serde_json::from_str((s1 + &domain_topic2 + &s2).as_str()).unwrap();
+            let subs: Vec<String> = vec![domain_topic2.clone()];
+            ie.data = serde_json::json!(subs);
             let ie_txt = serde_json::to_string(&ie).unwrap();
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message $cmd/subs");

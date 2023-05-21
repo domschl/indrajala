@@ -88,6 +88,20 @@ impl AsyncTaskReceiver for Ws {
             if self.config.ssl == true {
                 let mut peers = self.wss_connections.write().await;
                 for (key, value) in peers.iter_mut() {
+                    let subs: Vec<String> = value.subs.clone();
+                    let mut matched = false;
+                    for sub in subs.iter() {
+                        if IndraEvent::mqcmp(&msg.domain, sub) {
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if !matched {
+                        info!("Skipping websocket connection: {:?}, {:?} {}", key, subs, msg.domain);
+                        continue;
+                    } else {
+                        info!("Matched websocket connection: {:?}, {:?} {}", key, subs, msg.domain);
+                    }
                     let msg = Message::Text(msg_text.clone());
                     let ws_sink = Box::new(value);
                     let res = ws_sink.tx.send(msg).await;
@@ -99,6 +113,20 @@ impl AsyncTaskReceiver for Ws {
             } else {
                 let mut peers = self.ws_connections.write().await;
                 for (key, value) in peers.iter_mut() {
+                    let subs: Vec<String> = value.subs.clone();
+                    let mut matched = false;
+                    for sub in subs.iter() {
+                        if IndraEvent::mqcmp(&msg.domain, sub) {
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if !matched {
+                        info!("Skipping websocket connection: {:?}, {:?} {}", key, subs, msg.domain);
+                        continue;
+                    } else {
+                        info!("Matched websocket connection: {:?}, {:?} {}", key, subs, msg.domain);
+                    }
                     let msg = Message::Text(msg_text.clone());
                     let ws_sink = Box::new(value);
                     let res = ws_sink.tx.send(msg).await;
@@ -126,12 +154,53 @@ impl AsyncTaskReceiver for Ws {
     }
 }
 
-pub async fn init_websocket_server(
-    address: String,
-    _sender: async_channel::Sender<IndraEvent>,
-    _wsconfig: WsConfig,
-) {
-    let _url = format!("wss://{}", address);
+async fn handle_message(msg: Message, name: &str, peer_address: SocketAddr, subs: &mut Vec<String>, sx: async_channel::Sender<IndraEvent>) {
+    match msg {
+        Message::Text(text) => {
+            let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
+            if msg.domain == "$cmd/ws/subs" {
+                warn!("Received subs command: {:?}", msg);
+                //let mut subs = subs;
+                let new_subs_res: Result<Vec<String>, serde_json::Error> = serde_json::from_value(msg.data);
+                if new_subs_res.is_ok() {
+                    let new_subs = new_subs_res.unwrap();
+                    for sub in new_subs.iter() {
+                        let ev_sub;
+                        if !sub.starts_with("$event/") {
+                            ev_sub = format!("$event/{}", sub);
+                        } else {
+                            ev_sub = sub.clone();
+                        }
+                        if !subs.contains(&ev_sub) {
+                            subs.push(ev_sub.clone());
+                        }
+                    }
+                    info!("Subscriptions updated: {:?}", subs);
+                } else {
+                    warn!("Error parsing subs command: {:?}", new_subs_res);
+                }
+            } else {
+                msg.from_id = format!("{}/{}", name, peer_address);
+                sx.send(msg).await.unwrap();
+            }
+        }
+        Message::Binary(bin) => {
+            warn!("Received binary message: {:?}", bin);
+        }
+        Message::Ping(ping) => {
+            warn!("Received ping message: {:?}", ping);
+        }
+        Message::Pong(pong) => {
+            warn!("Received pong message: {:?}", pong);
+        }
+        Message::Close(close) => {
+            warn!("Received close message: {:?}", close);
+        }
+        Message::Frame(frame) => {
+            warn!("Received frame message: {:?}", frame);
+        }
+    }
+
 }
 
 async fn ws_handle_connection(
@@ -155,29 +224,10 @@ async fn ws_handle_connection(
         .insert(peer_address, ws_connection);
     while let Some(msg) = ws_stream.next().await {
         let msg = msg?;
-        match msg {
-            Message::Text(text) => {
-                let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
-                // msg.domain = format!("{}/{}", name, msg.domain);
-                msg.from_id = format!("{}/{}", name, peer_address);
-                sx.send(msg).await.unwrap();
-            }
-            Message::Binary(bin) => {
-                warn!("Received binary message: {:?}", bin);
-            }
-            Message::Ping(ping) => {
-                warn!("Received ping message: {:?}", ping);
-            }
-            Message::Pong(pong) => {
-                warn!("Received pong message: {:?}", pong);
-            }
-            Message::Close(close) => {
-                warn!("Received close message: {:?}", close);
-            }
-            Message::Frame(frame) => {
-                warn!("Received frame message: {:?}", frame);
-            }
-        }
+        let mut subs = connections.write().await[&peer_address].subs.clone();
+        handle_message(msg, name, peer_address, &mut subs, sx.clone()).await;
+        info!("Current subscriptions: {:?}", subs);
+        connections.write().await.get_mut(&peer_address).unwrap().subs = subs;
     }
     connections.write().await.remove(&peer_address);
     Ok(())
@@ -198,35 +248,17 @@ async fn wss_handle_connection(
         subs: Vec::new(),
         tx: Box::new(ws_sink),
     };
+    //let mut subs = wss_connection.subs.clone();
     connections
         .write()
         .await
         .insert(peer_address, wss_connection); // Box::new(ws_sink));
     while let Some(msg) = ws_stream.next().await {
         let msg = msg?;
-        match msg {
-            Message::Text(text) => {
-                let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
-                msg.from_id = format!("{}/{}", name, peer_address.to_string());
-                info!("Received a message from the client: {:?}", msg);
-                sender.send(msg).await.unwrap();
-            }
-            Message::Binary(bin) => {
-                warn!("Received binary message: {:?}", bin);
-            }
-            Message::Ping(ping) => {
-                warn!("Received ping message: {:?}", ping);
-            }
-            Message::Pong(pong) => {
-                warn!("Received pong message: {:?}", pong);
-            }
-            Message::Close(close) => {
-                warn!("Received close message: {:?}", close);
-            }
-            Message::Frame(frame) => {
-                warn!("Received frame message: {:?}", frame);
-            }
-        }
+        let mut subs = connections.write().await[&peer_address].subs.clone();
+        handle_message(msg, name, peer_address, &mut subs, sender.clone()).await;
+        info!("Current subscriptions: {:?}", subs);
+        connections.write().await.get_mut(&peer_address).unwrap().subs = subs;
     }
     // remove connection from active
     connections.write().await.remove(&peer_address);

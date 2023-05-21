@@ -256,11 +256,19 @@ impl AsyncTaskReceiver for SQLx {
                             //} else {
                             //    data_f64 = data_f64_opt.unwrap();
                             //}
-                            let data_f64 = row.2.parse::<f64>().unwrap();
+                            let data_f64_res = row.2.parse::<f64>();
                             let time_jd_start: f64 = row.1;
-                            // let time_jd_end: f64 = serde_json::from_value(data["time_jd_end"].clone()).unwrap();
-                            (time_jd_start, data_f64)
+                            if !data_f64_res.is_err() {
+                                let data_f64: f64 = data_f64_res.unwrap();
+                                (time_jd_start, data_f64)
+                            } else {
+                                // insert NaN for invalid data:
+                                warn!("SQLx: Invalid f64 value data in row: {:?}", row);
+                                let data_f64: f64 = std::f64::NAN;
+                                (time_jd_start, data_f64)
+                            }
                         })
+                        .filter(|row| !row.1.is_nan())
                         .collect();
                     info!(
                         "Found {} items out of raw {} for {}",
