@@ -5,40 +5,31 @@ use crate::{AsyncTaskReceiver, AsyncTaskSender};
 use async_channel;
 use futures::stream::SplitSink;
 use std::net::SocketAddr;
-use std::{
-    fs::File,
-    io::BufReader,
-    sync::{Arc},
-    collections::HashMap,
-};
+use std::{collections::HashMap, fs::File, io::BufReader, sync::Arc};
 
 use async_std::{
     net::{TcpListener, TcpStream},
-    sync::{RwLock},
+    sync::RwLock,
 };
 
 use log::{debug, error, info, warn};
 
+use rustls::ServerConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys}; //, rsa_private_keys};
-use rustls::{ServerConfig};
 
-use async_tls::{
-    TlsAcceptor,
-    server::TlsStream,
-};
+use async_tls::{server::TlsStream, TlsAcceptor};
 
-use async_tungstenite::{accept_async, WebSocketStream};
 use async_tungstenite::tungstenite::protocol::Message;
+use async_tungstenite::{accept_async, WebSocketStream};
 
-use futures::sink::{SinkExt};  // for websocket.send()
+use futures::channel::mpsc::UnboundedSender;
+use futures::sink::SinkExt; // for websocket.send()
 use futures::StreamExt;
-use futures::{
-    channel::mpsc::{UnboundedSender},
-};
 
 pub struct WsConnection {
     pub subs: Vec<String>,
-    pub tx: UnboundedSender<Message>,
+    // pub tx: UnboundedSender<Message>,
+    pub tx: Box<SplitSink<WebSocketStream<TcpStream>, Message>>,
 }
 pub struct WssConnection {
     pub subs: Vec<String>,
@@ -92,16 +83,24 @@ impl AsyncTaskReceiver for Ws {
                 break;
             }
             let msg_text = serde_json::to_string(&msg).unwrap();
-            let mut peers = self.wss_connections.write().await; //.unwrap();
-            for (_key, value) in peers.iter_mut() {
-                let msg = Message::Text(msg_text.clone());
-                let ws_sink = Box::new(value);
-                ws_sink.tx.send(msg).await.unwrap();
+            if self.config.ssl == true {
+                let mut peers = self.wss_connections.write().await;
+                for (_key, value) in peers.iter_mut() {
+                    let msg = Message::Text(msg_text.clone());
+                    let ws_sink = Box::new(value);
+                    ws_sink.tx.send(msg).await.unwrap();
+                }
+            } else {
+                let mut peers = self.ws_connections.write().await;
+                for (_key, value) in peers.iter_mut() {
+                    let msg = Message::Text(msg_text.clone());
+                    let ws_sink = Box::new(value);
+                    ws_sink.tx.send(msg).await.unwrap();
+                }
             }
         }
     }
 }
-
 
 pub async fn init_websocket_server(
     address: String,
@@ -111,18 +110,98 @@ pub async fn init_websocket_server(
     let _url = format!("wss://{}", address);
 }
 
-async fn wss_handle_connection( stream: TlsStream<TcpStream>, name: &str, connections: ActiveWssConnections , peer_address: SocketAddr, sender: async_channel::Sender<IndraEvent>) -> Result<(), Box<dyn std::error::Error>> {
+async fn ws_handle_connection(
+    stream: TcpStream,
+    connections: ActiveWsConnections,
+    name: &str,
+    peer_address: SocketAddr,
+    sx: async_channel::Sender<IndraEvent>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let websocket = accept_async(stream).await?;
     info!("Connected session to peer address: {}", peer_address);
     // split websocket into sender and receiver:
     let (ws_sink, mut ws_stream) = websocket.split();
-    let wss_connection: WssConnection = WssConnection{
+    let ws_connection: WsConnection = WsConnection {
         subs: Vec::new(),
         tx: Box::new(ws_sink),
     };
-    connections.write().await.insert(peer_address, wss_connection);   // Box::new(ws_sink));
-    while let Some(msg) = ws_stream.next().await { 
+    connections
+        .write()
+        .await
+        .insert(peer_address, ws_connection);
+    while let Some(msg) = ws_stream.next().await {
         let msg = msg?;
+        match msg {
+            Message::Text(text) => {
+                let msg: IndraEvent = serde_json::from_str(&text).unwrap();
+                sx.send(msg).await.unwrap();
+            }
+            Message::Binary(bin) => {
+                warn!("Received binary message: {:?}", bin);
+            }
+            Message::Ping(ping) => {
+                warn!("Received ping message: {:?}", ping);
+            }
+            Message::Pong(pong) => {
+                warn!("Received pong message: {:?}", pong);
+            }
+            Message::Close(close) => {
+                warn!("Received close message: {:?}", close);
+            }
+            Message::Frame(frame) => {
+                warn!("Received frame message: {:?}", frame);
+            }
+        }
+    }
+    connections.write().await.remove(&peer_address);
+    Ok(())
+}
+
+async fn wss_handle_connection(
+    stream: TlsStream<TcpStream>,
+    name: &str,
+    connections: ActiveWssConnections,
+    peer_address: SocketAddr,
+    sender: async_channel::Sender<IndraEvent>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let websocket = accept_async(stream).await?;
+    info!("Connected session to peer address: {}", peer_address);
+    // split websocket into sender and receiver:
+    let (ws_sink, mut ws_stream) = websocket.split();
+    let wss_connection: WssConnection = WssConnection {
+        subs: Vec::new(),
+        tx: Box::new(ws_sink),
+    };
+    connections
+        .write()
+        .await
+        .insert(peer_address, wss_connection); // Box::new(ws_sink));
+    while let Some(msg) = ws_stream.next().await {
+        let msg = msg?;
+        match msg {
+            Message::Text(text) => {
+                let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
+                msg.from_id = format!("{}/{}", name, peer_address.to_string());
+                info!("Received a message from the client: {:?}", msg);
+                sender.send(msg).await.unwrap();
+            }
+            Message::Binary(bin) => {
+                warn!("Received binary message: {:?}", bin);
+            }
+            Message::Ping(ping) => {
+                warn!("Received ping message: {:?}", ping);
+            }
+            Message::Pong(pong) => {
+                warn!("Received pong message: {:?}", pong);
+            }
+            Message::Close(close) => {
+                warn!("Received close message: {:?}", close);
+            }
+            Message::Frame(frame) => {
+                warn!("Received frame message: {:?}", frame);
+            }
+        }
+        /*
         // check for close message:
         if msg.is_close() {
             info!("Received close message from client: {:?}", msg);
@@ -138,6 +217,7 @@ async fn wss_handle_connection( stream: TlsStream<TcpStream>, name: &str, connec
         let mut ie = ie.unwrap();
         ie.from_id = format!("{}/{}", name, peer_address.to_string());
         sender.send(ie).await.unwrap();
+        */
     }
     // remove connection from active
     connections.write().await.remove(&peer_address);
@@ -145,7 +225,35 @@ async fn wss_handle_connection( stream: TlsStream<TcpStream>, name: &str, connec
     Ok(())
 }
 
-async fn wss_accept_loop(connections:ActiveWssConnections, listener: TcpListener, tls_acceptor: Arc<TlsAcceptor>, name: &str, sender: async_channel::Sender<IndraEvent>) {
+async fn ws_accept_loop(
+    connections: ActiveWsConnections,
+    listener: TcpListener,
+    name: &str,
+    sender: async_channel::Sender<IndraEvent>,
+) {
+    loop {
+        let (stream, _) = listener.accept().await.expect("failed to accept (WS)");
+        let peer_addr = stream.peer_addr().unwrap();
+        info!("Connected to peer address: {}", peer_addr);
+        let sx = sender.clone();
+        let xname = name.to_string().clone();
+        let conns = connections.clone();
+        async_std::task::spawn(async move {
+            if let Err(e) = ws_handle_connection(stream, conns, xname.as_str(), peer_addr, sx).await
+            {
+                error!("failed to handle connection: {}", e);
+            }
+        });
+    }
+}
+
+async fn wss_accept_loop(
+    connections: ActiveWssConnections,
+    listener: TcpListener,
+    tls_acceptor: Arc<TlsAcceptor>,
+    name: &str,
+    sender: async_channel::Sender<IndraEvent>,
+) {
     loop {
         let (stream, _) = listener.accept().await.expect("failed to accept (WSS)");
         let tls_acceptor = tls_acceptor.clone();
@@ -161,27 +269,9 @@ async fn wss_accept_loop(connections:ActiveWssConnections, listener: TcpListener
                 return;
             }
             let stream = stream_res.unwrap();
-            if let Err(e) = wss_handle_connection(stream, xname.as_str(), conns, peer_addr, sx).await {
-                error!("failed to handle connection: {}", e);
-            }
-        });
-    }
-}
-
-async fn ws_handle_connection(stream: TcpStream, connections: ActiveWsConnections, name: &str, peer_address: SocketAddr, sx: async_channel::Sender<IndraEvent>)  -> Result<(), Box<dyn std::error::Error>> {
-    Ok(())
-}
-
-async fn ws_accept_loop(connections:ActiveWsConnections, listener: TcpListener, name: &str, sender: async_channel::Sender<IndraEvent>) {
-    loop {
-        let (stream, _) = listener.accept().await.expect("failed to accept (WS)");
-        let peer_addr = stream.peer_addr().unwrap();
-        info!("Connected to peer address: {}", peer_addr);
-        let sx = sender.clone();
-        let xname = name.to_string().clone();
-        let conns = connections.clone();
-        async_std::task::spawn(async move {
-            if let Err(e) = ws_handle_connection(stream, conns,  xname.as_str(),peer_addr, sx).await {
+            if let Err(e) =
+                wss_handle_connection(stream, xname.as_str(), conns, peer_addr, sx).await
+            {
                 error!("failed to handle connection: {}", e);
             }
         });
@@ -196,7 +286,7 @@ impl AsyncTaskSender for Ws {
         let addr = self.config.address.as_str();
         if self.config.ssl == true {
             debug!("IndraTask Ws::sender: SSL enabled");
-        
+
             let f = File::open(self.config.cert).unwrap();
             let mut cert_reader = BufReader::new(f);
             let cert_chain = certs(&mut cert_reader)
@@ -223,14 +313,27 @@ impl AsyncTaskSender for Ws {
             info!("Ws: Listening on {} (ssl)", addr);
             let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
 
-            wss_accept_loop(self.wss_connections, listener, Arc::new(tls_acceptor), self.config.name.as_str(), sender).await;
+            wss_accept_loop(
+                self.wss_connections,
+                listener,
+                Arc::new(tls_acceptor),
+                self.config.name.as_str(),
+                sender,
+            )
+            .await;
         } else {
             debug!("IndraTask Ws::sender: SSL disabled");
 
             let listener = TcpListener::bind(addr).await.unwrap();
             info!("Ws: Listening on {} (ssl)", addr);
 
-            ws_accept_loop(self.ws_connections, listener, self.config.name.as_str(), sender).await;
+            ws_accept_loop(
+                self.ws_connections,
+                listener,
+                self.config.name.as_str(),
+                sender,
+            )
+            .await;
         }
     }
 }
