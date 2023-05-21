@@ -5,6 +5,8 @@ import websockets
 import logging
 import ssl
 import uuid
+import toml
+
 
 class IndraEvent:
     def __init__(
@@ -44,12 +46,19 @@ class IndraEvent:
     def to_json(self):
         """Convert to JSON string"""
         return json.dumps(self.__dict__)
-    
+
     @staticmethod
     def datetime2julian(dt: datetime.datetime):
         """Convert datetime to Julian date"""
-        return dt.toordinal() + 1721425.5 + (dt.hour / 24) + (dt.minute / 1440) + (dt.second / 86400) + (dt.microsecond / 86400000000)
-    
+        return (
+            dt.toordinal()
+            + 1721425.5
+            + (dt.hour / 24)
+            + (dt.minute / 1440)
+            + (dt.second / 86400)
+            + (dt.microsecond / 86400000000)
+        )
+
     @staticmethod
     def julian2datetime(jd):
         """Convert Julian date to datetime"""
@@ -78,23 +87,44 @@ class IndraEvent:
         minute = 60 * (hour - int(hour))
         second = 60 * (minute - int(minute))
         microsecond = 1000000 * (second - int(second))
-        return datetime.datetime(year, month, int(day), int(hour), int(minute), int(second), int(microsecond))
-    
-async def indra(url):
+        return datetime.datetime(
+            year, month, int(day), int(hour), int(minute), int(second), int(microsecond)
+        )
+
+
+async def indra(config):
     """Connect to Indra server, use TLS"""
-    async with websockets.connect(url) as websocket:  #, ssl=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT )) as websocket:
-        ie = IndraEvent("$event/python/test", "ws/python", str(uuid.uuid4()), "to/test", IndraEvent.datetime2julian(datetime.datetime.utcnow()),
-                        "string/test", "3.1325", "hash", IndraEvent.datetime2julian(datetime.datetime.utcnow()))
+    url = config["url"]
+    ssl_ctx = None
+    if "ssl" in config and config["ssl"] is True:
+        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        if "ca_authority" in config and config["ca_authority"] != "":
+            ssl_ctx.load_verify_locations(cafile=config["ca_authority"])
+    async with websockets.connect(url, ssl=ssl_ctx) as websocket:
+        ie = IndraEvent(
+            "$event/python/test",
+            "ws/python",
+            str(uuid.uuid4()),
+            "to/test",
+            IndraEvent.datetime2julian(datetime.datetime.utcnow()),
+            "string/test",
+            "3.1325",
+            "hash",
+            IndraEvent.datetime2julian(datetime.datetime.utcnow()),
+        )
         await websocket.send(ie.to_json())
 
-        #while True:
-        #    try:
-        #        message = await websocket.recv()
-        #        print(message)
-        #    except Exception as e:
-        #        print(e)
-        #        break    
+        while True:
+            try:
+                message = await websocket.recv()
+                print(message)
+            except Exception as e:
+                print(e)
+                break
+
 
 if __name__ == "__main__":
-    url = "ws://localhost:8082"
-    asyncio.run(indra(url))
+    logging.basicConfig(level=logging.INFO)
+    config = toml.load("ws_indra.toml")
+    url = config["url"]
+    asyncio.run(indra(config))

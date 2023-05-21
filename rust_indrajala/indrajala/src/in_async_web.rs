@@ -2,15 +2,12 @@ use crate::indra_config::WebConfig;
 use crate::IndraEvent;
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
-//use env_logger::Env;
-//use log::{debug, error, info, warn};
-use log::{debug, info, warn};
 use async_channel;
-use tide;
-use tide_rustls::TlsListener;
-use tide::http::{convert::Deserialize};
+use log::{debug, info, warn};
 use std::collections::HashMap;
-//use tide::Request;
+use tide;
+use tide::http::convert::Deserialize;
+use tide_rustls::TlsListener;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -65,8 +62,16 @@ struct WebState {
 }
 
 impl WebState {
-    fn new(sender: async_channel::Sender<IndraEvent>, ie: IndraEvent, sessions: HashMap<String, async_channel::Sender<IndraEvent>>  ) -> Self {
-        WebState { sender, ie, sessions  }
+    fn new(
+        sender: async_channel::Sender<IndraEvent>,
+        ie: IndraEvent,
+        sessions: HashMap<String, async_channel::Sender<IndraEvent>>,
+    ) -> Self {
+        WebState {
+            sender,
+            ie,
+            sessions,
+        }
     }
 }
 
@@ -103,7 +108,7 @@ impl AsyncTaskSender for Web {
                 Ok(res)
             });
         app.at(evpath.as_str())
-            .get(|mut req: tide::Request<WebState>| async move {
+            .get(|req: tide::Request<WebState>| async move {
                 #[derive(Deserialize)]
                 struct Query {
                     domain: String,
@@ -111,18 +116,25 @@ impl AsyncTaskSender for Web {
                 let mut st = req.state().clone();
                 let q_res: Result<Query, tide::Error> = req.query();
                 if q_res.is_err() {
-                    return Ok(format!("bad request: {} {}",req.url(), &q_res.as_ref().err().unwrap()).to_string());
+                    return Ok(format!(
+                        "bad request: {} {}",
+                        req.url(),
+                        &q_res.as_ref().err().unwrap()
+                    )
+                    .to_string());
                 }
                 let q: Query = q_res.unwrap();
                 let domain = q.domain;
                 info!("url {} domain {}", req.url(), domain);
-                let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
+                let (sender, _receiver) = async_channel::unbounded::<IndraEvent>();
                 let uuid = Uuid::new_v4().to_string();
                 // db req.
                 // wait on receiver.
                 st.sessions.insert(uuid.clone(), sender);
                 Ok(format!("Indrajala! domain={}", domain).to_string())
             });
+        app.at("/")
+            .get(|_| async move { Ok("Indrajala. API endpoints at ./api/v1/event (POST,GET).") });
         if self.config.ssl {
             info!("Web: Listening on {} (ssl)", self.config.address);
             app.listen(
