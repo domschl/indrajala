@@ -223,10 +223,9 @@ fn main() {
                 }
                 IndraTask::Ws(st) => {
                     join_handles.push(task::spawn(init_websocket_server(
-                        st.clone().connections,
                         st.clone().config.address,
                         sender.clone(),
-                        st.config.name.clone(),
+                        st.config.clone(),
                     )));
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));

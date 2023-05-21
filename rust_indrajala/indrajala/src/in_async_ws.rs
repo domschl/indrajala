@@ -1,40 +1,52 @@
 use crate::indra_config::WsConfig;
 use crate::IndraEvent;
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
-use std::{
-    collections::HashMap,
-    // io::Error as IoError,
-    net::SocketAddr,
-    // sync::{Arc, Mutex, RwLock},
-    sync::{Arc, RwLock},
+
+use async_channel;
+use futures::stream::SplitSink;
+use std::net::SocketAddr;
+use std::{collections::HashMap, fs::File, io::BufReader, sync::Arc};
+
+use async_std::{
+    net::{TcpListener, TcpStream},
+    sync::RwLock,
 };
 
-//use env_logger::Env;
-//use log::{debug, error, info, warn};
 use log::{debug, error, info, warn};
 
-use futures::prelude::*;
-use futures::{
-    channel::mpsc::{unbounded, UnboundedSender},
-    future, pin_mut,
-};
+use rustls::ServerConfig;
+use rustls_pemfile::{certs, pkcs8_private_keys}; //, rsa_private_keys};
 
-use async_std::net::{TcpListener, TcpStream};
-use async_std::task;
+use async_tls::{server::TlsStream, TlsAcceptor};
+
 use async_tungstenite::tungstenite::protocol::Message;
+use async_tungstenite::{accept_async, WebSocketStream};
 
-// use std::time::Duration;
+//use futures::channel::mpsc::UnboundedSender;
+use futures::sink::SinkExt; // for websocket.send()
+use futures::StreamExt;
 
-type Tx = UnboundedSender<Message>;
-//type PeerMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
-type PeerMap = Arc<RwLock<HashMap<SocketAddr, Tx>>>;
+pub struct WsConnection {
+    pub subs: Vec<String>,
+    // pub tx: UnboundedSender<Message>,
+    pub tx: Box<SplitSink<WebSocketStream<TcpStream>, Message>>,
+}
+pub struct WssConnection {
+    pub subs: Vec<String>,
+    pub tx: Box<SplitSink<WebSocketStream<TlsStream<TcpStream>>, Message>>,
+}
+
+// type ActiveWssConnections = Arc<RwLock<HashMap<SocketAddr, Box<SplitSink<WebSocketStream<TlsStream<TcpStream>>, Message>>>>>;
+type ActiveWssConnections = Arc<RwLock<HashMap<SocketAddr, WssConnection>>>;
+type ActiveWsConnections = Arc<RwLock<HashMap<SocketAddr, WsConnection>>>;
 
 #[derive(Clone)]
 pub struct Ws {
     pub config: WsConfig,
-    pub connections: PeerMap,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
+    pub wss_connections: ActiveWssConnections,
+    pub ws_connections: ActiveWsConnections,
 }
 
 impl Ws {
@@ -50,10 +62,10 @@ impl Ws {
 
         Ws {
             config: ws_config.clone(),
-            //connections: PeerMap::new(Mutex::new(HashMap::new())),
-            connections: PeerMap::new(RwLock::new(HashMap::new())),
             receiver: r1,
             sender: s1,
+            wss_connections: ActiveWssConnections::new(RwLock::new(HashMap::new())),
+            ws_connections: ActiveWsConnections::new(RwLock::new(HashMap::new())),
         }
     }
 }
@@ -70,149 +82,267 @@ impl AsyncTaskReceiver for Ws {
                 }
                 break;
             }
-
-            // let msg_text = msg.to_json().unwrap();
             let msg_text = serde_json::to_string(&msg).unwrap();
-            let wmsg = Message::Text(msg_text);
-            let conns = self.connections.clone();
-            let peers = conns.read().unwrap().clone();
-            /*
-            for recp in peers.iter().map(|(_, ws_sink)| ws_sink) {
-                recp.unbounded_send(wmsg.clone()).unwrap();
+            let mut ws_dead_conns = Vec::new();
+            let mut wss_dead_conns = Vec::new();
+            if self.config.ssl == true {
+                let mut peers = self.wss_connections.write().await;
+                for (key, value) in peers.iter_mut() {
+                    let msg = Message::Text(msg_text.clone());
+                    let ws_sink = Box::new(value);
+                    let res = ws_sink.tx.send(msg).await;
+                    if res.is_err() {
+                        warn!("Error sending message to websocket: {:?}", res);
+                        ws_dead_conns.push(key.clone());
+                    }
+                }
+            } else {
+                let mut peers = self.ws_connections.write().await;
+                for (key, value) in peers.iter_mut() {
+                    let msg = Message::Text(msg_text.clone());
+                    let ws_sink = Box::new(value);
+                    let res = ws_sink.tx.send(msg).await;
+                    if res.is_err() {
+                        warn!("Error sending message to websocket: {:?}", res);
+                        wss_dead_conns.push(key.clone());
+                    }
+                }
             }
-            */
-            debug!(
-                "Ws: Sending msg {}->{} to {} peers.",
-                msg.from_id,
-                msg.domain,
-                peers.len()
-            );
-            for recp_tuple in peers.iter() {
-                let (addr, ws_sink) = recp_tuple;
-                ws_sink.unbounded_send(wmsg.clone()).unwrap();
-                info!(
-                    "WS-ROUTE: from: {} to: {} via {}",
-                    msg.from_id,
-                    msg.domain,
-                    addr,
-                    //                    msg.data.to_string(),
-                );
+            // Remove dead connections:
+            if self.config.ssl == true {
+                let mut peers = self.wss_connections.write().await;
+                for key in ws_dead_conns.iter() {
+                    info!("Removing dead connection: {:?}", key);
+                    peers.remove(key);
+                }
+            } else {
+                let mut peers = self.ws_connections.write().await;
+                for key in wss_dead_conns.iter() {
+                    info!("Removing dead connection: {:?}", key);
+                    peers.remove(key);
+                }
             }
         }
     }
 }
 
-async fn handle_connection(
-    peer_map: PeerMap,
-    raw_stream: TcpStream,
-    addr: SocketAddr,
-    sender: async_channel::Sender<IndraEvent>,
-    name: String,
+pub async fn init_websocket_server(
+    address: String,
+    _sender: async_channel::Sender<IndraEvent>,
+    _wsconfig: WsConfig,
 ) {
-    info!(
-        "Incoming TCP connection from: {}, I am {}, sender is {:?}",
-        addr, name, sender
-    );
-
-    let ws_stream = async_tungstenite::accept_async(raw_stream)
-        .await
-        .expect("Error during the websocket handshake occurred");
-    debug!("WebSocket connection established: {}", addr);
-
-    // Insert the write part of this peer to the peer map.
-    let (tx, rx) = unbounded();
-    //peer_map.lock().unwrap().insert(addr, tx);
-    peer_map.write().unwrap().insert(addr, tx.clone());
-    let p2 = peer_map.read().unwrap().clone();
-
-    let (outgoing, incoming) = ws_stream.split();
-    //let sx = sender.clone();
-
-    let broadcast_incoming = incoming
-        // XXX remove close
-        .try_filter(move |msg| {
-            // Broadcasting a Close message from one client
-            // will close the other clients.
-            future::ready(!msg.is_close())
-        })
-        .try_for_each(move |msg| {
-            if let Message::Text(text) = msg.clone() {
-                //debug!("Received: {}", text);
-                let iero_res: Result<IndraEvent, serde_json::Error> = serde_json::from_str(&text);
-                let mut iero: IndraEvent;
-                if iero_res.is_err() {
-                    warn!("WS: Received invalid IndraEvent: {}, {}", text, iero_res.err().unwrap());
-                    tx.unbounded_send("error - not a valid IndraEvent".into())
-                        .unwrap();
-                } else {
-                    iero = iero_res.unwrap();
-                    task::block_on(async {
-                        iero.from_id = format!("{}/{}", name, addr).to_string().clone();
-                        if sender.send(iero.clone()).await.is_err() {
-                            error!("Ws: Error sending message to channel, assuming shutdown.");
-                            return;
-                        }
-                    });
-                    let peers = p2.clone();
-
-                    // We want to broadcast the message to everyone except ourselves.
-                    let broadcast_recipients = peers
-                        .iter()
-                        .filter(|(peer_addr, _)| peer_addr != &&addr)
-                        .map(|(_, ws_sink)| ws_sink);
-
-                    for recp in broadcast_recipients {
-                        recp.unbounded_send(msg.clone()).unwrap();
-                        info!(
-                            "WS-PEER-ROUTE: from: {} to: {} to {}", // [{}]",
-                            iero.from_id,
-                            iero.domain,
-                            addr,
-                            //iero.data.to_string().truncate(16),
-                        );
-                    }
-                }
-            }
-
-            future::ok(())
-        });
-
-    let receive_from_others = rx.map(Ok).forward(outgoing);
-
-    pin_mut!(broadcast_incoming, receive_from_others);
-    future::select(broadcast_incoming, receive_from_others).await;
-
-    warn!("{} disconnected", &addr);
-    peer_map.write().unwrap().remove(&addr);
+    let _url = format!("wss://{}", address);
 }
 
-pub async fn init_websocket_server(
-    connections: PeerMap,
-    address: String,
-    sender: async_channel::Sender<IndraEvent>,
-    name: String,
-) {
-    let addr = address.as_str();
-    let listener = TcpListener::bind(&addr).await.expect("Can't listen");
-    info!("Listening on: {}", addr);
-
-    // Let's spawn the handling of each connection in a separate task.
-    while let Ok((stream, addr)) = listener.accept().await {
-        task::spawn(handle_connection(
-            connections.clone(),
-            stream,
-            addr,
-            sender.clone(),
-            name.clone(),
-        ));
+async fn ws_handle_connection(
+    stream: TcpStream,
+    connections: ActiveWsConnections,
+    name: &str,
+    peer_address: SocketAddr,
+    sx: async_channel::Sender<IndraEvent>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let websocket = accept_async(stream).await?;
+    info!("Connected session to peer address: {}", peer_address);
+    // split websocket into sender and receiver:
+    let (ws_sink, mut ws_stream) = websocket.split();
+    let ws_connection: WsConnection = WsConnection {
+        subs: Vec::new(),
+        tx: Box::new(ws_sink),
+    };
+    connections
+        .write()
+        .await
+        .insert(peer_address, ws_connection);
+    while let Some(msg) = ws_stream.next().await {
+        let msg = msg?;
+        match msg {
+            Message::Text(text) => {
+                let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
+                // msg.domain = format!("{}/{}", name, msg.domain);
+                msg.from_id = format!("{}/{}", name, peer_address);
+                sx.send(msg).await.unwrap();
+            }
+            Message::Binary(bin) => {
+                warn!("Received binary message: {:?}", bin);
+            }
+            Message::Ping(ping) => {
+                warn!("Received ping message: {:?}", ping);
+            }
+            Message::Pong(pong) => {
+                warn!("Received pong message: {:?}", pong);
+            }
+            Message::Close(close) => {
+                warn!("Received close message: {:?}", close);
+            }
+            Message::Frame(frame) => {
+                warn!("Received frame message: {:?}", frame);
+            }
+        }
     }
-    //Ok(())
+    connections.write().await.remove(&peer_address);
+    Ok(())
+}
+
+async fn wss_handle_connection(
+    stream: TlsStream<TcpStream>,
+    name: &str,
+    connections: ActiveWssConnections,
+    peer_address: SocketAddr,
+    sender: async_channel::Sender<IndraEvent>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let websocket = accept_async(stream).await?;
+    info!("Connected session to peer address: {}", peer_address);
+    // split websocket into sender and receiver:
+    let (ws_sink, mut ws_stream) = websocket.split();
+    let wss_connection: WssConnection = WssConnection {
+        subs: Vec::new(),
+        tx: Box::new(ws_sink),
+    };
+    connections
+        .write()
+        .await
+        .insert(peer_address, wss_connection); // Box::new(ws_sink));
+    while let Some(msg) = ws_stream.next().await {
+        let msg = msg?;
+        match msg {
+            Message::Text(text) => {
+                let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
+                msg.from_id = format!("{}/{}", name, peer_address.to_string());
+                info!("Received a message from the client: {:?}", msg);
+                sender.send(msg).await.unwrap();
+            }
+            Message::Binary(bin) => {
+                warn!("Received binary message: {:?}", bin);
+            }
+            Message::Ping(ping) => {
+                warn!("Received ping message: {:?}", ping);
+            }
+            Message::Pong(pong) => {
+                warn!("Received pong message: {:?}", pong);
+            }
+            Message::Close(close) => {
+                warn!("Received close message: {:?}", close);
+            }
+            Message::Frame(frame) => {
+                warn!("Received frame message: {:?}", frame);
+            }
+        }
+    }
+    // remove connection from active
+    connections.write().await.remove(&peer_address);
+    info!("Disconnected session from peer address: {}", peer_address);
+    Ok(())
+}
+
+async fn ws_accept_loop(
+    connections: ActiveWsConnections,
+    listener: TcpListener,
+    name: &str,
+    sender: async_channel::Sender<IndraEvent>,
+) {
+    loop {
+        let (stream, _) = listener.accept().await.expect("failed to accept (WS)");
+        let peer_addr = stream.peer_addr().unwrap();
+        info!("Connected to peer address: {}", peer_addr);
+        let sx = sender.clone();
+        let xname = name.to_string().clone();
+        let conns = connections.clone();
+        async_std::task::spawn(async move {
+            if let Err(e) = ws_handle_connection(stream, conns, xname.as_str(), peer_addr, sx).await
+            {
+                error!("failed to handle connection: {}", e);
+            }
+        });
+    }
+}
+
+async fn wss_accept_loop(
+    connections: ActiveWssConnections,
+    listener: TcpListener,
+    tls_acceptor: Arc<TlsAcceptor>,
+    name: &str,
+    sender: async_channel::Sender<IndraEvent>,
+) {
+    loop {
+        let (stream, _) = listener.accept().await.expect("failed to accept (WSS)");
+        let tls_acceptor = tls_acceptor.clone();
+        let peer_addr = stream.peer_addr().unwrap();
+        info!("Connected to peer address: {}", peer_addr);
+        let sx = sender.clone();
+        let xname = name.to_string().clone();
+        let conns = connections.clone();
+        async_std::task::spawn(async move {
+            let stream_res = tls_acceptor.accept(stream).await;
+            if stream_res.is_err() {
+                error!("failed to accept TLS stream: {}", stream_res.err().unwrap());
+                return;
+            }
+            let stream = stream_res.unwrap();
+            if let Err(e) =
+                wss_handle_connection(stream, xname.as_str(), conns, peer_addr, sx).await
+            {
+                error!("failed to handle connection: {}", e);
+            }
+        });
+    }
 }
 
 impl AsyncTaskSender for Ws {
-    async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         if self.config.active == false {
             return;
+        }
+        let addr = self.config.address.as_str();
+        if self.config.ssl == true {
+            debug!("IndraTask Ws::sender: SSL enabled");
+
+            let f = File::open(self.config.cert).unwrap();
+            let mut cert_reader = BufReader::new(f);
+            let cert_chain = certs(&mut cert_reader)
+                .unwrap()
+                .iter()
+                .map(|v| rustls::Certificate(v.clone()))
+                .collect();
+            let f = File::open(self.config.key).unwrap();
+            let mut key_reader = BufReader::new(f);
+            let mut keys = pkcs8_private_keys(&mut key_reader)
+                .unwrap()
+                .iter()
+                .map(|v| rustls::PrivateKey(v.clone()))
+                .collect::<Vec<_>>();
+            let key = keys.remove(0);
+
+            let ws_config = ServerConfig::builder()
+                .with_safe_defaults()
+                .with_no_client_auth()
+                .with_single_cert(cert_chain, key)
+                .expect("bad certificate/key");
+
+            let listener = TcpListener::bind(addr).await.unwrap();
+            info!("Ws: Listening on wss://{} (ssl)", addr);
+            let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
+
+            wss_accept_loop(
+                self.wss_connections,
+                listener,
+                Arc::new(tls_acceptor),
+                self.config.name.as_str(),
+                sender,
+            )
+            .await;
+        } else {
+            debug!("IndraTask Ws::sender: SSL disabled");
+
+            let listener = TcpListener::bind(addr).await.unwrap();
+            info!("Ws: Listening on ws://{}", addr);
+
+            ws_accept_loop(
+                self.ws_connections,
+                listener,
+                self.config.name.as_str(),
+                sender,
+            )
+            .await;
         }
     }
 }
