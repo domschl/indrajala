@@ -22,7 +22,7 @@ use async_tls::{server::TlsStream, TlsAcceptor};
 use async_tungstenite::tungstenite::protocol::Message;
 use async_tungstenite::{accept_async, WebSocketStream};
 
-use futures::channel::mpsc::UnboundedSender;
+//use futures::channel::mpsc::UnboundedSender;
 use futures::sink::SinkExt; // for websocket.send()
 use futures::StreamExt;
 
@@ -83,19 +83,43 @@ impl AsyncTaskReceiver for Ws {
                 break;
             }
             let msg_text = serde_json::to_string(&msg).unwrap();
+            let mut ws_dead_conns = Vec::new();
+            let mut wss_dead_conns = Vec::new();
             if self.config.ssl == true {
                 let mut peers = self.wss_connections.write().await;
-                for (_key, value) in peers.iter_mut() {
+                for (key, value) in peers.iter_mut() {
                     let msg = Message::Text(msg_text.clone());
                     let ws_sink = Box::new(value);
-                    ws_sink.tx.send(msg).await.unwrap();
+                    let res = ws_sink.tx.send(msg).await;
+                    if res.is_err() {
+                        warn!("Error sending message to websocket: {:?}", res);
+                        ws_dead_conns.push(key.clone());
+                    }
                 }
             } else {
                 let mut peers = self.ws_connections.write().await;
-                for (_key, value) in peers.iter_mut() {
+                for (key, value) in peers.iter_mut() {
                     let msg = Message::Text(msg_text.clone());
                     let ws_sink = Box::new(value);
-                    ws_sink.tx.send(msg).await.unwrap();
+                    let res = ws_sink.tx.send(msg).await;
+                    if res.is_err() {
+                        warn!("Error sending message to websocket: {:?}", res);
+                        wss_dead_conns.push(key.clone());
+                    }
+                }
+            }
+            // Remove dead connections:
+            if self.config.ssl == true {
+                let mut peers = self.wss_connections.write().await;
+                for key in ws_dead_conns.iter() {
+                    info!("Removing dead connection: {:?}", key);
+                    peers.remove(key);
+                }
+            } else {
+                let mut peers = self.ws_connections.write().await;
+                for key in wss_dead_conns.iter() {
+                    info!("Removing dead connection: {:?}", key);
+                    peers.remove(key);
                 }
             }
         }
@@ -133,7 +157,9 @@ async fn ws_handle_connection(
         let msg = msg?;
         match msg {
             Message::Text(text) => {
-                let msg: IndraEvent = serde_json::from_str(&text).unwrap();
+                let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
+                // msg.domain = format!("{}/{}", name, msg.domain);
+                msg.from_id = format!("{}/{}", name, peer_address);
                 sx.send(msg).await.unwrap();
             }
             Message::Binary(bin) => {
@@ -201,23 +227,6 @@ async fn wss_handle_connection(
                 warn!("Received frame message: {:?}", frame);
             }
         }
-        /*
-        // check for close message:
-        if msg.is_close() {
-            info!("Received close message from client: {:?}", msg);
-            break;
-        }
-        info!("Received a message from the client: {:?}", msg);
-        let msg_text = msg.to_string();
-        let ie: Result<IndraEvent, serde_json::Error> = serde_json::from_str(&msg_text);
-        if ie.is_err() {
-            warn!("Failed to parse message from client: {:?}", msg_text);
-            continue;
-        }
-        let mut ie = ie.unwrap();
-        ie.from_id = format!("{}/{}", name, peer_address.to_string());
-        sender.send(ie).await.unwrap();
-        */
     }
     // remove connection from active
     connections.write().await.remove(&peer_address);
@@ -310,7 +319,7 @@ impl AsyncTaskSender for Ws {
                 .expect("bad certificate/key");
 
             let listener = TcpListener::bind(addr).await.unwrap();
-            info!("Ws: Listening on {} (ssl)", addr);
+            info!("Ws: Listening on wss://{} (ssl)", addr);
             let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
 
             wss_accept_loop(
@@ -325,7 +334,7 @@ impl AsyncTaskSender for Ws {
             debug!("IndraTask Ws::sender: SSL disabled");
 
             let listener = TcpListener::bind(addr).await.unwrap();
-            info!("Ws: Listening on {} (ssl)", addr);
+            info!("Ws: Listening on ws://{}", addr);
 
             ws_accept_loop(
                 self.ws_connections,
