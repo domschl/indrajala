@@ -25,7 +25,7 @@ println("Starting...")
 sslconfig = MbedTLS.SSLConfig(false)
 # sslconfig = MbedTLS.SSLConfig("/home/dsc/certs/nineveh.pem", "/home/dsc/certs/nineveh-key.pem")
 println("Opening...")
-WebSockets.open("ws://localhost:8082", sslconfig=sslconfig) do ws
+WebSockets.open("ws://localhost:8083", sslconfig=sslconfig) do ws
     x=0.0;
     for i in 1:10
         jd=datetime2julian(now(UTC))
