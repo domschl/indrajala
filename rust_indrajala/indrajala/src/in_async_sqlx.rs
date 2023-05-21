@@ -173,7 +173,7 @@ impl AsyncTaskReceiver for SQLx {
                     .starts_with("$cmd/db/req/event/number/float/history")
                 {
                     let req: IndraEventRequest = serde_json::from_value(msg.data).unwrap();
-                    debug!(
+                    info!(
                         "SQLx: Received db/scalar/req command from {} search for: {:?}",
                         msg.from_id, req
                     );

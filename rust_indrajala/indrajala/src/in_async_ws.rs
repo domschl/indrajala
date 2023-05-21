@@ -96,6 +96,10 @@ impl AsyncTaskReceiver for Ws {
                             break;
                         }
                     }
+                    if msg.domain == format!("{}/{}", self.config.name, key).to_string() {
+                        matched = true;
+                        info!("Matched direct-address websocket connection: {}/{:?}, {}", self.config.name, key, msg.domain);
+                    }
                     if !matched {
                         info!("Skipping websocket connection: {:?}, {:?} {}", key, subs, msg.domain);
                         continue;
@@ -120,6 +124,10 @@ impl AsyncTaskReceiver for Ws {
                             matched = true;
                             break;
                         }
+                    }
+                    if msg.domain == format!("{}/{}", self.config.name, key).to_string() {
+                        matched = true;
+                        info!("Matched direct-address websocket connection: {}/{:?}, {}", self.config.name, key, msg.domain);
                     }
                     if !matched {
                         info!("Skipping websocket connection: {:?}, {:?} {}", key, subs, msg.domain);

@@ -180,7 +180,7 @@ fn build_ui(app: &Application) {
         .build();
 
     let host2 = cfg.uris[0].clone();
-    let domain_topic2 = cfg.default_domains[0].clone();
+    let domain_topic2 = cfg.default_domains.clone();
     thread::spawn({
         //websocket_client
         let shared_time_series = Arc::clone(&time_series);
@@ -195,7 +195,7 @@ fn build_ui(app: &Application) {
             ie.domain = "$cmd/ws/subs".to_string();
             ie.from_id = "ws/plotter".to_string();
             ie.data_type = "cmd/subs".to_string();
-            let subs: Vec<String> = vec![domain_topic2.clone()];
+            let subs: Vec<String> = domain_topic2.clone();
             ie.data = serde_json::json!(subs);
             let ie_txt = serde_json::to_string(&ie).unwrap();
             socket.write_message(ie_txt.into()).unwrap();
@@ -343,6 +343,16 @@ fn build_ui(app: &Application) {
                                     serde_json::from_value(ier.data).unwrap(); //.to_string().as_str()).unwrap();
                                 let mut time_series_lock = shared_time_series.lock().unwrap();
                                 for domain in domains.iter() {
+                                    let mut matched = false;
+                                    for sub in domain_topic2.iter() {
+                                        if IndraEvent::mqcmp(sub, domain) {
+                                            matched = true;
+                                            break;
+                                        }
+                                    }
+                                    if !matched {
+                                        continue;
+                                    }
                                     if !time_series_lock.contains_key(&domain.clone()) {
                                         time_series_lock.insert(domain.clone(), Vec::new());
                                         Arc::new(&sender)
