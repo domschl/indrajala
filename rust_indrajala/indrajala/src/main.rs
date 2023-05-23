@@ -24,6 +24,8 @@ mod in_async_ws;
 use in_async_ws::Ws; // {init_websocket_server, Ws};
 mod in_async_signal;
 use in_async_signal::Signal;
+mod in_async_tasker;
+use in_async_tasker::Tasker;
 
 #[derive(Clone)]
 enum IndraTask {
@@ -33,6 +35,7 @@ enum IndraTask {
     SQLx(SQLx),
     Ws(Ws),
     Signal(Signal),
+    Tasker(Tasker),
 }
 
 trait AsyncTaskSender {
@@ -98,6 +101,13 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                     name = st.config.clone().name;
                 }
                 IndraTask::Signal(st) => {
+                    ot = st.config.clone().out_topics;
+                    ob = st.config.clone().out_blocks;
+                    act = st.config.clone().active;
+                    acs = st.sender.clone();
+                    name = st.config.clone().name;
+                }
+                IndraTask::Tasker(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
@@ -197,6 +207,12 @@ fn main() {
             tsk.push(IndraTask::Signal(si.clone()));
         }
     }
+    if !indra_config.tasker.is_none() {
+        for ta in indra_config.tasker.clone().unwrap() {
+            let ta: Tasker = Tasker::new(ta.clone());
+            tsk.push(IndraTask::Tasker(ta.clone()));
+        }
+    }
 
     let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
     let mut join_handles: Vec<task::JoinHandle<()>> = vec![];
@@ -228,6 +244,10 @@ fn main() {
                 IndraTask::Signal(st) => {
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
+                }
+                IndraTask::Tasker(ta) => {
+                    join_handles.push(task::spawn(ta.clone().async_sender(sender.clone())));
+                    join_handles.push(task::spawn(ta.clone().async_receiver(sender.clone())));
                 }
             }
         }
