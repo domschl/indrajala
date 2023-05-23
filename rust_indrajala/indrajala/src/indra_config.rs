@@ -142,13 +142,8 @@ pub struct TaskerConfig {
     pub name: String,
     pub active: bool,
     pub capa: Vec<TaskCapability>,
-    pub id: String,
     pub cmd: String,
     pub args: Vec<String>,
-    pub mode: TaskerMode,
-    pub interval: String,
-    pub default_domain: String,
-    pub ipc: TaskerIpc,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
 }
