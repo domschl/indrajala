@@ -52,6 +52,10 @@ impl AsyncTaskSender for Tasker {
 
 impl AsyncTaskReceiver for Tasker {
     async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            debug!("Tasker is not active");
+            return;
+        }
         let child = Command::new(self.config.cmd.clone())
             .args(self.config.args.clone())
             .stdout(Stdio::piped())
