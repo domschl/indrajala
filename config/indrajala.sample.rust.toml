@@ -1,43 +1,45 @@
 [[mqtt]]
 name = "MQTT.1"
-active = true
+active = false
 capa = ["Send", "Receive"]
 host = "nalanda"
 port = 1883
 username = ""
 password = ""
 client_id = "indrajala.1"
-topics = ["omu/enviro-master/BME280-1/sensor/temperature"]
-out_topics = ["test/#"]
+to_scope = "home/test"
+topics = ["omu/enviro-master/BME280-1/sensor/#"]
+out_topics = ["$event/test/#"]
 out_blocks = [""]
 
 [[mqtt]]
 name = "MQTT.2"
-active = true
+active = false
 capa = ["Send", "Receive"]
 host = "nalanda"
 port = 1883
 username = ""
 password = ""
 client_id = "indrajala.2"
-topics = ["#"]
-out_topics = ["test/#"]
+to_scope = "home/test"
+topics = ["omu/enviro-master/BME280-1/sensor/humidity"]
+out_topics = ["$event/test/#"]
 out_blocks = [""]
 
 [[ding_dong]]
 name = "DingDong.1"
-active = true
+active = false
 capa = ["Send", "Receive"]
 timer = 1000
 topic = "Ding"
 message = "Dong"
-out_topics = ["#"]
+out_topics = ["$event/test/#"]
 out_blocks = ["DingDong.1"]
 
 [[web]]
 name = "Web.1"
 active = true
-capa = ["Send"]
+capa = ["Request", "Send"]
 address = "0.0.0.0:8081"
 url = "/api/v1"
 ssl = true
@@ -49,23 +51,69 @@ out_blocks = []
 [[ws]]
 name = "Ws.1"
 active = true
-capa = ["Send"]
+capa = ["Receive", "Send", "Request"]
 address = "0.0.0.0:8082"
 url = "/ws/v1"
 ssl = true
 cert = "config/certs/m2max.pem"
 key = "config/certs/m2max-key.pem"
-out_topics = []
+out_topics = ["$event/#", "Ws.1/#"]
+out_blocks = []
+
+[[ws]]
+name = "Ws.2"
+active = true
+capa = ["Receive", "Send", "Request"]
+address = "0.0.0.0:8083"
+url = "/ws/v1"
+ssl = false
+cert = ""
+key = ""
+out_topics = ["$event/#", "Ws.2/#"]
 out_blocks = []
 
 [[sqlx]]
 name = "SQLx.1"
+active = true
 capa = ["Receive", "Request"]
 db_type = "SQLite"
-active = true
+db_sync = "Async"
 database_url = "config/db/indrajala.db"
-out_topics = ["#"]
+out_topics = ["$event/#", "$cmd/db/#"]
 out_blocks = []
 
-[[kaka]]
-ups = 0
+[[signal]]
+name = "Signal.1"
+active = true
+capa = ["Receive", "Request"]
+shutdown_delay_ms = 1000
+out_topics = []
+out_blocks = []
+
+[[tasker]]
+name = "Python.1"
+active = true
+capa = ["Receive", "Send", "Request"]
+id = "python_1"
+cmd = "python3"
+args = ["tasker/python_1.py"]
+mode = "Periodic"
+interval = "15s"
+default_domain = "$event/tasker/python_1"
+ipc = "Stdio"
+out_topics = ["$task/python_1/#", "$cmd/task/python_1/#"]
+out_blocks = []
+
+[[tasker]]
+name = "Julia.1"
+active = true
+capa = ["Receive", "Send", "Request"]
+id = "julia_1"
+cmd = "julia"
+args = ["tasker/julia_1.jl"]
+mode = "Periodic"
+interval = "15s"
+default_domain = "$event/tasker/julia_1"
+ipc = "Stdio"
+out_topics = ["$task/julia_1/#", "$cmd/task/julia_1/#"]
+out_blocks = []

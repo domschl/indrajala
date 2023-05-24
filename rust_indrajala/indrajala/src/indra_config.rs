@@ -14,6 +14,7 @@ pub struct IndraConfig {
     pub sqlx: Option<Vec<SQLxConfig>>,
     pub ws: Option<Vec<WsConfig>>,
     pub signal: Option<Vec<SignalConfig>>,
+    pub tasker: Option<Vec<TaskerConfig>>,
 }
 
 /*
@@ -121,6 +122,28 @@ pub struct SQLxConfig {
     pub db_type: DbType,
     pub db_sync: DbSync,
     pub database_url: String,
+    pub out_topics: Vec<String>,
+    pub out_blocks: Vec<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub enum TaskerMode {
+    Periodic,
+    Oneshot,
+    Continuous,
+}
+#[derive(Deserialize, Clone, Debug)]
+pub enum TaskerIpc {
+    Stdio,
+    Net,
+}
+#[derive(Deserialize, Clone, Debug)]
+pub struct TaskerConfig {
+    pub name: String,
+    pub active: bool,
+    pub capa: Vec<TaskCapability>,
+    pub cmd: String,
+    pub args: Vec<String>,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
 }
