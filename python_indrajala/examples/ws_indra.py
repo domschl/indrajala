@@ -24,9 +24,9 @@ class IndraEvent:
         """Create an IndraEvent json object
 
         :param domain:        MQTT-like path
-        :param from_id:       originator-path
-        :param uuid4:         unique id
-        :param to_scope:      security scope or context
+        :param from_id:       originator-path, used for replies in transaction-mode
+        :param uuid4:         unique id, is unchanged over transactions, can thus be used as correlator
+        :param to_scope:      session scope as domain hierarchy, identifies sessions or groups, can imply security scope or context
         :param time_jd_start:    event time as float julian date
         :param data_type      short descriptor-path
         :param data           JSON data (note: simple values are valid)
