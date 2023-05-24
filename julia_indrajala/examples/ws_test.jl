@@ -32,9 +32,9 @@ end;
 function indra_log(ws, type, msg)
     valid_types = ["error", "warn", "info", "debug"]
     if type in valid_types
-        msg = IndraEvent("\$log/$type", "ws/julia", UUIDs.uuid4(), "log/$type", datetime2julian(now(UTC)), "log/$type", JSON3.read(JSON3.write(msg)), "", datetime2julian(now(UTC)))
+        msg = IndraEvent("\$log/$type", "ws/julia", UUIDs.uuid4(), "log/$type", datetime2julian(now(UTC)), "string", JSON3.read(JSON3.write(msg)), "", datetime2julian(now(UTC)))
     else
-        msg = IndraEvent("\$log/error", "ws/julia", UUIDs.uuid4(), "log/error", datetime2julian(now(UTC)), "log/error", JSON3.read(JSON3.write("Invalid log type: $type")), "", datetime2julian(now(UTC)))
+        msg = IndraEvent("\$log/error", "ws/julia", UUIDs.uuid4(), "log/error", datetime2julian(now(UTC)), "string", JSON3.read(JSON3.write("Invalid log type: $type")), "", datetime2julian(now(UTC)))
     end
     send(ws, JSON3.write(msg))
     return(msg)
