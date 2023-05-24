@@ -109,6 +109,7 @@ class IndraClient
             uri="ws://localhost:8083"
             if verbose is True:
                 self.log.error(f"Please provide an uri=ws[s]://host:port in {config_file}, defaulting to {uri}")
+        
    
     def init_connection(self, config)
         if use_ssl is True:
