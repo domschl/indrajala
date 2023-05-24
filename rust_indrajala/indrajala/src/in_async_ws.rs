@@ -98,13 +98,22 @@ impl AsyncTaskReceiver for Ws {
                     }
                     if msg.domain == format!("{}/{}", self.config.name, key).to_string() {
                         matched = true;
-                        info!("Matched direct-address websocket connection: {}/{:?}, {}", self.config.name, key, msg.domain);
+                        info!(
+                            "Matched direct-address websocket connection: {}/{:?}, {}",
+                            self.config.name, key, msg.domain
+                        );
                     }
                     if !matched {
-                        info!("Skipping websocket connection: {:?}, {:?} {}", key, subs, msg.domain);
+                        info!(
+                            "Skipping websocket connection: {:?}, {:?} {}",
+                            key, subs, msg.domain
+                        );
                         continue;
                     } else {
-                        info!("Matched websocket connection: {:?}, {:?} {}", key, subs, msg.domain);
+                        info!(
+                            "Matched websocket connection: {:?}, {:?} {}",
+                            key, subs, msg.domain
+                        );
                     }
                     let msg = Message::Text(msg_text.clone());
                     let ws_sink = Box::new(value);
@@ -127,13 +136,22 @@ impl AsyncTaskReceiver for Ws {
                     }
                     if msg.domain == format!("{}/{}", self.config.name, key).to_string() {
                         matched = true;
-                        info!("Matched direct-address websocket connection: {}/{:?}, {}", self.config.name, key, msg.domain);
+                        info!(
+                            "Matched direct-address websocket connection: {}/{:?}, {}",
+                            self.config.name, key, msg.domain
+                        );
                     }
                     if !matched {
-                        info!("Skipping websocket connection: {:?}, {:?} {}", key, subs, msg.domain);
+                        info!(
+                            "Skipping websocket connection: {:?}, {:?} {}",
+                            key, subs, msg.domain
+                        );
                         continue;
                     } else {
-                        info!("Matched websocket connection: {:?}, {:?} {}", key, subs, msg.domain);
+                        info!(
+                            "Matched websocket connection: {:?}, {:?} {}",
+                            key, subs, msg.domain
+                        );
                     }
                     let msg = Message::Text(msg_text.clone());
                     let ws_sink = Box::new(value);
@@ -162,34 +180,55 @@ impl AsyncTaskReceiver for Ws {
     }
 }
 
-async fn handle_message(msg: Message, name: &str, peer_address: SocketAddr, subs: &mut Vec<String>, sx: async_channel::Sender<IndraEvent>) {
+async fn handle_message(
+    msg: Message,
+    name: &str,
+    peer_address: SocketAddr,
+    subs: &mut Vec<String>,
+    sx: async_channel::Sender<IndraEvent>,
+) {
     match msg {
         Message::Text(text) => {
             let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
-            if msg.domain == "$cmd/ws/subs" {
-                warn!("Received subs command: {:?}", msg);
-                //let mut subs = subs;
-                let new_subs_res: Result<Vec<String>, serde_json::Error> = serde_json::from_value(msg.data);
-                if new_subs_res.is_ok() {
-                    let new_subs = new_subs_res.unwrap();
-                    for sub in new_subs.iter() {
-                        let ev_sub;
-                        if !sub.starts_with("$event/") {
-                            ev_sub = format!("$event/{}", sub);
-                        } else {
-                            ev_sub = sub.clone();
+            match msg.domain.as_str() {
+                "$cmd/ws/subs" => {
+                    warn!("Received subs command: {:?}", msg);
+                    //let mut subs = subs;
+                    let new_subs_res: Result<Vec<String>, serde_json::Error> =
+                        serde_json::from_value(msg.data);
+                    if new_subs_res.is_ok() {
+                        let new_subs = new_subs_res.unwrap();
+                        for sub in new_subs.iter() {
+                            let ev_sub;
+                            if !sub.starts_with("$event/") {
+                                ev_sub = format!("$event/{}", sub);
+                            } else {
+                                ev_sub = sub.clone();
+                            }
+                            if !subs.contains(&ev_sub) {
+                                subs.push(ev_sub.clone());
+                            }
                         }
-                        if !subs.contains(&ev_sub) {
-                            subs.push(ev_sub.clone());
-                        }
+                        info!("Subscriptions updated: {:?}", subs);
                     }
-                    info!("Subscriptions updated: {:?}", subs);
-                } else {
-                    warn!("Error parsing subs command: {:?}", new_subs_res);
                 }
-            } else {
-                msg.from_id = format!("{}/{}", name, peer_address);
-                sx.send(msg).await.unwrap();
+                "$log/error" => {
+                    error!("{}: {:?}", msg.from_id, msg.data);
+                }
+                "$log/warn" => {
+                    warn!("{}: {:?}", msg.from_id, msg.data);
+                }
+                "$log/info" => {
+                    info!("{}: {:?}", msg.from_id, msg.data);
+                }
+                "$log/debug" => {
+                    debug!("{}: {:?}", msg.from_id, msg.data);
+                }
+                _ => {
+                    msg.from_id = format!("{}/{}", name, peer_address);
+                    info!("Received message via WS -> Route: {:?}", msg);
+                    sx.send(msg).await.unwrap();
+                }
             }
         }
         Message::Binary(bin) => {
@@ -208,7 +247,6 @@ async fn handle_message(msg: Message, name: &str, peer_address: SocketAddr, subs
             warn!("Received frame message: {:?}", frame);
         }
     }
-
 }
 
 async fn ws_handle_connection(
@@ -235,7 +273,12 @@ async fn ws_handle_connection(
         let mut subs = connections.write().await[&peer_address].subs.clone();
         handle_message(msg, name, peer_address, &mut subs, sx.clone()).await;
         info!("Current subscriptions: {:?}", subs);
-        connections.write().await.get_mut(&peer_address).unwrap().subs = subs;
+        connections
+            .write()
+            .await
+            .get_mut(&peer_address)
+            .unwrap()
+            .subs = subs;
     }
     connections.write().await.remove(&peer_address);
     Ok(())
@@ -266,7 +309,12 @@ async fn wss_handle_connection(
         let mut subs = connections.write().await[&peer_address].subs.clone();
         handle_message(msg, name, peer_address, &mut subs, sender.clone()).await;
         info!("Current subscriptions: {:?}", subs);
-        connections.write().await.get_mut(&peer_address).unwrap().subs = subs;
+        connections
+            .write()
+            .await
+            .get_mut(&peer_address)
+            .unwrap()
+            .subs = subs;
     }
     // remove connection from active
     connections.write().await.remove(&peer_address);
