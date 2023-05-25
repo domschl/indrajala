@@ -192,7 +192,7 @@ fn build_ui(app: &Application) {
 
             //let delta = time::Duration::from_millis(500);
             let mut ie: IndraEvent = IndraEvent::new();
-            ie.domain = "$cmd/ws/subs".to_string();
+            ie.domain = "$cmd/subs".to_string();
             ie.from_id = "ws/plotter".to_string();
             ie.data_type = "cmd/subs".to_string();
             let subs: Vec<String> = domain_topic2.clone();
