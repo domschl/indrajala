@@ -24,7 +24,7 @@ StructTypes.StructType(::Type{IndraEvent}) = StructTypes.Mutable()
 # end;
 
 function indra_subscribe(ws, topics)
-    msg = IndraEvent("\$cmd/ws/subs", "ws/julia", UUIDs.uuid4(), "cmd/subs", datetime2julian(now(UTC)), "cmd/subs", JSON3.read(JSON3.write(topics)), "", datetime2julian(now(UTC)))
+    msg = IndraEvent("\$cmd/subs", "ws/julia", UUIDs.uuid4(), "cmd/subs", datetime2julian(now(UTC)), "cmd/subs", JSON3.read(JSON3.write(topics)), "", datetime2julian(now(UTC)))
     send(ws, JSON3.write(msg))
     return(msg)
 end;

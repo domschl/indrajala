@@ -191,7 +191,7 @@ async fn handle_message(
         Message::Text(text) => {
             let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
             match msg.domain.as_str() {
-                "$cmd/ws/subs" => {
+                "$cmd/subs" => {
                     warn!("Received subs command: {:?}", msg);
                     //let mut subs = subs;
                     let new_subs_res: Result<Vec<String>, serde_json::Error> =

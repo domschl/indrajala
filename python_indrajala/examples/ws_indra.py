@@ -91,12 +91,12 @@ class IndraEvent:
             year, month, int(day), int(hour), int(minute), int(second), int(microsecond)
         )
 
-class IndraClient
+class IndraClient:
 	def __init__(self, config_file="indra_client.toml"):
-        self.log = logging.getLogger("IndraClient)
+        self.log = logging.getLogger("IndraClient")
         self.initialized = self.get_config(config_file, verbose=False)
         
-    def get_config(config_file, verbose=True)
+    def get_config(self, config_file, verbose=True):
         valid = True
         try:
             config = toml.load(config_file)
