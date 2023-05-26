@@ -26,6 +26,8 @@ mod in_async_signal;
 use in_async_signal::Signal;
 mod in_async_tasker;
 use in_async_tasker::Tasker;
+mod in_async_llm;
+use in_async_llm::LLM;
 
 #[derive(Clone)]
 enum IndraTask {
@@ -36,6 +38,7 @@ enum IndraTask {
     Ws(Ws),
     Signal(Signal),
     Tasker(Tasker),
+    LLM(LLM),
 }
 
 trait AsyncTaskSender {
@@ -108,6 +111,13 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                     name = st.config.clone().name;
                 }
                 IndraTask::Tasker(st) => {
+                    ot = st.config.clone().out_topics;
+                    ob = st.config.clone().out_blocks;
+                    act = st.config.clone().active;
+                    acs = st.sender.clone();
+                    name = st.config.clone().name;
+                }
+                IndraTask::LLM(st) => {
                     ot = st.config.clone().out_topics;
                     ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
@@ -213,6 +223,12 @@ fn main() {
             tsk.push(IndraTask::Tasker(ta.clone()));
         }
     }
+    if !indra_config.llm.is_none() {
+        for ll in indra_config.llm.clone().unwrap() {
+            let ll: LLM = LLM::new(ll.clone());
+            tsk.push(IndraTask::LLM(ll.clone()));
+        }
+    }
 
     let (sender, receiver) = async_channel::unbounded::<IndraEvent>();
     let mut join_handles: Vec<task::JoinHandle<()>> = vec![];
@@ -248,6 +264,10 @@ fn main() {
                 IndraTask::Tasker(ta) => {
                     join_handles.push(task::spawn(ta.clone().async_sender(sender.clone())));
                     join_handles.push(task::spawn(ta.clone().async_receiver(sender.clone())));
+                }
+                IndraTask::LLM(ll) => {
+                    join_handles.push(task::spawn(ll.clone().async_sender(sender.clone())));
+                    join_handles.push(task::spawn(ll.clone().async_receiver(sender.clone())));
                 }
             }
         }

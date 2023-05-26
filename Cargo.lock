@@ -763,6 +763,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "crunchy"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
+
+[[package]]
 name = "crypto-common"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1318,6 +1324,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "ggml"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "ggml-sys",
+ "thiserror",
+]
+
+[[package]]
+name = "ggml-sys"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "ghash"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1553,6 +1576,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "half"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02b4af3693f1b705df946e9fe5631932443781d0aabb423b62fcd4d73f6d2fd0"
+dependencies = [
+ "crunchy",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1764,6 +1796,7 @@ dependencies = [
  "env_logger",
  "futures",
  "indra_event",
+ "llm",
  "log",
  "paho-mqtt",
  "rustls 0.20.8",
@@ -1896,6 +1929,94 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef53942eb7bf7ff43a617b3e2c1c4a5ecf5944a7c1bc12d7ee39bbb15e5c1519"
 
 [[package]]
+name = "llm"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "llm-base",
+ "llm-bloom",
+ "llm-gpt2",
+ "llm-gptj",
+ "llm-gptneox",
+ "llm-llama",
+ "llm-mpt",
+ "serde",
+]
+
+[[package]]
+name = "llm-base"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "bytemuck",
+ "ggml",
+ "half",
+ "memmap2",
+ "partial_sort",
+ "rand 0.8.5",
+ "serde",
+ "serde_bytes",
+ "thiserror",
+]
+
+[[package]]
+name = "llm-bloom"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "bytemuck",
+ "llm-base",
+]
+
+[[package]]
+name = "llm-gpt2"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "bytemuck",
+ "llm-base",
+]
+
+[[package]]
+name = "llm-gptj"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "bytemuck",
+ "llm-base",
+]
+
+[[package]]
+name = "llm-gptneox"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "bytemuck",
+ "llm-base",
+ "serde",
+]
+
+[[package]]
+name = "llm-llama"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "bytemuck",
+ "llm-base",
+ "rand 0.8.5",
+ "thiserror",
+]
+
+[[package]]
+name = "llm-mpt"
+version = "0.1.1"
+source = "git+https://github.com/rustformers/llm?branch=main#5cb475ad5aa76488a289666cb1c278f0cdf79de2"
+dependencies = [
+ "bytemuck",
+ "llm-base",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1921,6 +2042,15 @@ name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
+
+[[package]]
+name = "memmap2"
+version = "0.5.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83faa42c0a078c393f6b29d5db232d8be22776a891f8f56e5284faee4a20b327"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "memoffset"
@@ -2108,6 +2238,12 @@ name = "partial-min-max"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6448add382c60bbbc64f9dab41309a12ec530c05191601042f911356ac09758c"
+
+[[package]]
+name = "partial_sort"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7924d1d0ad836f665c9065e26d016c673ece3993f30d340068b16f282afc1156"
 
 [[package]]
 name = "paste"
@@ -2696,6 +2832,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2113ab51b87a539ae008b5c6c02dc020ffa39afd2d83cffcb3f4eb2722cebec2"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde_bytes"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "416bda436f9aab92e02c8e10d49a15ddd339cea90b6e340fe51ed97abb548294"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

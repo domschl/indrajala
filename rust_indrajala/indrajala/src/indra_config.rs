@@ -15,6 +15,7 @@ pub struct IndraConfig {
     pub ws: Option<Vec<WsConfig>>,
     pub signal: Option<Vec<SignalConfig>>,
     pub tasker: Option<Vec<TaskerConfig>>,
+    pub llm: Option<Vec<LLMConfig>>,
 }
 
 /*
@@ -144,6 +145,18 @@ pub struct TaskerConfig {
     pub capa: Vec<TaskCapability>,
     pub cmd: String,
     pub args: Vec<String>,
+    pub out_topics: Vec<String>,
+    pub out_blocks: Vec<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+pub struct LLMConfig {
+    pub name: String,
+    pub active: bool,
+    pub capa: Vec<TaskCapability>,
+    pub model_path: String,
+    pub model_arch: String,
+    pub model_overrides: String,
     pub out_topics: Vec<String>,
     pub out_blocks: Vec<String>,
 }

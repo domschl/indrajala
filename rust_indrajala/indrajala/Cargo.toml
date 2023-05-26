@@ -31,3 +31,5 @@ signal-hook-async-std = "*"
 log = "*"
 env_logger = "*"
 
+# llm = "*"
+llm = { git = "https://github.com/rustformers/llm" , branch = "main" }
