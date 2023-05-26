@@ -117,3 +117,13 @@ default_domain = "$event/tasker/julia_1"
 ipc = "Stdio"
 out_topics = ["$task/julia_1/#", "$cmd/task/julia_1/#"]
 out_blocks = []
+
+[[llm]]
+name = "LLM.1"
+active = true
+capa = ["Receive", "Send", "Request"]
+model_path = "config/models/vicuna/wizard-vicuna-13B.ggmlv3.q4_0.bin"
+model_arch = "llama"
+model_overrides = "{}"
+out_topics = ["$event/#", "$cmd/llm/#"]
+out_blocks = []
