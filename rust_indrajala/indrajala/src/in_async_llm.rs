@@ -25,37 +25,11 @@ impl LLM {
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
         let mut llm_config = config.clone();
-
-        info!("Loading LLM model from {}", config.model_path);
-
-        let model_architecture: llm::ModelArchitecture = config.model_arch.parse().unwrap();
-        let model_path = Path::new(&config.model_path);
-        // check if file exists:
-        if !model_path.exists() {
-            error!("Model file {} does not exist", config.model_path);
-            llm_config.active = false;
-        }
-        let overrides = serde_json::from_str(config.model_overrides.as_str()).unwrap();
-
-        let model = llm::load_dynamic(
-            model_architecture,
-            model_path,
-            Default::default(),
-            overrides,
-            LLM::load_progress_callback_logger,
-        );
-        if model.is_err() {
-            let emsg = model.err().unwrap();
-            error!("Failed to load {model_architecture} model from {model_path:?}, {emsg}");
-            llm_config.active = false;
-        } else {
-            let model = model.unwrap();
-            if llm_config.active == true {
-                info!("Model loaded.");
-                let def_addr = format!("{}/#", config.name);
-                if !config.out_topics.contains(&def_addr) {
-                    llm_config.out_topics.push(def_addr);
-                }
+        if llm_config.active == true {
+            info!("Model loaded.");
+            let def_addr = format!("{}/#", llm_config.name);
+            if !llm_config.out_topics.contains(&def_addr) {
+                llm_config.out_topics.push(def_addr);
             }
         }
         LLM {
@@ -103,7 +77,33 @@ impl LLM {
             }
         };
     }
+
+    pub fn get_model(llm_config: &mut LLMConfig) -> Result<Box<dyn llm::Model>, llm::LoadError> {
+        info!("Loading LLM model from {}", llm_config.model_path);
+
+        let model_architecture: llm::ModelArchitecture = llm_config.model_arch.parse().unwrap();
+        let model_path = Path::new(&llm_config.model_path);
+        // check if file exists:
+        
+        let overrides = serde_json::from_str(llm_config.model_overrides.as_str()).unwrap();
+
+        let model = llm::load_dynamic(
+            model_architecture,
+            model_path,
+            Default::default(),
+            overrides,
+            LLM::load_progress_callback_logger,
+        );
+        model
+    }
+
+    pub fn send_answer(token: String) -> Result<llm::InferenceFeedback, llm::InferenceError> {
+        let answer = token;
+        info!("LLM: Answer: {}", answer);
+        Ok(llm::InferenceFeedback::Continue)
+    }
 }
+
 impl AsyncTaskSender for LLM {
     async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
@@ -119,6 +119,40 @@ impl AsyncTaskReceiver for LLM {
             debug!("LLM is not active");
             return;
         }
+        let model = LLM::get_model(&mut self.config);
+        if model.is_err() {
+            error!("LLM: Failed to load model: {}", model.err().unwrap());
+            return;
+        }
+        let model = model.unwrap();
+        let mut session = model.start_session(Default::default());
+
+        let character_name = "### Assistant";
+        let user_name = "### Human";
+        let persona = "A chat between a human and an assistant.";
+        let history = format!(
+            "{character_name}: Hello - How may I help you today?\n\
+             {user_name}: What is the capital of France?\n\
+             {character_name}:  Paris is the capital of France."
+        );
+    
+        let inference_parameters = llm::InferenceParameters::default();
+    
+        session
+            .feed_prompt(
+                model.as_ref(),
+                &inference_parameters,
+                format!("{persona}\n{history}").as_str(),
+                &mut Default::default(),
+                llm::feed_prompt_callback(|resp| match resp {
+                    llm::InferenceResponse::PromptToken(t)
+                    | llm::InferenceResponse::InferredToken(t) => LLM::send_answer(t),
+                    _ => Ok(llm::InferenceFeedback::Continue),
+                }),
+            )
+            .expect("Failed to ingest initial prompt.");
+    
+
         let mut msg_fut = self.receiver.recv().fuse();
         loop {
             select!(
