@@ -12,7 +12,9 @@ async-std = "*"
 uuid = { version = "*", features = ["v4"] }
 paho-mqtt = "*"
 toml = "*"
+rand = "0.8"
 async-channel = "*"
+async-mutex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 chrono = "*"
