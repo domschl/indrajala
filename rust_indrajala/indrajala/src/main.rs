@@ -1,5 +1,6 @@
 #![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
+#![feature(async_closure)]
 
 use env_logger::Env;
 use log::{debug, error, info, warn};
