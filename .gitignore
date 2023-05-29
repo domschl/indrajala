@@ -3,3 +3,4 @@ csv_tree/
 target
 plotter.toml
 .vscode/
+__pycache__/
