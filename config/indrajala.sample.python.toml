@@ -40,7 +40,7 @@ rootpath="{config_dir}/csv_tree"
 # MQTT interface based on PAHO MQTT
 [in_async_mqtt]
 active=false
-loglevel="INFO"
+loglevel="DEBUG"
 startup_delay_sec=10
 broker="mqtt-server-hostname"
 topics=["#"]
