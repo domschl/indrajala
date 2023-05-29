@@ -1,11 +1,5 @@
 import json
 import datetime
-import asyncio
-import websockets
-import logging
-import ssl
-import uuid
-import toml
 
 
 class IndraEvent:

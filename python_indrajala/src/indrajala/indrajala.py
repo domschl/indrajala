@@ -11,7 +11,7 @@ import asyncio
 import importlib
 import uuid
 import time
-import toml
+import tomllib
 
 # XXX dev only
 import sys
@@ -48,6 +48,11 @@ async def main_runner(main_logger, modules, toml_data, args):
     terminate_main_runner = False
 
     active_tasks = tasks
+
+    if len(active_tasks) == 0:
+        main_logger.error("No active tasks, exiting!")
+        terminate_main_runner = True
+    
     while terminate_main_runner is False:
         t0 = time.time()
         finished_tasks, active_tasks = await asyncio.wait(
@@ -206,8 +211,8 @@ def read_config_arguments():
     toml_file = os.path.join(config_dir, "indrajala.toml")
 
     try:
-        with open(toml_file, "r") as f:
-            toml_data = toml.parse(f.read())
+        with open(toml_file, "rb") as f:
+            toml_data = tomllib.load(f)
     except Exception as e:
         print(f"Couldn't read {toml_file}, {e}")
         exit(0)
