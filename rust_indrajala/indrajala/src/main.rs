@@ -1,6 +1,7 @@
 // WARNING: async fn in trait is experimental, requires nightly, but nightly beyond 2023-05-01 will
-// break llm's dependencies, so for now we lock to nightly-2021-05-01, using:
+// break llm's dependencies, so for now we lock to nightly-2021-05-01, using either of these:
 // rustup override set nightly-2023-05-01-x86_64-unknown-linux-gnu
+// rustup override set nightly-2023-05-01-aarch64-apple-darwin
 
 #![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
