@@ -1,6 +1,12 @@
+// WARNING: async fn in trait is experimental, requires nightly, but nightly beyond 2023-05-01 will
+// break llm's dependencies, so for now we lock to nightly-2021-05-01, using:
+// rustup override set nightly-2023-05-01-x86_64-unknown-linux-gnu
+
 #![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
 #![feature(async_closure)]
+// avoid boxing: (exp!)
+#![feature(type_alias_impl_trait)]
 
 use env_logger::Env;
 use log::{debug, error, info, warn};
@@ -45,6 +51,7 @@ enum IndraTask {
 trait AsyncTaskSender {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>);
 }
+
 trait AsyncTaskReceiver {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>);
 }
