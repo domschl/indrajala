@@ -92,7 +92,7 @@ class IndraEvent:
         )
 
 class IndraClient:
-	def __init__(self, config_file="indra_client.toml"):
+    def __init__(self, config_file="indra_client.toml"):
         self.log = logging.getLogger("IndraClient")
         self.initialized = self.get_config(config_file, verbose=False)
         
@@ -103,7 +103,7 @@ class IndraClient:
         except Exception as e:
             uri="ws://localhost:8083"
             if verbose is True:
-                self.log.error(f{config_file} config file not found: {e}, using default {uri}")
+                self.log.error("f{config_file} config file not found: {e}, using default {uri}")
             return False
         if 'uri' not in config:
             uri="ws://localhost:8083"
@@ -111,7 +111,7 @@ class IndraClient:
                 self.log.error(f"Please provide an uri=ws[s]://host:port in {config_file}, defaulting to {uri}")
         
    
-    def init_connection(self, config)
+    def init_connection(self, config):
         if use_ssl is True:
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             if "ca_authority" in config and config["ca_authority"] != "":

@@ -94,42 +94,18 @@ out_blocks = []
 name = "Python.1"
 active = true
 capa = ["Receive", "Send", "Request"]
-id = "python_1"
 cmd = "python3"
 args = ["tasker/python_1.py"]
-mode = "Periodic"
-interval = "15s"
-default_domain = "$event/tasker/python_1"
-ipc = "Stdio"
 out_topics = ["$task/python_1/#", "$cmd/task/python_1/#"]
 out_blocks = []
 
 [[tasker]]
 name = "Julia.1"
-active = true
+active = false
 capa = ["Receive", "Send", "Request"]
-id = "julia_1"
 cmd = "julia"
 args = ["tasker/julia_1.jl"]
-mode = "Periodic"
-interval = "15s"
-default_domain = "$event/tasker/julia_1"
-ipc = "Stdio"
-out_topics = ["$task/julia_1/#", "$cmd/task/julia_1/#"]
-out_blocks = []
-
-[[tasker]]
-name = "Llama.1"
-active = true
-capa = ["Receive", "Send", "Request"]
-id = "llama_server"
-cmd = "config/models/llama/server"
-args = ["-m", "config/models/llama/7B/ggml-model-q5_1.bin", "--ctx_size", "2048"]
-mode = "Periodic"
-interval = "15s"
-default_domain = ""
-ipc = "Stdio"
-out_topics = ["$task/llama/server/#"]
+out_topics = []
 out_blocks = []
 
 [[llm]]
