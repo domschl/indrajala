@@ -255,9 +255,9 @@ impl AsyncTaskReceiver for LLM {
         let receiver = self.receiver.clone();
         let llm_config = self.config.clone();
         info!("LLM: Starting LLM in async thread");
-        let tsk = async_std::task::spawn(async move || {
+        let tsk = async_std::task::spawn_blocking(async move || {
             LLM::infer(llm_config, sender, receiver).await;
-        }());
+        });
         /*
         let mut msg_fut = self.receiver.recv().fuse();
         loop {
