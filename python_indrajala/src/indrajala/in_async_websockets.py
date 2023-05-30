@@ -36,6 +36,8 @@ class EventProcessor:
         self.bind_address = config_data["bind_address"]
         config_dir = indra_data["config_dir"]
         hostname = socket.gethostname()
+        if hostname.find(".") >= 0:
+            hostname = hostname.split(".")[0]
         self.active = False
         self.enabled = False
         self.sessions = []
@@ -82,13 +84,13 @@ class EventProcessor:
 
         # async with websockets.serve(self.get_request, self.bind_address, self.port, ssl=self.ssl_context):
         #     await asyncio.Future();  # run forever
-        self.log.debug(
+        self.log.info(
             f"Async init websockets: starting serve at {self.bind_address}:{self.port}"
         )
         self.start_server = websockets.serve(
             self.get_request, self.bind_address, self.port, ssl=self.ssl_context
         )
-        return ["#"]
+        return ["$event/#"]
 
     def _create_session(self, websocket, path):
         session = {
@@ -114,11 +116,22 @@ class EventProcessor:
         else:
             # await session['websocket'].close()
             session["websocket"].close()
+            self.sessions.remove(session)
 
     async def get_request(self, websocket, path):
-        req = await websocket.recv()
+        connected = True
         session = self._create_session(websocket, path)
-        self.req_queue.put_nowait((req, id))
+        self.log.info(f"WS-recv: New session {session['id']} from {websocket.remote_address}")
+        async for message in websocket:
+            try:
+                req = await websocket.recv()
+            except Exception as e:
+                self.log.error(f"WS-recv: {e}")
+                connected = False
+                break
+            self.req_queue.put_nowait((req, id))
+        self._close_session(session["id"])
+        self.log.info(f"WS-recv: Session {session['id']} from {websocket.remote_address} closed")
 
     async def get(self):
         if self.active is False:
@@ -130,29 +143,33 @@ class EventProcessor:
             await self.online_future
         req = await self.req_queue.get()
         self.req_queue.task_done()
-        default_toks = {
-            "cmd": "ping",
-            "origin": self.name,
-            "time": datetime.now(tz=ZoneInfo("UTC")),
-            "topic": "ws",
-            "body": "",
-        }
-        msg = {}
-        if req and len(req) > 0 and req[0] == "{":
-            try:
-                msg = json.loads(req)
-            except Exception as e:
-                self.log.error(f"WS-recv: Couldn't decode json of {req}, {e}")
-        for tok in default_toks:
-            if tok not in msg:
-                self.log.warning(
-                    f"Required token {tok} not in msg obj {msg}, setting {tok}={default_toks[tok]}"
-                )
-                msg[tok] = default_toks[tok]
-        return msg
+
+        try:
+            ie = json.loads(req[0])
+        except Exception as e:
+            self.log.error(f"WS-recv: Couldn't decode json of {req}, {e}")
+            return {}
+        remote_address = self._session_by_id(req[1])["websocket"].remote_address
+        ie.from_id = f"{self.name}/{remote_address}"
+        return ie
 
     async def put(self, ie: IndraEvent):
         if self.active is False:
             return
         self.log.info(f"WS-send: {ie}")
+        if ie.domain == "$cmd/quit":
+            self.log.info("WS-recv: Quit command received")
+            n = 0
+            for session in self.sessions:
+                ie = IndraEvent()
+                ie.domain = "$cmd/quit"
+                await session["websocket"].send(ie.to_json())
+                await session["websocket"].close()
+                n += 1
+            self.log.info(f"WS-recv: Closed {n} sessions, exiting.")
+            return
+        for session in self.sessions:
+            # XXX subscription handling!
+            # await session["websocket"].send(ie.to_json())
+            self.info(f"WS-send: {ie} to {session['websocket']['remote_address']}")
         return

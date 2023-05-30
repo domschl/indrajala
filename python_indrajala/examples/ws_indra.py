@@ -5,8 +5,10 @@ import websockets
 import logging
 import ssl
 import uuid
-import toml
-
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 class IndraEvent:
     def __init__(
@@ -99,24 +101,33 @@ class IndraClient:
     def get_config(self, config_file, verbose=True):
         valid = True
         try:
-            config = toml.load(config_file)
+            self.config = tomllib.load(config_file)
         except Exception as e:
-            uri="ws://localhost:8083"
+            self.config = {}
+            self.config["uri"] = "ws://localhost:8083"
             if verbose is True:
-                self.log.error("f{config_file} config file not found: {e}, using default {uri}")
+                self.log.error("f{config_file} config file not found: {e}")
             return False
-        if 'uri' not in config:
-            uri="ws://localhost:8083"
+        if 'uri' not in self.config:
+            self.config["uri"]="ws://localhost:8083"
             if verbose is True:
-                self.log.error(f"Please provide an uri=ws[s]://host:port in {config_file}, defaulting to {uri}")
+                self.log.error(f"Please provide an uri=ws[s]://host:port in {config_file}")
         
    
-    def init_connection(self, config):
+    async def init_connection(self):
+        if "ssl" in self.config:
+            use_ssl = self.config["ssl"] 
+        else:
+            use_ssl = False
+
         if use_ssl is True:
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            if "ca_authority" in config and config["ca_authority"] != "":
-                ssl_ctx.load_verify_locations(cafile=config["ca_authority"])
-        async with websockets.connect(url, ssl=ssl_ctx) as websocket:
+            if "ca_authority" in self.config and self.config["ca_authority"] != "":
+                ssl_ctx.load_verify_locations(cafile=self.config["ca_authority"])
+        else:
+            ssl_ctx = None
+        async with websockets.connect(self.config["uri"], ssl=ssl_ctx) as websocket:
+            print("CONNECTED")
             ie = IndraEvent(
                 "$event/python/test",
                 "ws/python",
@@ -128,8 +139,9 @@ class IndraClient:
                 "hash",
                 IndraEvent.datetime2julian(datetime.datetime.utcnow()),
             )
+            print(ie.to_json())
             await websocket.send(ie.to_json())
-
+            print("SENT")
             while True:
                 try:
                     message = await websocket.recv()
@@ -137,8 +149,8 @@ class IndraClient:
                 except Exception as e:
                     print(e)
                     break
-    @staticmethod
-    parse_url(url):
+    #@staticmethod
+    #parse_url(url):
 		
 async def indra(config):
     """Connect to Indra server, use TLS"""
@@ -149,9 +161,6 @@ async def indra(config):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    config_file = "indra_client.toml"
-        exit(-1)
-    if url not in config:
-        host
-    url = config["url"]
-    asyncio.run(indra(config))
+    config_file = "ws_indra.toml"
+    wscl = IndraClient(config_file)
+    asyncio.run(wscl.init_connection())

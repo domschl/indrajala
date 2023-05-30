@@ -66,12 +66,11 @@ async def main_runner(main_logger, modules):
             active_tasks, return_when=asyncio.FIRST_COMPLETED
         )
         for task in finished_tasks:
-            main_logger.info(
+            main_logger.debug(
                 f"Task {task.get_name()} finished after {time.time()-t0}s"
             )
         for task in finished_tasks:
             ie = task.result()
-            main_logger.info(f"Got {ie.domain} from {task.get_name()}")
 
             origin_module = ie.from_id
             if '/' in origin_module:
@@ -95,19 +94,15 @@ async def main_runner(main_logger, modules):
             else:
                 main_logger.error(f"Task {origin_module} got disabled!")
             mod_found = False
-            main_logger.info(f"Checking modules {modules}")
             for module in modules:
-                main_logger.info(f"Checking {module} for {ie.domain} (start)")
                 if module != origin_module:
-                    main_logger.info(f"Checking {module} for {ie.domain}") 
                     for sub in subs[module]:
                         if IndraEvent.mqcmp(ie.domain, sub) is True:
-                            main_logger.info(f"Sending {ie.domain} to {module}")
+                            main_logger.info(f"ROUTE {ie.domain} to {module}")
                             asyncio.create_task(
                                 modules[module].put(ie), name=module + ".put"
                             )
                 else:
-                    main_logger.info(f"Skipping self-send of {ie.domain} to {module}")
                     mod_found = True
             if mod_found is False:
                 main_logger.error(f"Task {origin_module} not found, {origin_module} did not set from_id correctly")
