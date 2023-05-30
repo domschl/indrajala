@@ -128,19 +128,14 @@ class EventProcessor:
                     self.sessions.pop(ind)
 
     async def get_request(self, websocket, path):
-        connected = True
         session = self._create_session(websocket, path)
         self.log.info(f"WS-recv: New session {session['id']} from {websocket.remote_address}")
-        async for msg in websocket:
-            # try:
-            #     self.log.info("Awaiting message")
-            #     req = await websocket.recv()
-            # except Exception as e:
-            #     self.log.error(f"WS-recv: {e}")
-            #     connected = False
-            #     break
-            self.log.info(f"WS-recv: {msg}")
-            self.req_queue.put_nowait((msg, session["id"]))
+        try:
+            async for msg in websocket:
+                self.log.info(f"WS-recv: {msg}")
+                self.req_queue.put_nowait((msg, session["id"]))
+        except Exception as e:
+            self.log.warning(f"WS-recv: Session {session['id']} from {websocket.remote_address} failed: {e}")
         await self._close_session(session["id"])
         self.log.info(f"WS-recv: Session {session['id']} from {websocket.remote_address} closed")
 
