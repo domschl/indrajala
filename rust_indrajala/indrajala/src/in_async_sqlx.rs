@@ -345,7 +345,7 @@ impl AsyncTaskReceiver for SQLx {
                 continue;
             } else if msg.domain.starts_with("$event/") {
                 let domain = msg.domain.clone();
-                let data_str = serde_json::to_string(&msg.data).unwrap();
+                let data_str = msg.data.clone();
                 if self.config.active {
                     // ignore Ws* domains
                     debug!("SQLx::sender: {:?}", msg);
