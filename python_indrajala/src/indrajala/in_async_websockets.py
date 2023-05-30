@@ -61,6 +61,7 @@ class EventProcessor:
                 self.log.error(f"Failed to read ssl certs: {e}")
         else:
             self.req_queue = asyncio.Queue()
+            self.ssl_context = None
             self.active = True
         return
 
@@ -109,13 +110,13 @@ class EventProcessor:
                 return session
         return None
 
-    def _close_session(self, id):
+    async def _close_session(self, id):
         session = self._session_by_id(id)
         if session is None:
             self.log.warning(f"Tried to close nonexisting session {id}")
         else:
             # await session['websocket'].close()
-            session["websocket"].close()
+            await session["websocket"].close()
             self.sessions.remove(session)
 
     async def get_request(self, websocket, path):
@@ -130,7 +131,7 @@ class EventProcessor:
                 connected = False
                 break
             self.req_queue.put_nowait((req, id))
-        self._close_session(session["id"])
+        await self._close_session(session["id"])
         self.log.info(f"WS-recv: Session {session['id']} from {websocket.remote_address} closed")
 
     async def get(self):
@@ -170,6 +171,6 @@ class EventProcessor:
             return
         for session in self.sessions:
             # XXX subscription handling!
-            # await session["websocket"].send(ie.to_json())
-            self.info(f"WS-send: {ie} to {session['websocket']['remote_address']}")
+            await session["websocket"].send(ie.to_json())
+            self.log.info(f"WS-send: {ie} to {session['websocket'].remote_address}")
         return

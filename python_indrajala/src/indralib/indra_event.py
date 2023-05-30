@@ -19,7 +19,7 @@ class IndraEvent:
         """
         self.domain = ""
         self.from_id = ""
-        self.uuid4 = uuid.uuid4()
+        self.uuid4 = str(uuid.uuid4())
         self.to_scope = ""
         self.time_jd_start = self.datetime2julian(datetime.datetime.now())
         self.data_type = ""
