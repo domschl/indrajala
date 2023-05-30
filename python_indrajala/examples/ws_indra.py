@@ -140,8 +140,8 @@ class IndraClient:
                 "hash",
                 IndraEvent.datetime2julian(datetime.datetime.utcnow()),
             )
-            print(ie.to_json())
-            await asyncio.sleep(1)
+            # print(ie.to_json())
+            # await asyncio.sleep(1)
             await websocket.send(ie.to_json())
             print("SENT")
             while True:
