@@ -100,7 +100,7 @@ class EventProcessor:
             "path": path,
             "websocket": websocket,
             "time": time.time(),
-            "subs": [f"{self.name}.{websocket.remote_address}/#"]
+            "subs": [f"{self.name}/{websocket.remote_address[0]}:{websocket.remote_address[1]}/#"]
         }
         self.sessions.append(session)
         self.session_id += 1
@@ -112,18 +112,20 @@ class EventProcessor:
                 return session
         return None
 
-    async def _close_session(self, id):
-        session = self._session_by_id(id)
+    async def _close_session(self, session_id):
+        session = self._session_by_id(session_id)
         if session is None:
             self.log.warning(f"Tried to close nonexisting session {id}")
         else:
             # await session['websocket'].close()
             await session["websocket"].close()
-            self.sessions.remove(session)
             ie = IndraEvent()
             ie.domain = "$cmd/unsubs"
             ie.data = json.dumps(session["subs"])
-
+            self.req_queue.put_nowait((ie.to_json(), session_id))
+            for ind, session in enumerate(self.sessions):
+                if session["id"] == session_id:
+                    self.sessions.pop(ind)
 
     async def get_request(self, websocket, path):
         connected = True
@@ -161,8 +163,9 @@ class EventProcessor:
             return {}
         session = self._session_by_id(req[1])
         if session is None:
-            self.log.error(f"WS-recv: Couldn't find session {req[1]}")
-            return {}
+            self.log.info(f"WS-recv: Closed session {req[1]}")
+            ie.from_id = f"{self.name}/closed"
+            return ie
         remote_address = session["websocket"].remote_address
         ie.from_id = f"{self.name}/{remote_address[0]}:{remote_address[1]}"
         if ie.domain == '$cmd/subs':
@@ -198,6 +201,14 @@ class EventProcessor:
             return
         for session in self.sessions:
             # XXX subscription handling!
-            await session["websocket"].send(ie.to_json())
+            try:
+                await session["websocket"].send(ie.to_json())
+            except Exception as e:
+                self.log.error(f"WS-send: {e}")
+                # await session["websocket"].close()
+                for ind, sess in enumerate(self.sessions):
+                    if sess["id"] == session["id"]:
+                        self.sessions.pop(ind)
+                continue
             self.log.info(f"WS-send: {ie} to {session['websocket'].remote_address}")
         return
