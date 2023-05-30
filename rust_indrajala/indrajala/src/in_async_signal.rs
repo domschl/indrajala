@@ -87,7 +87,7 @@ impl Signal {
                     dd = IndraEvent::new();
                     dd.domain = a.to_string();
                     dd.from_id = self.config.name.to_string();
-                    dd.data = serde_json::json!(b);
+                    dd.data = b;
                     //dd.data = serde_json(b);
                     sender.send(dd).await.unwrap();
                 }

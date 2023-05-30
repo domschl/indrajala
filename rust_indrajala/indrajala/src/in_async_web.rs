@@ -85,7 +85,7 @@ impl AsyncTaskSender for Web {
         let mut app = tide::with_state(astate); //new();
         let mut ie: IndraEvent = IndraEvent::new();
         ie.domain = "web".to_string();
-        ie.data = serde_json::json!("Indrajala!");
+        ie.data = "Indrajala!".to_string();
         app.at(evpath.as_str())
             .post(|mut req: tide::Request<WebState>| async move {
                 let mut st = req.state().clone();

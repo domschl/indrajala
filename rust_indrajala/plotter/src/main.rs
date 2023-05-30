@@ -196,7 +196,7 @@ fn build_ui(app: &Application) {
             ie.from_id = "ws/plotter".to_string();
             ie.data_type = "cmd/subs".to_string();
             let subs: Vec<String> = domain_topic2.clone();
-            ie.data = serde_json::json!(subs);
+            ie.data = serde_json::to_string(&subs).unwrap();
             let ie_txt = serde_json::to_string(&ie).unwrap();
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message $cmd/subs");
@@ -244,7 +244,7 @@ fn build_ui(app: &Application) {
                             //let num_text: String = ier.data.to_string().replace("\"", "");
                             //let value_opt = num_text.trim().parse();
                             let value_opt: Result<f64, serde_json::Error> =
-                                serde_json::from_value(ier.data);
+                                serde_json::from_str(ier.data.as_str());
                             let value: f64;
                             value = value_opt.unwrap();
                             println!("domain: >{}<, value: {}", domain, value);
@@ -276,7 +276,7 @@ fn build_ui(app: &Application) {
                                     time_jd_end: None,
                                     max_count: Some(1000),
                                 };
-                                ie.data = serde_json::to_value(req).unwrap();
+                                ie.data = serde_json::to_string(&req).unwrap();
                                 let ie_txt = serde_json::to_string(&ie).unwrap();
                                 socket.write_message(ie_txt.into()).unwrap();
                                 println!("sent message request history of {}", domain);
@@ -340,7 +340,7 @@ fn build_ui(app: &Application) {
                             } else if ier.data_type == "db/reply/event/number/float/uniquedomains" {
                                 println!("UNIQUE reply! {}.", ier.data_type);
                                 let domains: Vec<String> =
-                                    serde_json::from_value(ier.data).unwrap(); //.to_string().as_str()).unwrap();
+                                    serde_json::from_str(ier.data.as_str()).unwrap(); //.to_string().as_str()).unwrap();
                                 let mut time_series_lock = shared_time_series.lock().unwrap();
                                 for domain in domains.iter() {
                                     let mut matched = false;
@@ -371,7 +371,7 @@ fn build_ui(app: &Application) {
                                             time_jd_end: None,
                                             max_count: Some(1000),
                                         };
-                                        ie.data = serde_json::to_value(req).unwrap();
+                                        ie.data = serde_json::to_string(&req).unwrap();
                                         let ie_txt = serde_json::to_string(&ie).unwrap();
                                         socket.write_message(ie_txt.into()).unwrap();
                                         println!("sent message request history of {}", domain);

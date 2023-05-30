@@ -98,32 +98,32 @@ impl AsyncTaskSender for Mqtt {
                         let num_int: Result<i64, _> = payload.trim().parse::<i64>();
                         if num_int.is_ok() {
                             dd.data_type = "number/int".to_string();
-                            dd.data = serde_json::to_value(num_int.unwrap()).unwrap();
+                            dd.data = num_int.unwrap().to_string();
                         } else {
                             let num_float: Result<f64, _> = payload.trim().parse::<f64>();
                             if num_float.is_ok() {
                                 dd.data_type = "number/float".to_string();
-                                dd.data = serde_json::to_value(num_float.unwrap()).unwrap();
+                                dd.data = num_float.unwrap().to_string();
                             } else {
                                 if ["on", "true", "active"]
                                     .contains(&payload.trim().to_lowercase().as_str())
                                 {
                                     dd.data_type = "bool".to_string();
-                                    dd.data = serde_json::to_value(true).unwrap();
+                                    dd.data = true.to_string();
                                 } else if ["off", "false", "inactive"]
                                     .contains(&payload.trim().to_lowercase().as_str())
                                 {
                                     dd.data_type = "bool".to_string();
-                                    dd.data = serde_json::to_value(false).unwrap();
+                                    dd.data = false.to_string();
                                 } else {
                                     let val_json: Result<serde_json::Value, serde_json::Error> =
                                         serde_json::from_str(payload.to_string().as_str());
                                     if val_json.is_ok() {
                                         dd.data_type = "json".to_string();
-                                        dd.data = val_json.unwrap();
+                                        dd.data = payload.to_string();
                                     } else {
                                         dd.data_type = "string".to_string();
-                                        dd.data = serde_json::json!(payload.to_string());
+                                        dd.data = payload.to_string();
                                     }
                                 }
                             }

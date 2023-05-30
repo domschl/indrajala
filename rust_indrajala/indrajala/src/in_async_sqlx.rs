@@ -172,7 +172,7 @@ impl AsyncTaskReceiver for SQLx {
                     .domain
                     .starts_with("$cmd/db/req/event/number/float/history")
                 {
-                    let req: IndraEventRequest = serde_json::from_value(msg.data).unwrap();
+                    let req: IndraEventRequest = serde_json::from_str(msg.data.as_str()).unwrap();
                     info!(
                         "SQLx: Received db/scalar/req command from {} search for: {:?}",
                         msg.from_id, req
@@ -287,7 +287,7 @@ impl AsyncTaskReceiver for SQLx {
                         to_scope: req.domain.clone(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
                         data_type: "db/reply/event/number/float/history".to_string(),
-                        data: serde_json::to_value(res).unwrap(),
+                        data: serde_json::to_string(&res).unwrap(),
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
                     };
@@ -328,7 +328,7 @@ impl AsyncTaskReceiver for SQLx {
                         to_scope: "domain_list".to_string(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
                         data_type: "db/reply/event/number/float/uniquedomains".to_string(),
-                        data: serde_json::to_value(rows).unwrap(),
+                        data: serde_json::to_string(&rows).unwrap(),
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
                     };

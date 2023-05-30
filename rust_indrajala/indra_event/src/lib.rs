@@ -93,7 +93,7 @@ pub struct IndraEvent {
     pub to_scope: String,
     pub time_jd_start: f64,
     pub data_type: String,
-    pub data: serde_json::Value,
+    pub data: String,
     pub auth_hash: Option<String>,
     pub time_jd_end: Option<f64>,
 }
@@ -133,7 +133,7 @@ impl IndraEvent {
             to_scope: "".to_string(), // A session scope, used to group events into sessions and to allow authentication hierachies. Domain-like syntax.
             time_jd_start: Self::datetime_to_julian(now), // The start time of the event, in Julian Date
             data_type: "".to_string(), // The type of the data, used to allow filtering, domain-like syntax, e.g. "number/float"
-            data: serde_json::json!(""), // The data, can be any JSON value, described by data_type
+            data: "".to_string(), // The data, can be any JSON value, described by data_type
             auth_hash: Default::default(), // A hash of the data, used to authenticate the data
             time_jd_end: Default::default(), // The end time of the event, in Julian Date
         }
