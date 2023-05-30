@@ -21,7 +21,7 @@ signal_port=17417
 
 # Postgresql storage
 [in_async_postgres]
-active=true
+active=false
 loglevel="INFO"
 connection="host='database-hostname' dbname='testdb' user='some-user'"
 disable_synchronous_commits=false
@@ -33,17 +33,17 @@ loglevel="INFO"
 rootpath=""
 
 [in_csv_tree]
-active=true
+active=false
 loglevel="INFO"
 rootpath="{config_dir}/csv_tree"
 
 # MQTT interface based on PAHO MQTT
 [in_async_mqtt]
-active=false
+active=true
 loglevel="DEBUG"
-startup_delay_sec=10
-broker="mqtt-server-hostname"
-topics=["#"]
+ignore_retained=true
+broker="nalanda"
+topics=["omu/#"]
 
 # Websockets
 [in_async_websockets]
@@ -52,6 +52,6 @@ loglevel="INFO"
 port=23577
 bind_address="0.0.0.0"
 ssl=true
-ssl_certfile="{configdir}/certs/certfile.pem"
-ssl_keyfile="{configdir}/certs/keyfile.pem"
+ssl_certfile="{configdir}/certs/m2max.pem"
+ssl_keyfile="{configdir}/certs/m2max-key.pem"
 
