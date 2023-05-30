@@ -5,6 +5,13 @@ import asyncio
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+# XXX dev only
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
+
+from indralib.indra_event import IndraEvent
+
 
 class EventProcessor:
     """Check if another instance is already running using a socket server. Terminate old instance and
@@ -106,13 +113,11 @@ class EventProcessor:
 
     async def get(self):
         _ = await self.exit_future
-        return {
-            "cmd": "system",
-            "time": datetime.now(tz=ZoneInfo("UTC")),
-            "topic": "$SYS/PROCESS",
-            "msg": "QUIT",
-            "origin": self.name,
-        }
+        ie = IndraEvent()
+        ie.domain = "$cmd/quit"
+        ie.from_id = self.name
+        self.active = False
+        return ie
 
     async def put(self, _):
         return
