@@ -9,7 +9,7 @@ import argparse
 import pathlib
 import asyncio
 import importlib
-import uuid
+import json
 import time
 try:
     import tomllib
@@ -111,6 +111,21 @@ async def main_runner(main_logger, modules):
                     main_logger.info("QUIT message received, terminating...")
                     terminate_main_runner = True
                     continue
+                elif ie.domain == "$cmd/subs":
+                    sub_list = json.loads(ie.data)
+                    if isinstance(sub_list, list) is True:
+                        for sub in sub_list:
+                            if sub not in subs[origin_module]:
+                                subs[origin_module].append(sub)
+                                main_logger.info(f"Subscribing to {sub}")
+                elif ie.domain == "$cmd/unsubs":
+                    sub_list = json.loads(ie.data)
+                    if isinstance(sub_list, list) is True:
+                        for sub in sub_list:
+                            if sub in subs[origin_module]:
+                                subs[origin_module].remove(sub)
+                                main_logger.info(f"Unsubscribing from {sub}")
+
             # else:
             #     main_logger.error(f"Unknown domain {ie.domain} in {ie}")
     main_logger.info("All done, terminating indrajala.")

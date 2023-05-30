@@ -2,6 +2,7 @@ import json
 import datetime
 import asyncio
 import websockets
+import websockets.client
 import logging
 import ssl
 import uuid
@@ -126,20 +127,21 @@ class IndraClient:
                 ssl_ctx.load_verify_locations(cafile=self.config["ca_authority"])
         else:
             ssl_ctx = None
-        async with websockets.connect(self.config["uri"], ssl=ssl_ctx) as websocket:
+        async with websockets.client.connect(self.config["uri"], ssl=ssl_ctx) as websocket:
             print("CONNECTED")
             ie = IndraEvent(
-                "$event/python/test",
+                "$cmd/subs",
                 "ws/python",
                 str(uuid.uuid4()),
                 "to/test",
                 IndraEvent.datetime2julian(datetime.datetime.utcnow()),
                 "string/test",
-                "3.1325",
+                json.dumps(["$event/omu/enviro-master/#"]),
                 "hash",
                 IndraEvent.datetime2julian(datetime.datetime.utcnow()),
             )
             print(ie.to_json())
+            await asyncio.sleep(1)
             await websocket.send(ie.to_json())
             print("SENT")
             while True:

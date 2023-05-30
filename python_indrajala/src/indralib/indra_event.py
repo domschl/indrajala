@@ -32,6 +32,13 @@ class IndraEvent:
         return json.dumps(self.__dict__)
     
     @staticmethod
+    def from_json(json_str):
+        """Convert from JSON string"""
+        ie = IndraEvent()
+        ie.__dict__ = json.loads(json_str)
+        return ie
+    
+    @staticmethod
     def mqcmp(pub, sub):
         """MQTT-style wildcard compare"""
         for c in ["+", "#"]:

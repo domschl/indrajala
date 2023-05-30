@@ -4,6 +4,7 @@ import asyncio
 import socket
 import ssl
 import websockets
+import websockets.server
 import json
 import time
 from datetime import datetime
@@ -88,10 +89,10 @@ class EventProcessor:
         self.log.info(
             f"Async init websockets: starting serve at {self.bind_address}:{self.port}"
         )
-        self.start_server = websockets.serve(
+        self.start_server = websockets.server.serve(
             self.get_request, self.bind_address, self.port, ssl=self.ssl_context
         )
-        return ["$event/#"]
+        return [f"{self.name}/#"]
 
     def _create_session(self, websocket, path):
         session = {
@@ -99,9 +100,10 @@ class EventProcessor:
             "path": path,
             "websocket": websocket,
             "time": time.time(),
+            "subs": [f"{self.name}.{websocket.remote_address}/#"]
         }
-        self.session_id += 1
         self.sessions.append(session)
+        self.session_id += 1
         return session
 
     def _session_by_id(self, id):
@@ -118,19 +120,25 @@ class EventProcessor:
             # await session['websocket'].close()
             await session["websocket"].close()
             self.sessions.remove(session)
+            ie = IndraEvent()
+            ie.domain = "$cmd/unsubs"
+            ie.data = json.dumps(session["subs"])
+
 
     async def get_request(self, websocket, path):
         connected = True
         session = self._create_session(websocket, path)
         self.log.info(f"WS-recv: New session {session['id']} from {websocket.remote_address}")
-        async for message in websocket:
-            try:
-                req = await websocket.recv()
-            except Exception as e:
-                self.log.error(f"WS-recv: {e}")
-                connected = False
-                break
-            self.req_queue.put_nowait((req, id))
+        async for msg in websocket:
+            # try:
+            #     self.log.info("Awaiting message")
+            #     req = await websocket.recv()
+            # except Exception as e:
+            #     self.log.error(f"WS-recv: {e}")
+            #     connected = False
+            #     break
+            self.log.info(f"WS-recv: {msg}")
+            self.req_queue.put_nowait((msg, session["id"]))
         await self._close_session(session["id"])
         self.log.info(f"WS-recv: Session {session['id']} from {websocket.remote_address} closed")
 
@@ -146,12 +154,31 @@ class EventProcessor:
         self.req_queue.task_done()
 
         try:
-            ie = json.loads(req[0])
+            # ie = json.loads(req[0])
+            ie = IndraEvent().from_json(req[0])
         except Exception as e:
             self.log.error(f"WS-recv: Couldn't decode json of {req}, {e}")
             return {}
-        remote_address = self._session_by_id(req[1])["websocket"].remote_address
-        ie.from_id = f"{self.name}/{remote_address}"
+        session = self._session_by_id(req[1])
+        if session is None:
+            self.log.error(f"WS-recv: Couldn't find session {req[1]}")
+            return {}
+        remote_address = session["websocket"].remote_address
+        ie.from_id = f"{self.name}/{remote_address[0]}:{remote_address[1]}"
+        if ie.domain == '$cmd/subs':
+            session_id = req[1]
+            session = self._session_by_id(session_id)
+            if session is None:
+                self.log.error(f"WS-recv: Couldn't find session {session_id}")
+            else:
+                new_subs = json.loads(ie.data)
+                if new_subs is None:
+                    new_subs = []
+                for new_sub in new_subs:
+                    if new_sub not in session['subs']:
+                        session['subs'].append(new_sub)
+                self.log.info(f"WS-recv: Session {session_id} subscribed to {new_subs}")
+            return ie            
         return ie
 
     async def put(self, ie: IndraEvent):
