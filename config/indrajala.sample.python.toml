@@ -37,21 +37,36 @@ active=false
 loglevel="INFO"
 rootpath="{config_dir}/csv_tree"
 
-# MQTT interface based on PAHO MQTT
-[in_async_mqtt]
+# MQTT multi-interface based on PAHO MQTT
+[[in_async_mqtt]]
 active=true
-loglevel="DEBUG"
+loglevel="INFO"
 ignore_retained=true
 broker="nalanda"
 topics=["omu/#"]
 
-# Websockets
-[in_async_websockets]
+[[in_async_mqtt]]
 active=true
 loglevel="INFO"
-port=23577
+ignore_retained=true
+broker="nalanda"
+topics=["hastates/#"]
+
+# Multi-instance Websockets
+[[in_async_websockets]]
+active=true
+loglevel="INFO"
+port=8082
 bind_address="0.0.0.0"
 ssl=true
-ssl_certfile="{configdir}/certs/m2max.pem"
-ssl_keyfile="{configdir}/certs/m2max-key.pem"
+ssl_certfile="{configdir}/certs/{hostname}.pem"
+ssl_keyfile="{configdir}/certs/{hostname}-key.pem"
+
+[[in_async_websockets]]
+active=true
+loglevel="INFO"
+port=8083
+bind_address="0.0.0.0"
+ssl=false
+
 
