@@ -195,7 +195,7 @@ async fn handle_message(
                     warn!("Received subs command: {:?}", msg);
                     //let mut subs = subs;
                     let new_subs_res: Result<Vec<String>, serde_json::Error> =
-                        serde_json::from_value(msg.data);
+                        serde_json::from_str(msg.data.as_str());
                     if new_subs_res.is_ok() {
                         let new_subs = new_subs_res.unwrap();
                         for sub in new_subs.iter() {

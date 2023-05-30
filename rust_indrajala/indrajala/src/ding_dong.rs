@@ -54,7 +54,7 @@ impl AsyncTaskSender for DingDong {
             dd = IndraEvent::new();
             dd.domain = a.to_string();
             dd.from_id = self.config.name.to_string();
-            dd.data = serde_json::json!(b);
+            dd.data = b.to_string();
             //dd.data = serde_json(b);
             async_std::task::sleep(Duration::from_millis(self.config.timer)).await;
             if self.config.active {
