@@ -10,19 +10,19 @@ class EventProcessor:
     """Check if another instance is already running using a socket server. Terminate old instance and
     start new instance (if kill option was not set.)"""
 
-    def __init__(self, name, toml_data):
+    def __init__(self, indra_data, config_data):
         self.log = logging.getLogger("IndraSignalServer")
+        self.name = config_data["name"]
         try:
-            self.loglevel = toml_data[name]["loglevel"].upper()
+            self.loglevel = config_data["loglevel"].upper()
         except Exception as e:
             self.loglevel = logging.INFO
             logging.error(
-                f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}"
+                f"Missing entry 'loglevel' in indrajala.toml section {self.name}: {e}"
             )
         self.log.setLevel(self.loglevel)
-        self.port = int(toml_data[name]["signal_port"])
-        self.toml_data = toml_data
-        self.name = name
+        self.port = int(config_data["signal_port"])
+        self.config_data = config_data
         self.active = True
 
     def isActive(self):
@@ -79,7 +79,7 @@ class EventProcessor:
             if "quitting" in data.decode():
                 print("Other instance did terminate.")
                 self.log.info("Old instance terminated.")
-            if self.toml_data[self.name]["kill_daemon"] is True:
+            if self.config_data["kill_daemon"] is True:
                 print("Exiting after quitting other instance.")
                 exit(0)
         except Exception as e:
