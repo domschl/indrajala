@@ -31,6 +31,10 @@ async def main_runner(main_logger, modules):
     for module in modules:
         main_logger.debug(f"async_init of {module}")
         subs[module] = await modules[module].async_init(loop)
+        default_subs = ["$cmd/quit", f"module/#"]
+        for sub in default_subs:
+            if sub not in subs[module]:
+                subs[module].append(sub)
 
     tasks = []
     for module in modules:
@@ -38,7 +42,7 @@ async def main_runner(main_logger, modules):
         if callable(m_op) is True:
             tasks.append(
                 asyncio.create_task(
-                    modules[module].server_task(), name=module + "_server_task"
+                    modules[module].server_task(), name=module
                 )
             )
             main_logger.debug(
@@ -62,22 +66,17 @@ async def main_runner(main_logger, modules):
             active_tasks, return_when=asyncio.FIRST_COMPLETED
         )
         for task in finished_tasks:
-            main_logger.debug(
+            main_logger.info(
                 f"Task {task.get_name()} finished after {time.time()-t0}s"
             )
         for task in finished_tasks:
-            res = task.result()
-            if res is None or "topic" not in res or "origin" not in res:
-                main_logger.warning(f"Invalid empty msg {res}")
-                if res is None:
-                    main_logger.warning(f"Result should never be None, task {task}")
-                    res = {}
-                if "origin" not in res:
-                    main_logger.error(f"Origin not set in task {task}")
-                    # res['origin'] = task
-                # continue
+            ie = task.result()
+            main_logger.info(f"Got {ie.domain} from {task.get_name()}")
 
-            origin_module = res["origin"]  # task.get_name() !
+            origin_module = ie.from_id
+            if '/' in origin_module:
+                origin_module = origin_module.split('/')[0]
+
             if modules[origin_module].isActive() is True:
                 if len(active_tasks) == 0:
                     active_tasks = [
@@ -95,35 +94,30 @@ async def main_runner(main_logger, modules):
                     )
             else:
                 main_logger.error(f"Task {origin_module} got disabled!")
-                continue
-            if "cmd" not in res:
-                main_logger.error(f"Invalid result without 'cmd' field: {res}")
-                continue
-            if res["cmd"] == "event":
-                if "uuid" not in res:
-                    main_logger.warning(f"Missing uuid in event {res}")
-                    res["uuid"] = str(uuid.uuid4())
-                if "topic" in res and res["topic"] is not None:
-                    for module in modules:
-                        if module != origin_module:
-                            for sub in subs[module]:
-                                if IndraEvent.mqcmp(res["topic"], sub) is True:
-                                    # await modules[module].put(res)
-                                    asyncio.create_task(
-                                        modules[module].put(res), name=module + ".put"
-                                    )
-                                    break
-            elif res["cmd"] == "system":
-                if "topic" in res and res["topic"] is not None:
-                    if res["topic"] == "$SYS/PROCESS":
-                        if "msg" in res and res["msg"] == "QUIT":
-                            main_logger.info("QUIT message received, terminating...")
-                            terminate_main_runner = True
-                            continue
-            elif res["cmd"] == "ping":
-                main_logger.debug(f"Received and ignored ping {res}")
-            else:
-                main_logger.error(f"Unknown cmd {res['cmd']} in {res}")
+            mod_found = False
+            main_logger.info(f"Checking modules {modules}")
+            for module in modules:
+                main_logger.info(f"Checking {module} for {ie.domain} (start)")
+                if module != origin_module:
+                    main_logger.info(f"Checking {module} for {ie.domain}") 
+                    for sub in subs[module]:
+                        if IndraEvent.mqcmp(ie.domain, sub) is True:
+                            main_logger.info(f"Sending {ie.domain} to {module}")
+                            asyncio.create_task(
+                                modules[module].put(ie), name=module + ".put"
+                            )
+                else:
+                    main_logger.info(f"Skipping self-send of {ie.domain} to {module}")
+                    mod_found = True
+            if mod_found is False:
+                main_logger.error(f"Task {origin_module} not found, {origin_module} did not set from_id correctly")
+            if ie.domain.startswith("$cmd"):
+                if ie.domain == "$cmd/quit":
+                    main_logger.info("QUIT message received, terminating...")
+                    terminate_main_runner = True
+                    continue
+            # else:
+            #     main_logger.error(f"Unknown domain {ie.domain} in {ie}")
     main_logger.info("All done, terminating indrajala.")
 
 
@@ -201,9 +195,10 @@ def load_modules(main_logger, toml_data, args):
                                 )
                                 continue
                         modules[sub_mod["name"]] = ev_proc
-                        main_logger.debug(f"Import {module} success.")
+                        main_logger.info(f"Import {module} success.")
                     else:
-                        main_logger.debug(f"Module [{module}] is not active.")
+                        main_logger.info(f"Module [{module}] is not active.")
+    main_logger.info(f"Loaded modules: {modules}")
     return modules
 
 

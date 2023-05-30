@@ -9,6 +9,12 @@ from zoneinfo import ZoneInfo
 
 import paho.mqtt.client as mqtt
 
+# XXX dev only
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
+
+from indralib.indra_event import IndraEvent
 
 class AsyncMqttHelper:
     """Helper module for async wrapper for paho mqtt"""
@@ -214,37 +220,14 @@ class EventProcessor:
     async def get(self):
         if self.enabled is True:
             tp, ms, ut = await self.async_mqtt.message()
-            that_msg = {
-                "cmd": "event",
-                "topic": tp,
-                "msg": ms.decode("utf-8"),
-                "uuid": str(uuid.uuid4()),
-                "time": ut.isoformat(),
-                "origin": self.name,
-            }
-            if False:
-                pass
-            # if time.time() - self.startup_time > self.startup_delay_sec:
-            #     if self.first_msg is False:
-            #         self.first_msg = True
-            #         self.log.info("MQTT receive activated, routing received messages.")
-            #     # that_msg['time'] = datetime.now(tz=ZoneInfo('UTC')).isoformat()
-            #     return that_msg
-            else:
-                that_msg["cmd"] = "ping"
-                that_msg["topic"] = None
-                that_msg["msg"] = None
-                return that_msg
-        else:
-            return {
-                "cmd": "ping",
-                "topic": None,
-                "msg": None,
-                "time": datetime.now(tz=ZoneInfo("UTC")).isoformat(),
-                "origin": self.name,
-            }
+            ie = IndraEvent()
+            ie.domain = f"$event/{tp}"
+            ie.from_id = self.name
+            ie.time_jd_start = IndraEvent.get_jd(ut)
+            ie.data = ms.decode("utf-8")
+            return ie
 
-    async def put(self, msg):
+    async def put(self, ie):
         if self.enabled is True:
-            self.log.debug(f"{self.name}: Received message {msg}")
+            self.log.debug(f"{self.name}: Received message {ie}")
         return

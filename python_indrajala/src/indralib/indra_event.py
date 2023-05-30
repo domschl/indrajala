@@ -1,20 +1,10 @@
 import json
 import datetime
+import uuid
 
 
 class IndraEvent:
-    def __init__(
-        self,
-        domain,
-        from_id,
-        uuid4,
-        to_scope,
-        time_start,
-        data_type,
-        data,
-        auth_hash=None,
-        time_end=None,
-    ):
+    def __init__(self):
         """Create an IndraEvent json object
 
         :param domain:        MQTT-like path
@@ -27,15 +17,15 @@ class IndraEvent:
         :param auth_hash:     security auth (optional)
         :param time_jd_end:      end-of-event jd (optional)
         """
-        self.domain = domain
-        self.from_id = from_id
-        self.uuid4 = uuid4
-        self.to_scope = to_scope
-        self.time_jd_start = time_start
-        self.data_type = data_type
-        self.data = data
-        self.auth_hash = auth_hash
-        self.time_jd_end = time_end
+        self.domain = ""
+        self.from_id = ""
+        self.uuid4 = uuid.uuid4()
+        self.to_scope = ""
+        self.time_jd_start = self.datetime2julian(datetime.datetime.now())
+        self.data_type = ""
+        self.data = ""
+        self.auth_hash = ""
+        self.time_jd_end = None
 
     def to_json(self):
         """Convert to JSON string"""
