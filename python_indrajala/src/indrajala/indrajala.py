@@ -142,48 +142,65 @@ def load_modules(main_logger, toml_data, args):
                 f"In toml_file {args.toml_file}, no configuration section [{module}] found, skipping this module"
             )
         else:
-            if "active" not in toml_data[module]:
-                main_logger.warning(
-                    f"In toml_file {args.toml_file}, section [{module}] has no entry active=true|false, skipping this module"
-                )
+            sub_mods = []
+            single_instance = True
+            if isinstance(toml_data[module], list) is True:
+                sub_mods = toml_data[module]
+                single_instance = False
             else:
-                if toml_data[module]["active"] is True:
-                    main_logger.info(f"Activating module [{module}]")
-                    try:
-                        main_logger.debug(f"Importing {module}...")
-                        m = importlib.import_module(module)
-                    except Exception as e:
-                        main_logger.error(f"Failed to import module {module}: {e}")
-                        toml_data[module]["active"] = False
-                        continue
-                    try:
-                        ev_proc = m.EventProcessor(module, toml_data)
-                    except Exception as e:
-                        main_logger.error(
-                            f"Failed to import EventProcessor from module {module}: {e}"
-                        )
-                        continue
-                    try:
-                        if ev_proc.isActive() is False:
-                            main_logger.error(f"Failed to initialize module {module}")
-                            continue
-                    except Exception as e:
-                        main_logger.error(
-                            f"Failed to detect activity-state of module {module}: {e}"
-                        )
-                        continue
-                    methods = ["get", "put"]
-                    for method in methods:
-                        m_op = getattr(ev_proc, method, None)
-                        if callable(m_op) is False:
+                sub_mods = [toml_data[module]]
+            main_logger.info(f"Activating module [{module}]")
+            try:
+                main_logger.debug(f"Importing {module}...")
+                m = importlib.import_module(module)
+            except Exception as e:
+                main_logger.error(f"Failed to import module {module}: {e}")
+                continue
+            for index, sub_mod in enumerate(sub_mods):
+                if "active" not in sub_mod:
+                    main_logger.warning(
+                        f"In toml_file {args.toml_file}, section {module}[{index}] has no entry active=true|false, skipping this module"
+                    )
+                    continue
+                else:
+                    if "name" not in sub_mod:
+                        if single_instance is True:
+                            toml_data[module]["name"] = module
+                            sub_mod["name"] = module
+                        else:
+                            toml_data[module][index]["name"] = f"{module}.{index}"
+                            sub_mod["name"] = f"{module}.{index}"
+                        name = sub_mod["name"]
+                        main_logger.info(f"Module {module} has no name, using {name}")
+                    if sub_mod["active"] is True:
+                        try:
+                            ev_proc = m.EventProcessor(toml_data["indrajala"], sub_mod)
+                        except Exception as e:
                             main_logger.error(
-                                f"Failed to import EventProcessor from module {module} has no {method} function"
+                                f"Failed to import EventProcessor from module {module}: {e}"
                             )
                             continue
-                    modules[module] = ev_proc
-                    main_logger.debug(f"Import {module} success.")
-                else:
-                    main_logger.debug(f"Module [{module}] is not active.")
+                        try:
+                            if ev_proc.isActive() is False:
+                                main_logger.error(f"Failed to initialize module {module}")
+                                continue
+                        except Exception as e:
+                            main_logger.error(
+                                f"Failed to detect activity-state of module {module}: {e}"
+                            )
+                            continue
+                        methods = ["get", "put"]
+                        for method in methods:
+                            m_op = getattr(ev_proc, method, None)
+                            if callable(m_op) is False:
+                                main_logger.error(
+                                    f"Failed to import EventProcessor from module {module} has no {method} function"
+                                )
+                                continue
+                        modules[module] = ev_proc
+                        main_logger.debug(f"Import {module} success.")
+                    else:
+                        main_logger.debug(f"Module [{module}] is not active.")
     return modules
 
 
@@ -262,7 +279,7 @@ def read_config_arguments():
     main_logger.setLevel(main_loglevel)
 
     main_logger.info(
-        "--------------------------------------------------------------------------------------"
+        "----------------------------------------------------------"
     )
     main_logger.info(f"   Starting Indrajala server {INDRAJALA_VERSION}")
 

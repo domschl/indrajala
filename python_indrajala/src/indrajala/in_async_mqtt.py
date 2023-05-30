@@ -172,20 +172,20 @@ class AsyncMqtt:
 
 
 class EventProcessor:
-    def __init__(self, name, toml_data):
+    def __init__(self, indra_data, config_data):
         self.log = logging.getLogger("IndraMqtt")
+        self.name = config_data["name"]
         try:
-            self.loglevel = logging.getLevelName(toml_data[name]["loglevel"].upper())
+            self.loglevel = logging.getLevelName(config_data["loglevel"].upper())
         except Exception as e:
             self.loglevel = logging.DEBUG
             logging.error(
-                f"Missing entry 'loglevel' in indrajala.toml section {name}: {e}"
+                f"Missing entry 'loglevel' in indrajala.toml section {self.name}: {e}"
             )
         self.log.setLevel(self.loglevel)
-        self.toml_data = toml_data
-        self.name = name
+        self.config_data = config_data
         self.enabled = False
-        self.ignore_retained = self.toml_data[self.name]["ignore_retained"]
+        self.ignore_retained = self.config_data["ignore_retained"]
         self.first_msg = False
         self.active = True
         return
@@ -196,17 +196,17 @@ class EventProcessor:
     async def async_init(self, loop):
         self.loop = loop
         self.async_mqtt = AsyncMqtt(
-            loop, self.toml_data[self.name]["broker"], self.toml_data[self.name]["ignore_retained"], self.loglevel
+            loop, self.config_data["broker"], self.config_data["ignore_retained"], self.loglevel
         )
         if (
-            "last_will_topic" in self.toml_data[self.name]
-            and "last_will_message" in self.toml_data[self.name]
+            "last_will_topic" in self.config_data
+            and "last_will_message" in self.config_data
         ):
-            lwt = self.toml_data[self.name]["last_will_topic"]
-            lwm = self.toml_data[self.name]["last_will_message"]
+            lwt = self.config_data["last_will_topic"]
+            lwm = self.config_data["last_will_message"]
             self.async_mqtt.last_will(lwt, lwm)
         await self.async_mqtt.initial_connect()  # Needs to happen after last_will is set.
-        for topic in self.toml_data[self.name]["topics"]:
+        for topic in self.config_data["topics"]:
             self.async_mqtt.subscribe(topic)
         self.enabled = True
         return []
