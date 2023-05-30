@@ -223,11 +223,11 @@ class EventProcessor:
             ie = IndraEvent()
             ie.domain = f"$event/{tp}"
             ie.from_id = self.name
-            ie.time_jd_start = IndraEvent.get_jd(ut)
+            ie.time_jd_start = IndraEvent.datetime2julian(ut)
             ie.data = ms.decode("utf-8")
             return ie
 
     async def put(self, ie):
         if self.enabled is True:
-            self.log.debug(f"{self.name}: Received message {ie}")
+            self.log.info(f"{self.name}: Received message {ie}")
         return

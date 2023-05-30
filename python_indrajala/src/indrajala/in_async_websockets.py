@@ -9,6 +9,13 @@ import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+# XXX dev only
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
+
+from indralib.indra_event import IndraEvent
+
 
 class EventProcessor:
     def __init__(self, indra_data, config_data):
@@ -144,7 +151,8 @@ class EventProcessor:
                 msg[tok] = default_toks[tok]
         return msg
 
-    async def put(self, msg):
+    async def put(self, ie: IndraEvent):
         if self.active is False:
             return
+        self.log.info(f"WS-send: {ie}")
         return
