@@ -21,7 +21,7 @@ from indralib.indra_event import IndraEvent
 
 INDRAJALA_VERSION = "0.1.0"
 
-async def main_runner(main_logger, modules, toml_data, args):
+async def main_runner(main_logger, modules):
     loop = asyncio.get_running_loop()
     subs = {}
 
@@ -197,7 +197,7 @@ def load_modules(main_logger, toml_data, args):
                                     f"Failed to import EventProcessor from module {module} has no {method} function"
                                 )
                                 continue
-                        modules[module] = ev_proc
+                        modules[sub_mod["name"]] = ev_proc
                         main_logger.debug(f"Import {module} success.")
                     else:
                         main_logger.debug(f"Module [{module}] is not active.")
@@ -293,6 +293,6 @@ modules = load_modules(main_logger, toml_data, args)
 
 terminate_main_runner = False
 try:
-    asyncio.run(main_runner(main_logger, modules, toml_data, args), debug=True)
+    asyncio.run(main_runner(main_logger, modules), debug=True)
 except KeyboardInterrupt:
     terminate_main_runner = True
