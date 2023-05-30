@@ -204,7 +204,7 @@ fn build_ui(app: &Application) {
             ie.domain = "$cmd/db/req/event/number/float/uniquedomains".to_string();
             ie.from_id = "ws/plotter".to_string();
             ie.data_type = "db/req/event/uniquedomains".to_string();
-            ie.data = serde_json::from_str("{}").unwrap();
+            ie.data = "{}".to_string();
             let ie_txt = serde_json::to_string(&ie).unwrap();
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message req/uniquedomains");
@@ -213,10 +213,11 @@ fn build_ui(app: &Application) {
                 // If the message is text, parse it as a record
                 if let Message::Text(text) = msg {
                     //println!("Received: len={}", text.len());
-                    let mut ier: IndraEvent = serde_json::from_str(&text.as_str()).unwrap();
-                    if ier.domain.starts_with("$event/") {
-                        ier.domain = ier.domain.replace("$event/", "");
-                    }
+                    let ier: IndraEvent = serde_json::from_str(&text.as_str()).unwrap();
+                    // if ier.domain.starts_with("$event/") {
+                    //     ier.domain = ier.domain.replace("$event/", "");
+                    //}
+                    println!("Received: {}", ier.domain);
                     let mut matched = false;
                     let mut reply = false;
                     for domain in cfg.default_domains.iter() {
@@ -228,7 +229,7 @@ fn build_ui(app: &Application) {
                     if matched == false {
                         let mut st = ier.domain.clone();
                         st.truncate(2);
-                        if st == "Ws".to_string() {
+                        if st == "ws".to_string() {
                             matched = true;
                             reply = true;
                         }

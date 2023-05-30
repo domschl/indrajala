@@ -344,7 +344,7 @@ impl AsyncTaskReceiver for SQLx {
                 warn!("SQLx: Received unknown command: {:?}", msg.domain);
                 continue;
             } else if msg.domain.starts_with("$event/") {
-                let domain = &msg.domain[7..];
+                let domain = msg.domain.clone();
                 let data_str = serde_json::to_string(&msg.data).unwrap();
                 if self.config.active {
                     // ignore Ws* domains
