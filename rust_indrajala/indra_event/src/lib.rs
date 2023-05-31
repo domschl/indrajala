@@ -99,7 +99,10 @@ pub struct IndraEvent {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum IndraEventRequestMode { Intervall, Latest }
+pub enum IndraEventRequestMode {
+    Intervall,
+    Latest,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IndraEventRequest {
@@ -127,13 +130,13 @@ impl IndraEvent {
         //let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
         // println!("{}", iso_string);
         IndraEvent {
-            domain: "".to_string(),   // The recipient domain, PUBLISHER topic which can be subscribed to
-            from_id: "".to_string(),  // The sender instance domain , a reverse PUBLISHER topic which can be used to reply, if used in transaction mode
-            uuid4: "".to_string(),    // A uuid for the event, used to prevent duplicate events
+            domain: "".to_string(), // The recipient domain, PUBLISHER topic which can be subscribed to
+            from_id: "".to_string(), // The sender instance domain , a reverse PUBLISHER topic which can be used to reply, if used in transaction mode
+            uuid4: "".to_string(),   // A uuid for the event, used to prevent duplicate events
             to_scope: "".to_string(), // A session scope, used to group events into sessions and to allow authentication hierachies. Domain-like syntax.
             time_jd_start: Self::datetime_to_julian(now), // The start time of the event, in Julian Date
             data_type: "".to_string(), // The type of the data, used to allow filtering, domain-like syntax, e.g. "number/float"
-            data: "".to_string(), // The data, can be any JSON value, described by data_type
+            data: "".to_string(),      // The data, can be any JSON value, described by data_type
             auth_hash: Default::default(), // A hash of the data, used to authenticate the data
             time_jd_end: Default::default(), // The end time of the event, in Julian Date
         }
@@ -256,20 +259,18 @@ impl IndraEvent {
     pub fn check_route(
         ie_domain: &String,
         _name: &String,
-        out_topics: &Vec<String>,
-        out_blocks: &Vec<String>,
+        subs: &Vec<String>,
+        blocks: Option<&Vec<String>>,
     ) -> bool {
-        for topic in out_topics {
-            //println!(
-            //    "router: Task: {} Subs: {} Event.domain: {}",
-            //    _name, topic, ie_domain
-            //);
+        for topic in subs {
             if IndraEvent::mqcmp(ie_domain, topic) {
                 let mut blocked = false;
-                for out_block in out_blocks {
-                    if IndraEvent::mqcmp(ie_domain, &out_block) {
-                        // println!("router: {} {} {} blocked", name, topic, ie_domain);
-                        blocked = true;
+                if !blocks.is_none() {
+                    for out_block in blocks.unwrap() {
+                        if IndraEvent::mqcmp(ie_domain, &out_block) {
+                            // println!("router: {} {} {} blocked", name, topic, ie_domain);
+                            blocked = true;
+                        }
                     }
                 }
 

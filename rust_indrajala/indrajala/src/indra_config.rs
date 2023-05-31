@@ -18,24 +18,10 @@ pub struct IndraConfig {
     pub llm: Option<Vec<LLMConfig>>,
 }
 
-/*
-#[derive(Deserialize, Clone, Debug)]
-pub struct IndraTaskConfigs {
-    pub tasks: Vec<IndraTaskConfig>,
-}
-*/
-#[derive(Deserialize, Clone, Copy, Debug)]
-pub enum TaskCapability {
-    Send,
-    Receive,
-    Request,
-}
-
 #[derive(Deserialize, Clone, Debug)]
 pub struct MqttConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<TaskCapability>,
     pub host: String,
     pub port: u16,
     pub username: String,
@@ -43,8 +29,6 @@ pub struct MqttConfig {
     pub client_id: String,
     pub to_scope: String,
     pub topics: Vec<String>,
-    pub out_topics: Vec<String>,
-    pub out_blocks: Vec<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -56,12 +40,9 @@ pub struct MqttConfigs {
 pub struct DingDongConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<TaskCapability>,
     pub timer: u64,
     pub topic: String,
     pub message: String,
-    pub out_topics: Vec<String>,
-    pub out_blocks: Vec<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -69,37 +50,28 @@ pub struct SignalConfig {
     pub name: String,
     pub active: bool,
     pub shutdown_delay_ms: u64,
-    pub capa: Vec<TaskCapability>,
-    pub out_topics: Vec<String>,
-    pub out_blocks: Vec<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct WebConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<TaskCapability>,
     pub address: String,
     pub url: String,
     pub ssl: bool,
     pub cert: String,
     pub key: String,
-    pub out_topics: Vec<String>,
-    pub out_blocks: Vec<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct WsConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<TaskCapability>,
     pub address: String,
     pub url: String,
     pub ssl: bool,
     pub cert: String,
     pub key: String,
-    pub out_topics: Vec<String>,
-    pub out_blocks: Vec<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -119,12 +91,9 @@ pub enum DbSync {
 pub struct SQLxConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<TaskCapability>,
     pub db_type: DbType,
     pub db_sync: DbSync,
     pub database_url: String,
-    pub out_topics: Vec<String>,
-    pub out_blocks: Vec<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -142,23 +111,17 @@ pub enum TaskerIpc {
 pub struct TaskerConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<TaskCapability>,
     pub cmd: String,
     pub args: Vec<String>,
-    pub out_topics: Vec<String>,
-    pub out_blocks: Vec<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct LLMConfig {
     pub name: String,
     pub active: bool,
-    pub capa: Vec<TaskCapability>,
     pub model_path: String,
     pub model_arch: String,
     pub model_overrides: String,
-    pub out_topics: Vec<String>,
-    pub out_blocks: Vec<String>,
 }
 
 impl IndraConfig {
