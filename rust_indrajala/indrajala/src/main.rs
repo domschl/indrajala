@@ -49,6 +49,10 @@ enum IndraTask {
     LLM(LLM),
 }
 
+trait AsyncTaskInit {
+    async fn async_init(self) -> Vec<String>;
+}
+
 trait AsyncTaskSender {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>);
 }
@@ -71,67 +75,59 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
         }
         debug!("IE-Event: {} {} {}", ie.time_jd_start, ie.domain, ie.data);
         for task in &tsk {
-            let ot: Vec<String>;
-            let ob: Vec<String>;
+            let subs: Vec<String>;
             let act: bool;
             let acs: async_channel::Sender<IndraEvent>;
             let name: String;
             match task {
                 IndraTask::DingDong(st) => {
-                    ot = st.config.clone().out_topics;
-                    ob = st.config.clone().out_blocks;
-                    act = st.config.clone().active;
+                    let cfg = st.config.clone();
+                    act = cfg.active;
                     acs = st.sender.clone();
-                    name = st.config.clone().name;
+                    name = cfg.name;
+                    subs = st.subs.clone();
                 }
                 IndraTask::Mqtt(st) => {
-                    ot = st.config.clone().out_topics;
-                    ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.sender.clone();
                     name = st.config.clone().name;
+                    subs = st.subs.clone();
                 }
                 IndraTask::Web(st) => {
-                    ot = st.config.clone().out_topics;
-                    ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.sender.clone();
                     name = st.config.clone().name;
+                    subs = st.subs.clone();
                 }
                 IndraTask::SQLx(st) => {
-                    ot = st.config.clone().out_topics;
-                    ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.sender.clone();
                     name = st.config.clone().name;
+                    subs = st.subs.clone();
                 }
                 IndraTask::Ws(st) => {
-                    ot = st.config.clone().out_topics;
-                    ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.sender.clone();
                     name = st.config.clone().name;
+                    subs = st.subs.clone();
                 }
                 IndraTask::Signal(st) => {
-                    ot = st.config.clone().out_topics;
-                    ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.sender.clone();
                     name = st.config.clone().name;
+                    subs = st.subs.clone();
                 }
                 IndraTask::Tasker(st) => {
-                    ot = st.config.clone().out_topics;
-                    ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.sender.clone();
                     name = st.config.clone().name;
+                    subs = st.subs.clone();
                 }
                 IndraTask::LLM(st) => {
-                    ot = st.config.clone().out_topics;
-                    ob = st.config.clone().out_blocks;
                     act = st.config.clone().active;
                     acs = st.sender.clone();
                     name = st.config.clone().name;
+                    subs = st.subs.clone();
                 }
             }
             if act == false {
@@ -153,7 +149,7 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
             } else {
                 debug!("{}, {} no match", ie.from_id, name_subs);
             }
-            if IndraEvent::check_route(&ie.domain, &name, &ot, &ob) || ie.domain == "$cmd/quit" {
+            if IndraEvent::check_route(&ie.domain, &name, &subs, None) || ie.domain == "$cmd/quit" {
                 let mut sdata = ie.data.to_string();
                 if sdata.len() > 16 {
                     sdata.truncate(16);

@@ -45,6 +45,7 @@ pub struct Ws {
     pub config: WsConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
+    pub subs: Vec<String>,
     pub wss_connections: ActiveWssConnections,
     pub ws_connections: ActiveWsConnections,
 }
@@ -54,16 +55,14 @@ impl Ws {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let mut ws_config = config.clone();
-        let def_addr = format!("{}/#", config.name);
-        if !config.out_topics.contains(&def_addr) {
-            ws_config.out_topics.push(def_addr);
-        }
+        let ws_config = config.clone();
+        let subs = vec!["$event/#".to_string(), format!("{}/#", config.name).to_string()];
 
         Ws {
             config: ws_config.clone(),
             receiver: r1,
             sender: s1,
+            subs: subs,
             wss_connections: ActiveWssConnections::new(RwLock::new(HashMap::new())),
             ws_connections: ActiveWsConnections::new(RwLock::new(HashMap::new())),
         }

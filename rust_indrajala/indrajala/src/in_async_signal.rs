@@ -20,6 +20,7 @@ pub struct Signal {
     pub config: SignalConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
+    pub subs: Vec<String>,
 }
 
 impl Signal {
@@ -27,10 +28,13 @@ impl Signal {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
+        let subs = vec![format!("{}/#", config.name).to_string()];
+
         Signal {
             config: config.clone(),
             receiver: r1,
             sender: s1,
+            subs: subs,
         }
     }
 }

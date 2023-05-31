@@ -18,6 +18,7 @@ pub struct SQLx {
     pub config: SQLxConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
+    pub subs: Vec<String>,
     pub pool: Option<SqlitePool>,
     pub r_sender: Option<async_channel::Sender<IndraEvent>>,
 }
@@ -29,11 +30,9 @@ impl SQLx {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let mut sq_config = config.clone();
-        let def_addr = "$cmd/db/event/#".to_string();
-        if !config.out_topics.contains(&def_addr) {
-            sq_config.out_topics.push(def_addr);
-        }
+        //let sq_config = config.clone();
+        let def_addr = "$cmd/db/#".to_string();
+        let subs = vec!["$event/#".to_string(), def_addr, format!("{}/#", config.name).to_string()];
 
         task::block_on(async {
             let pool = async_init(&mut config).await;
@@ -41,6 +40,7 @@ impl SQLx {
                 config: config.clone(),
                 receiver: r1,
                 sender: s1,
+                subs: subs,
                 pool: pool,
                 r_sender: Default::default(),
             }
@@ -168,6 +168,7 @@ impl AsyncTaskReceiver for SQLx {
                 }
                 break;
             } else if msg.domain.starts_with("$cmd/") {
+                // Random-sampling: SELECT * FROM (SELECT * FROM mytable ORDER BY RANDOM() LIMIT 1000) ORDER BY time;
                 if msg
                     .domain
                     .starts_with("$cmd/db/req/event/number/float/history")

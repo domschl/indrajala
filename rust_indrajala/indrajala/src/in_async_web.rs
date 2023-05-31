@@ -15,6 +15,7 @@ pub struct Web {
     pub config: WebConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
+    pub subs: Vec<String>,
 }
 
 impl Web {
@@ -22,15 +23,14 @@ impl Web {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let mut web_config = config.clone();
-        let def_addr = format!("{}/#", config.name);
-        if !config.out_topics.contains(&def_addr) {
-            web_config.out_topics.push(def_addr);
-        }
+        let web_config = config.clone();
+        let subs = vec!["$event/#".to_string(), format!("{}/#", config.name).to_string()];
+
         Web {
             config: web_config.clone(),
             receiver: r1,
             sender: s1,
+            subs: subs,
         }
     }
 }
