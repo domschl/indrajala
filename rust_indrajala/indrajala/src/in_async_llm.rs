@@ -114,13 +114,14 @@ impl LLM {
         let model_path = Path::new(&llm_config.model_path);
         // check if file exists:
 
-        let overrides = serde_json::from_str(llm_config.model_overrides.as_str()).unwrap();
-
+        //let overrides = serde_json::from_str(llm_config.model_overrides.as_str()).unwrap();
+        let vocabulary_source = llm::VocabularySource::Model;
         let model = llm::load_dynamic(
             model_architecture,
             model_path,
+            vocabulary_source,
             Default::default(),
-            overrides,
+            // overrides,
             LLM::load_progress_callback_logger,
         );
         model
