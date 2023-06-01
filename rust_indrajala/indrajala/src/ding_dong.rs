@@ -21,7 +21,7 @@ impl DingDong {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let subs = vec![format!("{}/#", config.name).to_string()];
+        let subs = vec!["$event/#".to_string(), format!("{}/#", config.name).to_string()];
 
         DingDong {
             config: config.clone(),
