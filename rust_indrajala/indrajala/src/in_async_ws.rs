@@ -68,9 +68,12 @@ impl Ws {
         }
     }
 
-    pub fn unsub(self, unsubs: Vec<String>, sender: async_channel::Sender<IndraEvent>) {
+    pub fn unsub(self, unsubs: Vec<String>, sender: async_channel::Sender<IndraEvent>, from_id: String) {
             let mut ie = IndraEvent::new();
             ie.domain = "$cmd/unsubs".to_string();
+            ie.from_id = from_id;
+            ie.uuid4 = uuid::Uuid::new_v4().to_string();
+            ie.data_type = "json".to_string();  // XXX needs unification
             ie.data = serde_json::to_string(&unsubs).unwrap();
             sender.try_send(ie).unwrap();
     }
@@ -173,15 +176,17 @@ impl AsyncTaskReceiver for Ws {
             if self.config.ssl == true {
                 let mut peers = self.wss_connections.write().await;
                 for key in ws_dead_conns.iter() {
-                    self.clone().unsub(peers[key].subs.clone(), sender.clone());
+                    let from_id = format!("{}/{}", self.config.name, key).to_string();
+                    self.clone().unsub(peers[key].subs.clone(), sender.clone(), from_id);
                     info!("Removing dead connection: {:?}", key);
                     peers.remove(key);
                 }
             } else {
                 let mut peers = self.ws_connections.write().await;
                 for key in wss_dead_conns.iter() {
+                    let from_id = format!("{}/{}", self.config.name, key).to_string();
                     info!("Removing dead connection: {:?}", key);
-                    self.clone().unsub(peers[key].subs.clone(), sender.clone());
+                    self.clone().unsub(peers[key].subs.clone(), sender.clone(), from_id);
                     peers.remove(key);
                 }
             }
@@ -222,7 +227,7 @@ async fn handle_message(
                         info!("Subscriptions updated: {:?}", subs);
                         let mut ie = msg.clone();
                         ie.from_id = format!("{}/{}", name, peer_address);
-                        sx.send(msg).await.unwrap();
+                        sx.send(ie).await.unwrap();
                     } else {
                         warn!("Error parsing subs command: {:?}", msg);
                     }

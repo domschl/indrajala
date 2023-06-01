@@ -61,7 +61,7 @@ trait AsyncTaskReceiver {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>);
 }
 
-async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEvent>) {
+async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEvent>) {
     let mut quit_cmd_received: bool = false;
     loop {
         let msg = receiver.recv().await;
@@ -69,12 +69,13 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
         let mut from_ident = false;
         if ie.from_id == "" {
             error!(
-                "ERROR: ignoring {:#?}, from_instance is not set, can't avoid recursion.",
-                ie
+                "ERROR: ignoring route to {}, from_id is not set: {}, can't avoid recursion.",
+                ie.domain, ie.from_id
             );
         }
+        let task_name = ie.from_id.split("/").collect::<Vec<&str>>()[0];
         debug!("IE-Event: {} {} {}", ie.time_jd_start, ie.domain, ie.data);
-        for task in &tsk {
+        for task in &mut tsk {
             let subs: Vec<String>;
             let act: bool;
             let acs: async_channel::Sender<IndraEvent>;
@@ -134,21 +135,170 @@ async fn router(tsk: Vec<IndraTask>, receiver: async_channel::Receiver<IndraEven
                 continue;
             }
             let name_subs = name.clone() + "/#";
-            if IndraEvent::mqcmp(&ie.from_id, &name_subs) || (&ie.from_id == &name) {
+            if !subs.contains(&name_subs) {
+                warn!(
+                    "Received message from {} to {}, but {} is not subscribed to {}",
+                    ie.from_id, ie.domain, name, name_subs
+                );
+            }
+            if task_name == name {
                 if ie.domain != "$cmd/quit" {
                     debug!(
                         "NOT sending {} to {}, recursion avoidance.",
                         ie.from_id, name
                     );
                     from_ident = true;
-                    continue;
                 } else {
                     quit_cmd_received = true;
                 }
                 from_ident = true;
-            } else {
-                debug!("{}, {} no match", ie.from_id, name_subs);
+                if ie.domain == "$cmd/subs" {
+                    let subs_res: Result<Vec<String>, serde_json::Error> =
+                        serde_json::from_str(ie.data.as_str());
+                    if !subs_res.is_err() {
+                        let mut subs = subs_res.unwrap();
+                        warn!("{}: {} subs: {:?}", ie.from_id, name, subs);
+                        match task {
+                            IndraTask::DingDong(st) => {
+                                let old_subs = st.subs.clone();
+                                st.subs.append(&mut subs);
+                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::Mqtt(st) => {
+                                let old_subs = st.subs.clone();
+                                st.subs.append(&mut subs);
+                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::Web(st) => {
+                                let old_subs = st.subs.clone();
+                                st.subs.append(&mut subs);
+                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::SQLx(st) => {
+                                let old_subs = st.subs.clone();
+                                st.subs.append(&mut subs);
+                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::Ws(st) => {
+                                let old_subs = st.subs.clone();
+                                st.subs.append(&mut subs);
+                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::Signal(st) => {
+                                let old_subs = st.subs.clone();
+                                st.subs.append(&mut subs);
+                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::Tasker(st) => {
+                                let old_subs = st.subs.clone();
+                                st.subs.append(&mut subs);
+                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::LLM(st) => {
+                                let old_subs = st.subs.clone();
+                                st.subs.append(&mut subs);
+                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                        }
+                    } else {
+                        error!("{}: {} subs: {:?}", ie.from_id, name, subs_res);
+                    }
+                }
+                if ie.domain == "$cmd/unsubs" {
+                    let subs_res: Result<Vec<String>, serde_json::Error> =
+                        serde_json::from_str(ie.data.as_str());
+                    if !subs_res.is_err() {
+                        match task {
+                            IndraTask::DingDong(st) => {
+                                let old_subs = st.subs.clone();
+                                for sub in subs_res.unwrap() {
+                                    let index = st.subs.iter().position(|x| *x == sub);
+                                    if index.is_some() {
+                                        st.subs.remove(index.unwrap());
+                                    }
+                                }
+                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs);
+                            }
+                            IndraTask::Mqtt(st) => {
+                                let old_subs = st.subs.clone();
+                                for sub in subs_res.unwrap() {
+                                    let index = st.subs.iter().position(|x| *x == sub);
+                                    if index.is_some() {
+                                        st.subs.remove(index.unwrap());
+                                    }
+                                }
+                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs);
+                            }
+                            IndraTask::Web(st) => {
+                                let old_subs = st.subs.clone();
+                                for sub in subs_res.unwrap() {
+                                    let index = st.subs.iter().position(|x| *x == sub);
+                                    if index.is_some() {
+                                        st.subs.remove(index.unwrap());
+                                    }
+                                }
+                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::SQLx(st) => {
+                                let old_subs = st.subs.clone();
+                                for sub in subs_res.unwrap() {
+                                    let index = st.subs.iter().position(|x| *x == sub);
+                                    if index.is_some() {
+                                        st.subs.remove(index.unwrap());
+                                    }
+                                }
+                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::Ws(st) => {
+                                let old_subs = st.subs.clone();
+                                for sub in subs_res.unwrap() {
+                                    let index = st.subs.iter().position(|x| *x == sub);
+                                    if index.is_some() {
+                                        st.subs.remove(index.unwrap());
+                                    }
+                                }
+                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::Signal(st) => {
+                                let old_subs = st.subs.clone();
+                                for sub in subs_res.unwrap() {
+                                    let index = st.subs.iter().position(|x| *x == sub);
+                                    if index.is_some() {
+                                        st.subs.remove(index.unwrap());
+                                    }
+                                }
+                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::Tasker(st) => {
+                                let old_subs = st.subs.clone();
+                                for sub in subs_res.unwrap() {
+                                    let index = st.subs.iter().position(|x| *x == sub);
+                                    if index.is_some() {
+                                        st.subs.remove(index.unwrap());
+                                    }
+                                }
+                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                            IndraTask::LLM(st) => {
+                                let old_subs = st.subs.clone();
+                                for sub in subs_res.unwrap() {
+                                    let index = st.subs.iter().position(|x| *x == sub);
+                                    if index.is_some() {
+                                        st.subs.remove(index.unwrap());
+                                    }
+                                }
+                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                            }
+                        }
+                    } else {
+                        error!("{}: {} unsubs: {:?}", ie.from_id, name, subs_res);
+                    }
+                    continue;
+                } else {
+                    debug!("{}, {} no match", ie.from_id, name_subs);
+                }
             }
+
             if IndraEvent::check_route(&ie.domain, &name, &subs, None) || ie.domain == "$cmd/quit" {
                 let mut sdata = ie.data.to_string();
                 if sdata.len() > 16 {
