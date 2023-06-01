@@ -129,7 +129,7 @@ impl AsyncTaskSender for Mqtt {
                             }
                         }
                         if sender.send(dd).await.is_err() {
-                            error!("Mqtt: Error sending message to channel, assuming shutdown.");
+                            warn!("Mqtt: Error sending message to channel, assuming shutdown.");
                             break;
                         }
                     }

@@ -358,7 +358,7 @@ async fn ws_accept_loop(
         async_std::task::spawn(async move {
             if let Err(e) = ws_handle_connection(stream, conns, xname.as_str(), peer_addr, sx).await
             {
-                error!("failed to handle connection: {}", e);
+                warn!("failed to handle connection: {}", e);
             }
         });
     }
@@ -389,7 +389,7 @@ async fn wss_accept_loop(
             if let Err(e) =
                 wss_handle_connection(stream, xname.as_str(), conns, peer_addr, sx).await
             {
-                error!("failed to handle connection: {}", e);
+                warn!("failed to handle connection: {}", e);
             }
         });
     }
