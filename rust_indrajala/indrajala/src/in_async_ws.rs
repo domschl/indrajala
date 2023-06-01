@@ -56,7 +56,7 @@ impl Ws {
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
         let ws_config = config.clone();
-        let subs = vec!["$event/#".to_string(), format!("{}/#", config.name).to_string()];
+        let subs = vec![format!("{}/#", config.name).to_string()];
 
         Ws {
             config: ws_config.clone(),

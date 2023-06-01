@@ -24,7 +24,7 @@ impl Web {
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
         let web_config = config.clone();
-        let subs = vec!["$event/#".to_string(), format!("{}/#", config.name).to_string()];
+        let subs = vec![format!("{}/#", config.name).to_string()];
 
         Web {
             config: web_config.clone(),

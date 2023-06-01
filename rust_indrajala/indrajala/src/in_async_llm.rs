@@ -32,7 +32,7 @@ impl LLM {
         if llm_config.active == true {
             info!("Model loaded.");
         }
-        let subs = vec!["$event/#".to_string(), format!("{}/#", config.name).to_string()];
+        let subs = vec![format!("{}/#", config.name).to_string()];
 
         LLM {
             config: llm_config.clone(),
