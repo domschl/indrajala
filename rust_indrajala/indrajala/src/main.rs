@@ -65,6 +65,10 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
     let mut quit_cmd_received: bool = false;
     loop {
         let msg = receiver.recv().await;
+        if msg.is_err() {
+            error!("ERROR: router: {:?}", msg);
+            continue;
+        }
         let ie = msg.unwrap();
         let mut from_ident = false;
         if ie.from_id == "" {
@@ -147,7 +151,6 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                         "NOT sending {} to {}, recursion avoidance.",
                         ie.from_id, name
                     );
-                    from_ident = true;
                 } else {
                     quit_cmd_received = true;
                 }
@@ -162,42 +165,42 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                             IndraTask::DingDong(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
-                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::Mqtt(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
-                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::Web(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
-                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::SQLx(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
-                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::Ws(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
-                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::Signal(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
-                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::Tasker(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
-                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::LLM(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
-                                info!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                         }
                     } else {
@@ -208,86 +211,87 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                     let subs_res: Result<Vec<String>, serde_json::Error> =
                         serde_json::from_str(ie.data.as_str());
                     if !subs_res.is_err() {
+                        let subs = subs_res.unwrap().clone();
                         match task {
                             IndraTask::DingDong(st) => {
                                 let old_subs = st.subs.clone();
-                                for sub in subs_res.unwrap() {
+                                for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
                                     if index.is_some() {
                                         st.subs.remove(index.unwrap());
                                     }
                                 }
-                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs);
+                                debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs);
                             }
                             IndraTask::Mqtt(st) => {
                                 let old_subs = st.subs.clone();
-                                for sub in subs_res.unwrap() {
+                                for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
                                     if index.is_some() {
                                         st.subs.remove(index.unwrap());
                                     }
                                 }
-                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs);
+                                debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs);
                             }
                             IndraTask::Web(st) => {
                                 let old_subs = st.subs.clone();
-                                for sub in subs_res.unwrap() {
+                                for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
                                     if index.is_some() {
                                         st.subs.remove(index.unwrap());
                                     }
                                 }
-                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::SQLx(st) => {
                                 let old_subs = st.subs.clone();
-                                for sub in subs_res.unwrap() {
+                                for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
                                     if index.is_some() {
                                         st.subs.remove(index.unwrap());
                                     }
                                 }
-                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::Ws(st) => {
                                 let old_subs = st.subs.clone();
-                                for sub in subs_res.unwrap() {
+                                for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
                                     if index.is_some() {
                                         st.subs.remove(index.unwrap());
                                     }
                                 }
-                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::Signal(st) => {
                                 let old_subs = st.subs.clone();
-                                for sub in subs_res.unwrap() {
+                                for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
                                     if index.is_some() {
                                         st.subs.remove(index.unwrap());
                                     }
                                 }
-                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::Tasker(st) => {
                                 let old_subs = st.subs.clone();
-                                for sub in subs_res.unwrap() {
+                                for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
                                     if index.is_some() {
                                         st.subs.remove(index.unwrap());
                                     }
                                 }
-                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                             IndraTask::LLM(st) => {
                                 let old_subs = st.subs.clone();
-                                for sub in subs_res.unwrap() {
+                                for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
                                     if index.is_some() {
                                         st.subs.remove(index.unwrap());
                                     }
                                 }
-                                info!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
+                                debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
                         }
                     } else {
