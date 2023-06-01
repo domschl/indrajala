@@ -9,7 +9,7 @@ import uuid
 try:
     import tomllib
 except ImportError:
-    import tomli as tomllib
+    import tomli as tomllib  # type: ignore
 
 class IndraEvent:
     def __init__(

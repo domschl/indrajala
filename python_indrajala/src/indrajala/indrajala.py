@@ -14,7 +14,7 @@ import time
 try:
     import tomllib
 except ModuleNotFoundError:  # Python 3.10 and older:
-    import tomli as tomllib
+    import tomli as tomllib  # type: ignore
 
 # XXX dev only
 import sys
@@ -115,9 +115,9 @@ async def main_runner(main_logger, modules):
                     sub_list = json.loads(ie.data)
                     if isinstance(sub_list, list) is True:
                         for sub in sub_list:
-                            if sub not in subs[origin_module]:
-                                subs[origin_module].append(sub)
-                                main_logger.info(f"Subscribing to {sub}")
+                            # if sub not in subs[origin_module]:  # XXX different sessions can sub to the same thing, alternative would be reference counting...
+                            subs[origin_module].append(sub)
+                            main_logger.info(f"Subscribing to {sub}")
                 elif ie.domain == "$cmd/unsubs":
                     sub_list = json.loads(ie.data)
                     if isinstance(sub_list, list) is True:

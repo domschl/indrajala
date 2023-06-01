@@ -67,18 +67,25 @@ impl Ws {
             ws_connections: ActiveWsConnections::new(RwLock::new(HashMap::new())),
         }
     }
+
+    pub fn unsub(self, unsubs: Vec<String>, sender: async_channel::Sender<IndraEvent>) {
+            let mut ie = IndraEvent::new();
+            ie.domain = "$cmd/unsubs".to_string();
+            ie.data = serde_json::to_string(&unsubs).unwrap();
+            sender.try_send(ie).unwrap();
+    }
 }
 
 impl AsyncTaskReceiver for Ws {
-    async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
+    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
         debug!("IndraTask Ws::receiver");
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {
                 debug!("Ws: Received quit command, quiting receive-loop.");
-                if self.config.active {
-                    self.config.active = false;
-                }
+                //if self.config.active {
+                    // self.config.active = false;
+                //}
                 break;
             }
             let msg_text = serde_json::to_string(&msg).unwrap();
@@ -95,11 +102,12 @@ impl AsyncTaskReceiver for Ws {
                             break;
                         }
                     }
-                    if msg.domain == format!("{}/{}", self.config.name, key).to_string() {
+                    let nn = self.clone().config.name.clone();
+                    if msg.domain == format!("{}/{}", nn, key).to_string() {
                         matched = true;
                         info!(
                             "Matched direct-address websocket connection: {}/{:?}, {}",
-                            self.config.name, key, msg.domain
+                            self.clone().config.clone().name, key, msg.domain
                         );
                     }
                     if !matched {
@@ -165,6 +173,7 @@ impl AsyncTaskReceiver for Ws {
             if self.config.ssl == true {
                 let mut peers = self.wss_connections.write().await;
                 for key in ws_dead_conns.iter() {
+                    self.clone().unsub(peers[key].subs.clone(), sender.clone());
                     info!("Removing dead connection: {:?}", key);
                     peers.remove(key);
                 }
@@ -172,6 +181,7 @@ impl AsyncTaskReceiver for Ws {
                 let mut peers = self.ws_connections.write().await;
                 for key in wss_dead_conns.iter() {
                     info!("Removing dead connection: {:?}", key);
+                    self.clone().unsub(peers[key].subs.clone(), sender.clone());
                     peers.remove(key);
                 }
             }
@@ -199,16 +209,22 @@ async fn handle_message(
                         let new_subs = new_subs_res.unwrap();
                         for sub in new_subs.iter() {
                             let ev_sub;
-                            if !sub.starts_with("$event/") {
+                            if !sub.starts_with("$event/") {   // XXX useless hack, tbr.
                                 ev_sub = format!("$event/{}", sub);
                             } else {
                                 ev_sub = sub.clone();
                             }
-                            if !subs.contains(&ev_sub) {
-                                subs.push(ev_sub.clone());
-                            }
+                            //if !subs.contains(&ev_sub) {  // XXX: allow dups
+                            subs.push(ev_sub.clone());
+                            //}
                         }
+                        warn!("Subscribing to: {:?} -> {:?}", new_subs, subs);
                         info!("Subscriptions updated: {:?}", subs);
+                        let mut ie = msg.clone();
+                        ie.from_id = format!("{}/{}", name, peer_address);
+                        sx.send(msg).await.unwrap();
+                    } else {
+                        warn!("Error parsing subs command: {:?}", msg);
                     }
                 }
                 "$log/error" => {
