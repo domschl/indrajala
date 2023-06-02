@@ -111,7 +111,7 @@ impl AsyncTaskReceiver for Ws {
                         }
                     }
                     let nn = self.clone().config.name.clone();
-                    if msg.domain == format!("{}/{}", nn, key).to_string() {
+                    if msg.domain == *format!("{}/{}", nn, key).to_string() {
                         matched = true;
                         info!(
                             "Matched direct-address websocket connection: {}/{:?}, {}",
@@ -152,7 +152,7 @@ impl AsyncTaskReceiver for Ws {
                             break;
                         }
                     }
-                    if msg.domain == format!("{}/{}", self.config.name, key).to_string() {
+                    if msg.domain == *format!("{}/{}", self.config.name, key).to_string() {
                         matched = true;
                         info!(
                             "Matched direct-address websocket connection: {}/{:?}, {}",

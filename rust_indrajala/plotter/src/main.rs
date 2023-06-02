@@ -230,7 +230,7 @@ fn build_ui(app: &Application) {
                         let mut st = ier.domain.clone();
                         st.truncate(2);
                         st = st.to_lowercase();
-                        if st == "ws".to_string() {
+                        if st == *"ws" {
                             matched = true;
                             reply = true;
                         }

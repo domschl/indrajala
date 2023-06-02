@@ -255,6 +255,7 @@ impl AsyncTaskReceiver for SQLx {
                             //    data_f64 = data_f64_opt.unwrap();
                             //}
                             let time_jd_start: f64 = row.1;
+
                             let data_f64_res = row.2.parse::<f64>();
                             if data_f64_res.is_ok() {
                                 let data_f64: f64 = data_f64_res.unwrap();
