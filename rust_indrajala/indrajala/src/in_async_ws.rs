@@ -2,7 +2,7 @@ use crate::indra_config::WsConfig;
 use crate::IndraEvent;
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
-use async_channel;
+//use async_channel;
 use futures::stream::SplitSink;
 use std::net::SocketAddr;
 use std::{collections::HashMap, fs::File, io::BufReader, sync::Arc};
@@ -55,27 +55,32 @@ impl Ws {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let ws_config = config.clone();
-        let subs = vec![format!("{}/#", config.name).to_string()];
+        let ws_config = config;
+        let subs = vec![format!("{}/#", ws_config.name)];
 
         Ws {
-            config: ws_config.clone(),
+            config: ws_config,
             receiver: r1,
             sender: s1,
-            subs: subs,
+            subs,
             wss_connections: ActiveWssConnections::new(RwLock::new(HashMap::new())),
             ws_connections: ActiveWsConnections::new(RwLock::new(HashMap::new())),
         }
     }
 
-    pub fn unsub(self, unsubs: Vec<String>, sender: async_channel::Sender<IndraEvent>, from_id: String) {
-            let mut ie = IndraEvent::new();
-            ie.domain = "$cmd/unsubs".to_string();
-            ie.from_id = from_id;
-            ie.uuid4 = uuid::Uuid::new_v4().to_string();
-            ie.data_type = "json".to_string();  // XXX needs unification
-            ie.data = serde_json::to_string(&unsubs).unwrap();
-            sender.try_send(ie).unwrap();
+    pub fn unsub(
+        self,
+        unsubs: Vec<String>,
+        sender: async_channel::Sender<IndraEvent>,
+        from_id: String,
+    ) {
+        let mut ie = IndraEvent::new();
+        ie.domain = "$cmd/unsubs".to_string();
+        ie.from_id = from_id;
+        ie.uuid4 = uuid::Uuid::new_v4().to_string();
+        ie.data_type = "json".to_string(); // XXX needs unification
+        ie.data = serde_json::to_string(&unsubs).unwrap();
+        sender.try_send(ie).unwrap();
     }
 }
 
@@ -87,14 +92,14 @@ impl AsyncTaskReceiver for Ws {
             if msg.domain == "$cmd/quit" {
                 debug!("Ws: Received quit command, quiting receive-loop.");
                 //if self.config.active {
-                    // self.config.active = false;
+                // self.config.active = false;
                 //}
                 break;
             }
             let msg_text = serde_json::to_string(&msg).unwrap();
             let mut ws_dead_conns = Vec::new();
             let mut wss_dead_conns = Vec::new();
-            if self.config.ssl == true {
+            if self.config.ssl {
                 let mut peers = self.wss_connections.write().await;
                 for (key, value) in peers.iter_mut() {
                     let subs: Vec<String> = value.subs.clone();
@@ -110,7 +115,9 @@ impl AsyncTaskReceiver for Ws {
                         matched = true;
                         info!(
                             "Matched direct-address websocket connection: {}/{:?}, {}",
-                            self.clone().config.clone().name, key, msg.domain
+                            self.clone().config.clone().name,
+                            key,
+                            msg.domain
                         );
                     }
                     if !matched {
@@ -130,7 +137,8 @@ impl AsyncTaskReceiver for Ws {
                     let res = ws_sink.tx.send(msg).await;
                     if res.is_err() {
                         warn!("Error sending message to websocket: {:?}", res);
-                        ws_dead_conns.push(key.clone());
+                        // ws_dead_conns.push(key.clone());
+                        ws_dead_conns.push(*key);
                     }
                 }
             } else {
@@ -168,16 +176,18 @@ impl AsyncTaskReceiver for Ws {
                     let res = ws_sink.tx.send(msg).await;
                     if res.is_err() {
                         warn!("Error sending message to websocket: {:?}", res);
-                        wss_dead_conns.push(key.clone());
+                        //wss_dead_conns.push(key.clone());
+                        wss_dead_conns.push(*key);
                     }
                 }
             }
             // Remove dead connections:
-            if self.config.ssl == true {
+            if self.config.ssl {
                 let mut peers = self.wss_connections.write().await;
                 for key in ws_dead_conns.iter() {
                     let from_id = format!("{}/{}", self.config.name, key).to_string();
-                    self.clone().unsub(peers[key].subs.clone(), sender.clone(), from_id);
+                    self.clone()
+                        .unsub(peers[key].subs.clone(), sender.clone(), from_id);
                     info!("Removing dead connection: {:?}", key);
                     peers.remove(key);
                 }
@@ -186,7 +196,8 @@ impl AsyncTaskReceiver for Ws {
                 for key in wss_dead_conns.iter() {
                     let from_id = format!("{}/{}", self.config.name, key).to_string();
                     info!("Removing dead connection: {:?}", key);
-                    self.clone().unsub(peers[key].subs.clone(), sender.clone(), from_id);
+                    self.clone()
+                        .unsub(peers[key].subs.clone(), sender.clone(), from_id);
                     peers.remove(key);
                 }
             }
@@ -213,12 +224,12 @@ async fn handle_message(
                     if new_subs_res.is_ok() {
                         let new_subs = new_subs_res.unwrap();
                         for sub in new_subs.iter() {
-                            let ev_sub;
-                            if !sub.starts_with("$event/") {   // XXX useless hack, tbr.
-                                ev_sub = format!("$event/{}", sub);
+                            let ev_sub = if !sub.starts_with("$event/") {
+                                // XXX useless hack, tbr.
+                                format!("$event/{}", sub)
                             } else {
-                                ev_sub = sub.clone();
-                            }
+                                sub.clone()
+                            };
                             //if !subs.contains(&ev_sub) {  // XXX: allow dups
                             subs.push(ev_sub.clone());
                             //}
@@ -397,11 +408,11 @@ async fn wss_accept_loop(
 
 impl AsyncTaskSender for Ws {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
-        if self.config.active == false {
+        if !self.config.active {
             return;
         }
         let addr = self.config.address.as_str();
-        if self.config.ssl == true {
+        if self.config.ssl {
             debug!("IndraTask Ws::sender: SSL enabled");
 
             let f = File::open(self.config.cert).unwrap();

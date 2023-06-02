@@ -1,16 +1,11 @@
-use async_channel;
-use async_std::{
-    process:: {
-        Command,
-        Stdio,
-    }, 
-};
+//use async_channel;
+use async_std::process::{Command, Stdio};
 use futures::future::FutureExt;
 use std::pin::pin;
 //use futures::Future;
 use futures::select;
 
-use log::{debug, error, warn, info};
+use log::{debug, error, info, warn};
 
 use crate::indra_config::TaskerConfig;
 use crate::IndraEvent;
@@ -29,14 +24,14 @@ impl Tasker {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let tasker_config = config.clone();
-        let subs = vec![format!("{}/#", config.name).to_string()];
+        let tasker_config = config;
+        let subs = vec![format!("{}/#", tasker_config.name)];
 
         Tasker {
-            config: tasker_config.clone(),
+            config: tasker_config,
             receiver: r1,
             sender: s1,
-            subs: subs,
+            subs,
         }
     }
 }
@@ -45,8 +40,7 @@ impl AsyncTaskSender for Tasker {
     async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
             debug!("Tasker is not active");
-            return;
-        }        
+        }
     }
 }
 
@@ -63,14 +57,20 @@ impl AsyncTaskReceiver for Tasker {
             //.stderr(Stdio::piped())
             .spawn();
         if child.is_err() {
-            error!("Tasker: Failed to spawn {} command: {}, args: {:?}: {}", self.config.name, self.config.cmd, self.config.args, child.err().unwrap());
+            error!(
+                "Tasker: Failed to spawn {} command: {}, args: {:?}: {}",
+                self.config.name,
+                self.config.cmd,
+                self.config.args,
+                child.err().unwrap()
+            );
             return;
         }
         info!("Started {}", self.config.name);
         let mut child = child.unwrap();
         let mut child_term_fut = pin!(child.status().fuse());
         let mut msg_fut = self.receiver.recv().fuse();
-        
+
         loop {
             select!(
                 msg = msg_fut => {

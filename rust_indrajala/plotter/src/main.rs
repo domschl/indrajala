@@ -1,6 +1,6 @@
 //use std::f64::{partial_max, partial_min};
 use chrono::{DateTime, Utc};
-use glib;
+//use glib;
 use gtk::prelude::*;
 use gtk::{
     Application, ApplicationWindow, Box, DrawingArea, Label, ListBox, PolicyType, ScrolledWindow,
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use toml;
+//use toml;
 use tungstenite::{connect, Message};
 use url::Url;
 
@@ -28,9 +28,9 @@ use indra_event::{IndraEvent, IndraEventRequest, IndraEventRequestMode};
 //use std::time::Duration;
 //use plotters::prelude::*;
 
-fn tconv(t: chrono::DateTime<Utc>) -> chrono::DateTime<Utc> {
-    return t;
-}
+//fn tconv(t: chrono::DateTime<Utc>) -> chrono::DateTime<Utc> {
+//    return t;
+//}
 
 #[derive(Deserialize, Clone, Debug)]
 struct Config {
@@ -130,13 +130,13 @@ fn build_ui(app: &Application) {
             }
             let (min_datetime, min_f64) = data_vec
                 .iter()
-                .fold((tconv(data_vec[0].0), data_vec[0].1), |acc, val| {
-                    (min(acc.0, tconv(val.0)), min(acc.1, val.1))
+                .fold((data_vec[0].0, data_vec[0].1), |acc, val| {
+                    (min(acc.0, val.0), min(acc.1, val.1))
                 });
             let (max_datetime, max_f64) = data_vec
                 .iter()
-                .fold((tconv(data_vec[0].0), data_vec[0].1), |acc, val| {
-                    (max(acc.0, tconv(val.0)), max(acc.1, val.1))
+                .fold((data_vec[0].0, data_vec[0].1), |acc, val| {
+                    (max(acc.0, val.0), max(acc.1, val.1))
                 });
 
             let mut ctx = ChartBuilder::on(&root_area)
@@ -157,7 +157,7 @@ fn build_ui(app: &Application) {
                 .unwrap();
             */
             ctx.draw_series(LineSeries::new(
-                data_vec.iter().map(|d| (tconv(d.0), d.1 as f32)),
+                data_vec.iter().map(|d| (d.0, d.1 as f32)),
                 &RED,
             ))
             .unwrap();
@@ -213,7 +213,7 @@ fn build_ui(app: &Application) {
                 // If the message is text, parse it as a record
                 if let Message::Text(text) = msg {
                     //println!("Received: len={}", text.len());
-                    let ier: IndraEvent = serde_json::from_str(&text.as_str()).unwrap();
+                    let ier: IndraEvent = serde_json::from_str(text.as_str()).unwrap();
                     // if ier.domain.starts_with("$event/") {
                     //     ier.domain = ier.domain.replace("$event/", "");
                     //}
@@ -226,7 +226,7 @@ fn build_ui(app: &Application) {
                             reply = false;
                         }
                     }
-                    if matched == false {
+                    if !matched {
                         let mut st = ier.domain.clone();
                         st.truncate(2);
                         st = st.to_lowercase();
@@ -235,8 +235,8 @@ fn build_ui(app: &Application) {
                             reply = true;
                         }
                     }
-                    if matched == true {
-                        if reply == false {
+                    if matched {
+                        if !reply {
                             let time = IndraEvent::julian_to_datetime(ier.time_jd_start); //.with_timezone(&Local);
                             if !ier.data_type.starts_with("number/float") {
                                 continue;
@@ -247,8 +247,7 @@ fn build_ui(app: &Application) {
                             //let value_opt = num_text.trim().parse();
                             let value_opt: Result<f64, serde_json::Error> =
                                 serde_json::from_str(ier.data.as_str());
-                            let value: f64;
-                            value = value_opt.unwrap();
+                            let value = value_opt.unwrap();
                             println!("domain: >{}<, value: {}", domain, value);
                             let mut time_series_lock = shared_time_series.lock().unwrap();
                             // time_series_lock.push((time.with_timezone(&Local), value));
@@ -284,7 +283,7 @@ fn build_ui(app: &Application) {
                                 println!("sent message request history of {}", domain);
                             }
                             // println!("Temperature at {}: {}", time, value);
-                            /* 
+                            /*
                             if !known_topics.contains(&domain.clone()) {
                                 known_topics.push(domain.clone());
                                 Arc::new(&sender)
@@ -298,9 +297,9 @@ fn build_ui(app: &Application) {
                                 ier.domain, ier.from_id, ier.to_scope, ier.data_type
                             );
                             if ier.data_type == "db/reply/event/number/float/history" {
-                                let res: Vec<(f64, f64)>;
                                 let domain: String = ier.to_scope.to_string();
-                                res = serde_json::from_str(ier.data.to_string().as_str()).unwrap();
+                                let res: Vec<(f64, f64)> =
+                                    serde_json::from_str(ier.data.to_string().as_str()).unwrap();
                                 println!("res: {}", res.len());
                                 let mut time_series_lock = shared_time_series.lock().unwrap();
                                 if time_series_lock.contains_key(&domain.clone()) {
@@ -319,7 +318,7 @@ fn build_ui(app: &Application) {
                                             if w[0].0 == w[1].0 {
                                                 None
                                             } else {
-                                                Some(w[0].clone())
+                                                Some(w[0])
                                             }
                                         })
                                         .chain(arr.last().cloned())
@@ -384,7 +383,7 @@ fn build_ui(app: &Application) {
                             }
                         }
                         // Check if text in known_topics:
-                        if matched == true {
+                        if matched {
                             Arc::new(&sender).send(ChMessage::UpdateGraph()).unwrap();
                         }
                     }
@@ -392,9 +391,9 @@ fn build_ui(app: &Application) {
             }
         }
     });
-    let listbox_clone2 = list_box2.clone();
+    let listbox_clone2 = list_box2;
     //let time_series_clone = time_series.clone();
-    let drawing_area_clone = drawing_area.clone();
+    let drawing_area_clone = drawing_area;
     receiver.attach(None, move |msg| {
         match msg {
             ChMessage::UpdateListBox(text) => listbox_clone2.append(&Label::new(Some(&text))),
