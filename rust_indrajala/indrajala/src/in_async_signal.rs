@@ -28,13 +28,13 @@ impl Signal {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let subs = vec![format!("{}/#", config.name).to_string()];
+        let subs = vec![format!("{}/#", config.name)];
 
         Signal {
-            config: config.clone(),
+            config,
             receiver: r1,
             sender: s1,
-            subs: subs,
+            subs,
         }
     }
 }
@@ -103,7 +103,7 @@ impl Signal {
 
 impl AsyncTaskSender for Signal {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
-        let signals = Signals::new(&[SIGHUP, SIGTERM, SIGINT, SIGQUIT]).unwrap();
+        let signals = Signals::new([SIGHUP, SIGTERM, SIGINT, SIGQUIT]).unwrap();
         let handle = signals.handle();
 
         let signals_task = async_std::task::spawn(self.clone().handle_signals(signals, sender));

@@ -32,7 +32,11 @@ impl SQLx {
         (s1, r1) = async_channel::unbounded();
         //let sq_config = config.clone();
         let def_addr = "$cmd/db/#".to_string();
-        let subs = vec!["$event/#".to_string(), def_addr, format!("{}/#", config.name).to_string()];
+        let subs = vec![
+            "$event/#".to_string(),
+            def_addr,
+            format!("{}/#", config.name),
+        ];
 
         task::block_on(async {
             let pool = async_init(&mut config).await;
@@ -40,8 +44,8 @@ impl SQLx {
                 config: config.clone(),
                 receiver: r1,
                 sender: s1,
-                subs: subs,
-                pool: pool,
+                subs,
+                pool,
                 r_sender: Default::default(),
             }
         })
@@ -50,16 +54,10 @@ impl SQLx {
 
 async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     let fnam = config.database_url.clone();
-    let db_sync: &str;
-
-    match config.db_sync {
-        DbSync::Sync => {
-            db_sync = "NORMAL";
-        }
-        DbSync::Async => {
-            db_sync = "OFF";
-        }
-    }
+    let db_sync: &str = match config.db_sync {
+        DbSync::Sync => "NORMAL",
+        DbSync::Async => "OFF",
+    };
     let options = SqliteConnectOptions::new()
         .filename(fnam.clone())
         .create_if_missing(true)
@@ -147,12 +145,12 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
             pool = None;
         }
     }
-    return pool;
+    pool
 }
 
 impl AsyncTaskReceiver for SQLx {
     async fn async_receiver(mut self, sender: async_channel::Sender<IndraEvent>) {
-        if self.config.active == false {
+        if !self.config.active {
             return;
         }
         debug!("IndraTask SQLx::sender");
@@ -198,7 +196,7 @@ impl AsyncTaskReceiver for SQLx {
                         } else {
                             rows = rows_res.unwrap();
                         }
-                    } else if !req.time_jd_start.is_none() && req.time_jd_end.is_none() {
+                    } else if req.time_jd_start.is_some() && req.time_jd_end.is_none() {
                         rows = sqlx::query_as(
                             "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ? AND time_jd_start >= ?",
                         )
@@ -207,7 +205,7 @@ impl AsyncTaskReceiver for SQLx {
                         .fetch_all(&pool)
                         .await
                         .unwrap();
-                    } else if req.time_jd_start.is_none() && !req.time_jd_end.is_none() {
+                    } else if req.time_jd_start.is_none() && req.time_jd_end.is_some() {
                         rows = sqlx::query_as(
                             "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ? AND time_jd_start <= ?",
                         )
@@ -216,7 +214,7 @@ impl AsyncTaskReceiver for SQLx {
                         .fetch_all(&pool)
                         .await
                         .unwrap();
-                    } else if !req.time_jd_start.is_none() && !req.time_jd_end.is_none() {
+                    } else if req.time_jd_start.is_some() && req.time_jd_end.is_some() {
                         rows = sqlx::query_as(
                             "SELECT id, time_jd_start, data FROM indra_events WHERE domain = ? AND time_jd_start >= ? AND time_jd_start <= ?",
                         )
@@ -237,13 +235,12 @@ impl AsyncTaskReceiver for SQLx {
                     let step: usize;
                     if req.max_count.is_none() {
                         step = 1;
+                    } else if rows.len() > req.max_count.unwrap() {
+                        step = rows.len() / req.max_count.unwrap();
                     } else {
-                        if rows.len() > req.max_count.unwrap() {
-                            step = rows.len() / req.max_count.unwrap();
-                        } else {
-                            step = 1;
-                        }
+                        step = 1;
                     }
+
                     let res: Vec<(f64, f64)> = rows
                         .iter()
                         .step_by(step)
@@ -257,9 +254,9 @@ impl AsyncTaskReceiver for SQLx {
                             //} else {
                             //    data_f64 = data_f64_opt.unwrap();
                             //}
-                            let data_f64_res = row.2.parse::<f64>();
                             let time_jd_start: f64 = row.1;
-                            if !data_f64_res.is_err() {
+                            let data_f64_res = row.2.parse::<f64>();
+                            if data_f64_res.is_ok() {
                                 let data_f64: f64 = data_f64_res.unwrap();
                                 (time_jd_start, data_f64)
                             } else {
@@ -382,8 +379,7 @@ impl AsyncTaskReceiver for SQLx {
 impl AsyncTaskSender for SQLx {
     async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
         loop {
-            let _dd: IndraEvent;
-            _dd = IndraEvent::new();
+            let _dd: IndraEvent = IndraEvent::new();
             async_std::task::sleep(Duration::from_millis(1000)).await;
             if self.config.active {
                 //sender.send(dd).await.unwrap();

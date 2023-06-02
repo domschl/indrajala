@@ -1,13 +1,13 @@
-use async_channel;
+//use async_channel;
 use async_std::task;
 //use futures::future::FutureExt;
 //use futures::Future;
 //use futures::select;
 
 //use chrono::Duration;
-use llm;
+//use llm;
 use log::{debug, error, info, warn};
-use rand;
+//use rand;
 use std::convert::Infallible;
 use std::path::Path;
 
@@ -16,29 +16,29 @@ use crate::IndraEvent;
 use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 #[derive(Clone)]
-pub struct LLM {
+pub struct Llm {
     pub config: LLMConfig,
     pub receiver: async_channel::Receiver<IndraEvent>,
     pub sender: async_channel::Sender<IndraEvent>,
     pub subs: Vec<String>,
 }
 
-impl LLM {
+impl Llm {
     pub fn new(config: LLMConfig) -> Self {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let llm_config = config.clone();
-        if llm_config.active == true {
+        let llm_config = config; //.clone();
+        if llm_config.active {
             info!("Model loaded.");
         }
-        let subs = vec![format!("{}/#", config.name).to_string()];
+        let subs = vec![format!("{}/#", llm_config.name)];
 
-        LLM {
-            config: llm_config.clone(),
+        Llm {
+            config: llm_config, //.clone(),
             receiver: r1,
             sender: s1,
-            subs: subs,
+            subs,
         }
     }
 
@@ -97,9 +97,9 @@ impl LLM {
                 }
 
                 if buf.is_empty() {
-                    LLM::send_answer(t)
+                    Llm::send_answer(t)
                 } else {
-                    LLM::send_answer(reverse_buf)
+                    Llm::send_answer(reverse_buf)
                 }
             }
             llm::InferenceResponse::EotToken => Ok(llm::InferenceFeedback::Halt),
@@ -108,7 +108,7 @@ impl LLM {
     }
 
     pub fn get_model(llm_config: LLMConfig) -> Result<Box<dyn llm::Model>, llm::LoadError> {
-        info!("Loading LLM model from {}", llm_config.model_path);
+        info!("Loading Llm model from {}", llm_config.model_path);
 
         let model_architecture: llm::ModelArchitecture = llm_config.model_arch.parse().unwrap();
         let model_path = Path::new(&llm_config.model_path);
@@ -122,14 +122,14 @@ impl LLM {
             vocabulary_source,
             Default::default(),
             // overrides,
-            LLM::load_progress_callback_logger,
+            Llm::load_progress_callback_logger,
         );
         model
     }
 
     pub fn send_answer(token: String) -> Result<llm::InferenceFeedback, Infallible> {
         let answer = token;
-        info!("LLM: Answer: {}", answer);
+        info!("Llm: Answer: {}", answer);
         Ok(llm::InferenceFeedback::Continue)
     }
 
@@ -138,10 +138,10 @@ impl LLM {
         _sender: async_channel::Sender<IndraEvent>,
         receiver: async_channel::Receiver<IndraEvent>,
     ) {
-        info!("LLM: Starting LLM in long-running thread");
-        let model = LLM::get_model(llm_config);
+        info!("Llm: Starting Llm in long-running thread");
+        let model = Llm::get_model(llm_config);
         if model.is_err() {
-            error!("LLM: Failed to load model: {}", model.err().unwrap());
+            error!("Llm: Failed to load model: {}", model.err().unwrap());
             return;
         }
         let model = model.unwrap();
@@ -166,7 +166,7 @@ impl LLM {
                 &mut Default::default(),
                 llm::feed_prompt_callback(|resp| match resp {
                     llm::InferenceResponse::PromptToken(t)
-                    | llm::InferenceResponse::InferredToken(t) => LLM::send_answer(t),
+                    | llm::InferenceResponse::InferredToken(t) => Llm::send_answer(t),
                     _ => Ok(llm::InferenceFeedback::Continue),
                 }),
             )
@@ -183,15 +183,15 @@ impl LLM {
             let ie = match ie_rcv {
                 Ok(ie) => ie,
                 Err(e) => {
-                    info!("LLM thread: Failed to receive IndraEvent: {}", e);
+                    info!("Llm thread: Failed to receive IndraEvent: {}", e);
                     continue;
                 }
             };
 
-            warn!("LLM thread: Received IndraEvent: {:?}", ie);
+            warn!("Llm thread: Received IndraEvent: {:?}", ie);
 
             if ie.domain == "$cmd/quit" {
-                info!("LLM thread: Received quit command");
+                info!("Llm thread: Received quit command");
                 break;
             }
             let line = ie.data.to_string();
@@ -213,7 +213,7 @@ impl LLM {
                         maximum_token_count: None,
                     },
                     &mut Default::default(),
-                    LLM::inference_callback(String::from(user_name), &mut buf),
+                    Llm::inference_callback(String::from(user_name), &mut buf),
                 )
                 .unwrap_or_else(|e| panic!("{e}"));
 
@@ -236,28 +236,27 @@ impl LLM {
     }
 }
 
-impl AsyncTaskSender for LLM {
+impl AsyncTaskSender for Llm {
     async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
-            debug!("LLM is not active");
-            return;
+            debug!("Llm is not active");
         }
     }
 }
 
-impl AsyncTaskReceiver for LLM {
+impl AsyncTaskReceiver for Llm {
     async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
-            debug!("LLM is not active");
+            debug!("Llm is not active");
             return;
         }
-        let name = self.config.name.clone();
-        let sender = self.sender.clone();
-        let receiver = self.receiver.clone();
         let llm_config = self.config.clone();
-        info!("LLM: Starting LLM in async thread");
+        let name = llm_config.name.clone();
+        let sender = self.sender.clone();
+        let receiver = self.receiver; // .clone();
+        info!("Llm: Starting Llm in async thread");
         let tsk = async_std::task::spawn_blocking(async move || {
-            LLM::infer(llm_config, sender, receiver).await;
+            Llm::infer(llm_config, sender, receiver).await;
         });
         /*
         let mut msg_fut = self.receiver.recv().fuse();
@@ -265,12 +264,12 @@ impl AsyncTaskReceiver for LLM {
             select!(
                 msg = msg_fut => {
                     if msg.is_err() {
-                        error!("LLM: Failed to receive message: {}", msg.err().unwrap());
+                        error!("Llm: Failed to receive message: {}", msg.err().unwrap());
                         break;
                     }
                     let msg = msg.unwrap();
                     if msg.domain == "$cmd/quit" {
-                        debug!("LLM: Received quit command, quiting receive-loop.");
+                        debug!("Llm: Received quit command, quiting receive-loop.");
                         self.config.active = false;
                     } else {
                         msg_fut = self.receiver.recv().fuse();
@@ -280,8 +279,8 @@ impl AsyncTaskReceiver for LLM {
         }
         */
         //let _unused = inf.await;
-        let _tt = task::block_on(tsk);       
+        let _tt = task::block_on(tsk);
         info!("End long-running thread llm ");
-        info!("LLM {}: Receive-loop exited (llm thread running)", name);
+        info!("Llm {}: Receive-loop exited (llm thread running)", name);
     }
 }
