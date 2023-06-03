@@ -100,7 +100,7 @@ pub struct IndraEvent {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum IndraEventRequestMode {
-    Intervall,
+    Interval,
     Latest,
 }
 
