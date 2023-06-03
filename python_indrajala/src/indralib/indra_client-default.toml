@@ -1,0 +1,3 @@
+uri = "wss://pergamon:8082"
+ca_authority = "ca-root.pem"
+auth_token = ""
