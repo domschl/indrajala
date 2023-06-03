@@ -2,9 +2,8 @@ import asyncio
 import websockets
 import logging
 import ssl
-import uuid
+import json
 import toml
-import datetime
 import os
 
 from indra_event import IndraEvent
@@ -137,6 +136,52 @@ class IndraClient:
         self.websocket = None
         return True
     
+    async def subscribe(self, domains):
+        """Subscribe to domain"""
+        if self.initialized is False:
+            self.log.error("Indrajala connection data not initialized, please provide at least an uri!")
+            return False
+        if self.websocket is None:
+            self.log.error("Websocket not initialized, please call init_connection() first!")
+            return False
+        if domains is None or domains == "":
+            self.log.error("Please provide a valid domain(s)!")
+            return False
+        ie = IndraEvent()
+        ie.domain = "$cmd/subs"
+        ie.from_id = "ws/python"
+        ie.data_type = "json/vector/string"
+        if isinstance(domains, list) is True:
+            ie.data = json.dumps(domains)
+        else:
+            ie.data = json.dumps([domains])
+        await self.websocket.send(ie.to_json())
+        return True
+    
+    async def unsubscribe(self, domains):
+        """Unsubscribe from domain"""
+        if self.initialized is False:
+            self.log.error("Indrajala connection data not initialized, please provide at least an uri!")
+            return False
+        if self.websocket is None:
+            self.log.error("Websocket not initialized, please call init_connection() first!")
+            return False
+        if domains is None or domains == "":
+            self.log.error("Please provide a valid domain(s)!")
+            return False
+        ie = IndraEvent()
+        ie.domain = "$cmd/unsubs"
+        ie.from_id = "ws/python"
+        ie.data_type = "json/vector/string"
+        if isinstance(domains, list) is True:
+            ie.data = json.dumps(domains)
+        else:
+            ie.data = json.dumps([domains])
+        await self.websocket.send(ie.to_json())
+        return True
+   
+    async def get_history(self, domain, start_time, end_time=None, sample_size=None):
+        pass
 
 async def tester():
     cl = IndraClient(config_file="indra_client.toml")
@@ -144,11 +189,7 @@ async def tester():
     if ws is None:
         logging.error("Could not connect to Indrajala")
         return
-    ie = IndraEvent()
-    ie.domain = "$event/python/test"
-    ie.from_id = "ws/python"
-    await cl.send_event(ie)
-
+    await cl.subscribe(["$event/#"])
     while True:
         ie = await cl.recv_event()
         if ie is None:
@@ -159,4 +200,8 @@ async def tester():
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    asyncio.get_event_loop().run_until_complete(tester())
+    try:
+        asyncio.get_event_loop().run_until_complete(tester())
+    except KeyboardInterrupt:
+        pass
+    
