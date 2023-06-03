@@ -272,7 +272,7 @@ fn build_ui(app: &Application) {
                                 ie.data_type = "db/req/event/history".to_string();
                                 let req: IndraEventRequest = IndraEventRequest {
                                     domain: domain.clone(),
-                                    mode: IndraEventRequestMode::Intervall,
+                                    mode: IndraEventRequestMode::Interval,
                                     time_jd_start: None,
                                     time_jd_end: None,
                                     max_count: Some(1000),
@@ -367,7 +367,7 @@ fn build_ui(app: &Application) {
                                         ie.data_type = "db/req/event/history".to_string();
                                         let req: IndraEventRequest = IndraEventRequest {
                                             domain: domain.clone(),
-                                            mode: IndraEventRequestMode::Intervall,
+                                            mode: IndraEventRequestMode::Interval,
                                             time_jd_start: None,
                                             time_jd_end: None,
                                             max_count: Some(1000),

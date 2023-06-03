@@ -181,7 +181,26 @@ class IndraClient:
         return True
    
     async def get_history(self, domain, start_time, end_time=None, sample_size=None):
-        pass
+        cmd = {
+            "domain": domain,
+            "time_jd_start": start_time,
+            "time_jd_end": end_time,
+            "max_count": sample_size,
+            "mode": "Intervall"
+        }
+        ie = IndraEvent()
+        ie.domain = "$cmd/db/req/event/number/float/history"
+        ie.from_id = "ws/python"
+        ie.data_type = "json/dbreq"
+        ie.data = json.dumps(cmd)
+        print("Sending: ", ie.to_json())
+        await self.websocket.send(ie.to_json())
+        print("Waiting for reply")
+        repl = await self.websocket.recv()
+        print("Received: ", repl)
+        ie.from_json(repl)
+        return ie.data
+
 
 async def tester():
     cl = IndraClient(config_file="indra_client.toml")
@@ -189,6 +208,8 @@ async def tester():
     if ws is None:
         logging.error("Could not connect to Indrajala")
         return
+    hist = await cl.get_history("$event/omu/enviro-master/BME280-1/sensor/humidity", 0, None, 100)
+    print(hist)
     await cl.subscribe(["$event/#"])
     while True:
         ie = await cl.recv_event()
@@ -204,4 +225,3 @@ if __name__ == "__main__":
         asyncio.get_event_loop().run_until_complete(tester())
     except KeyboardInterrupt:
         pass
-    
