@@ -31,7 +31,7 @@ impl SQLx {
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
         //let sq_config = config.clone();
-        let def_addr = "$cmd/db/#".to_string();
+        let def_addr = "$trx/db/#".to_string();
         let subs = vec![
             "$event/#".to_string(),
             def_addr,
@@ -165,15 +165,12 @@ impl AsyncTaskReceiver for SQLx {
                     self.config.active = false;
                 }
                 break;
-            } else if msg.domain.starts_with("$cmd/") {
+            } else if msg.domain.starts_with("$trx/db/") {
                 // Random-sampling: SELECT * FROM (SELECT * FROM mytable ORDER BY RANDOM() LIMIT 1000) ORDER BY time;
-                if msg
-                    .domain
-                    .starts_with("$cmd/db/req/event/number/float/history")
-                {
+                if msg.domain.starts_with("$trx/db/req/event/history") {
                     let req: IndraEventRequest = serde_json::from_str(msg.data.as_str()).unwrap();
                     info!(
-                        "SQLx: Received db/scalar/req command from {} search for: {:?}",
+                        "SQLx: Received db/req/event command from {} search for: {:?}",
                         msg.from_id, req
                     );
                     let rows: Vec<(i64, f64, String)>;
@@ -280,12 +277,12 @@ impl AsyncTaskReceiver for SQLx {
                     }
                     let ut_now = Utc::now();
                     let rmsg = IndraEvent {
-                        domain: msg.from_id.clone(),
+                        domain: msg.from_id.clone(), // .replace("$trx/db/req", "$trx/db/reply"),
                         from_id: self.config.name.clone(),
                         uuid4: msg.uuid4.clone(),
                         to_scope: req.domain.clone(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
-                        data_type: "db/reply/event/number/float/history".to_string(),
+                        data_type: "vector/tuple/jd/float".to_string(),
                         data: serde_json::to_string(&res).unwrap(),
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
@@ -304,10 +301,7 @@ impl AsyncTaskReceiver for SQLx {
                     }
                     //}
                     continue;
-                } else if msg
-                    .domain
-                    .starts_with("$cmd/db/req/event/number/float/uniquedomains")
-                {
+                } else if msg.domain.starts_with("$trx/db/req/event/uniquedomains") {
                     debug!("SQLx: Received db/unq/req command from {}", msg.from_id);
                     //let rows: Vec<(String)>;
                     let pool = pool.clone().unwrap();
@@ -321,12 +315,12 @@ impl AsyncTaskReceiver for SQLx {
                             .collect();
                     let ut_now = Utc::now();
                     let rmsg = IndraEvent {
-                        domain: msg.from_id.clone(),
+                        domain: msg.from_id.clone().replace("$trx/db/req", "$/trx/db/reply"),
                         from_id: self.config.name.clone(),
                         uuid4: msg.uuid4.clone(),
-                        to_scope: "domain_list".to_string(),
+                        to_scope: "".to_string(),
                         time_jd_start: IndraEvent::datetime_to_julian(ut_now),
-                        data_type: "db/reply/event/number/float/uniquedomains".to_string(),
+                        data_type: "vector/string/uniquedomains".to_string(),
                         data: serde_json::to_string(&rows).unwrap(),
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
@@ -349,6 +343,7 @@ impl AsyncTaskReceiver for SQLx {
                     // ignore Ws* domains
                     debug!("SQLx::sender: {:?}", msg);
                     // Insert a new record into the table
+                    // XXX, check if data_type and data match!
                     let rows_affected = sqlx::query(
                             r#"
                                 INSERT INTO indra_events (domain, from_id, uuid4, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)

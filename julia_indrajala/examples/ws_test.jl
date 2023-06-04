@@ -14,7 +14,7 @@ Base.@kwdef mutable struct IndraEvent
     to_scope::String
     time_jd_start::Float64
     data_type::String
-    data::Any
+    data::String
     auth_hash::Any
     time_jd_end::Any
 end;
@@ -23,7 +23,7 @@ StructTypes.StructType(::Type{IndraEvent}) = StructTypes.Mutable()
 function indra_subscribe(ws, topics)
     msg = IndraEvent("\$cmd/subs", "ws/julia", UUIDs.uuid4(), "cmd/subs", datetime2julian(now(UTC)), "cmd/subs", JSON3.write(topics), "", datetime2julian(now(UTC)))
     send(ws, JSON3.write(msg))
-    return(msg)
+    return (msg)
 end;
 
 function indra_log(ws, type, msg)
@@ -35,7 +35,7 @@ function indra_log(ws, type, msg)
     end
     send(ws, JSON3.write(msg))
     println("Sent: $(msg)")
-    return(msg)
+    return (msg)
 end;
 
 sslconfig = MbedTLS.SSLConfig(false)

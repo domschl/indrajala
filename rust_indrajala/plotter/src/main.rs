@@ -194,7 +194,7 @@ fn build_ui(app: &Application) {
             let mut ie: IndraEvent = IndraEvent::new();
             ie.domain = "$cmd/subs".to_string();
             ie.from_id = "ws/plotter".to_string();
-            ie.data_type = "cmd/subs".to_string();
+            ie.data_type = "vector/string".to_string();
             // It is not redundant.
             #[allow(clippy::redundant_clone)]
             let subs: Vec<String> = domain_topic2.clone();
@@ -203,10 +203,10 @@ fn build_ui(app: &Application) {
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message $cmd/subs");
             let mut ie: IndraEvent = IndraEvent::new();
-            ie.domain = "$cmd/db/req/event/number/float/uniquedomains".to_string();
+            ie.domain = "$trx/db/req/event/uniquedomains".to_string();
             ie.from_id = "ws/plotter".to_string();
-            ie.data_type = "db/req/event/uniquedomains".to_string();
-            ie.data = "{}".to_string();
+            ie.data_type = "".to_string();
+            ie.data = "".to_string();
             let ie_txt = serde_json::to_string(&ie).unwrap();
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message req/uniquedomains");
@@ -266,9 +266,9 @@ fn build_ui(app: &Application) {
                                     .unwrap();
                                 // request history
                                 let mut ie: IndraEvent = IndraEvent::new();
-                                ie.domain = "$cmd/db/req/event/number/float/history".to_string();
+                                ie.domain = "$trx/db/req/event/history".to_string();
                                 ie.from_id = "ws/plotter".to_string();
-                                ie.data_type = "db/req/event/history".to_string();
+                                ie.data_type = "db/eventrequest".to_string();
                                 let req: IndraEventRequest = IndraEventRequest {
                                     domain: domain.clone(),
                                     mode: IndraEventRequestMode::Interval,
@@ -300,7 +300,7 @@ fn build_ui(app: &Application) {
                                 "We got some reply! {} {} for {}: {}",
                                 ier.domain, ier.from_id, ier.to_scope, ier.data_type
                             );
-                            if ier.data_type == "db/reply/event/number/float/history" {
+                            if ier.data_type == "vector/tuple/jd/float" {
                                 let domain: String = ier.to_scope.to_string();
                                 let res: Vec<(f64, f64)> =
                                     serde_json::from_str(ier.data.to_string().as_str()).unwrap();
@@ -342,7 +342,7 @@ fn build_ui(app: &Application) {
                                     println!("Can't find {}", domain.clone());
                                 }
                                 continue;
-                            } else if ier.data_type == "db/reply/event/number/float/uniquedomains" {
+                            } else if ier.data_type.starts_with("vector/string") {
                                 println!("UNIQUE reply! {}.", ier.data_type);
                                 let domains: Vec<String> =
                                     serde_json::from_str(ier.data.as_str()).unwrap(); //.to_string().as_str()).unwrap();
@@ -367,10 +367,9 @@ fn build_ui(app: &Application) {
                                             .unwrap();
                                         // request history
                                         let mut ie: IndraEvent = IndraEvent::new();
-                                        ie.domain =
-                                            "$cmd/db/req/event/number/float/history".to_string();
+                                        ie.domain = "$trx/db/req/event/history".to_string();
                                         ie.from_id = "ws/plotter".to_string();
-                                        ie.data_type = "db/req/event/history".to_string();
+                                        ie.data_type = "eventhistory".to_string();
                                         let req: IndraEventRequest = IndraEventRequest {
                                             domain: domain.clone(),
                                             mode: IndraEventRequestMode::Interval,
