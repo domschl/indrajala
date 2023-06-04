@@ -383,6 +383,8 @@ fn main() {
         }
     }
     if indra_config.llm.is_some() {
+        // Technically, this is redundant, but once another task is added, this will be needed.
+        #[allow(clippy::redundant_clone)]
         for ll in indra_config.llm.clone().unwrap() {
             let ll: Llm = Llm::new(ll.clone());
             tsk.push(IndraTask::Llm(ll.clone()));
