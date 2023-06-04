@@ -31,7 +31,7 @@ _This is a provisional collection of protocol elements that are currently used t
 | `uuid4` | UUID4 | _a valid UUID4_ | is unchanged over transactions, can thus be used as correlator, example: 45ba88f6-5997-4aa4-9864-8683fdcdaf42 |
 | `to_scope` | String | "" | Doesn't matter |
 | `time_jd_start` | Float64 | `2460088.5710301` | Julian date of request |
-| `data_type` | String | `array/string` | the JSON data is a string array |
+| `data_type` | String | `vector/string` | the JSON data is a string array |
 | `data` | String (JSON) | `["$event/abc/#', "my/path/something/#"]` | JSON String array of subscription topics (MQTT wildcard syntax) |
 | `param auth_hash` | String |  `""` | TBD |
 | `time_jd_end` | Float64 | set to `time_jd_start` | currently unused |

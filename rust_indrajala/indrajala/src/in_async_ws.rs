@@ -78,7 +78,7 @@ impl Ws {
         ie.domain = "$cmd/unsubs".to_string();
         ie.from_id = from_id;
         ie.uuid4 = uuid::Uuid::new_v4().to_string();
-        ie.data_type = "json".to_string(); // XXX needs unification
+        ie.data_type = "vector/string".to_string();
         ie.data = serde_json::to_string(&unsubs).unwrap();
         sender.try_send(ie).unwrap();
     }

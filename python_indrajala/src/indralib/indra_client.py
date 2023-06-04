@@ -182,7 +182,7 @@ class IndraClient:
         ie = IndraEvent()
         ie.domain = "$cmd/subs"
         ie.from_id = "ws/python"
-        ie.data_type = "json/vector/string"
+        ie.data_type = "vector/string"
         if isinstance(domains, list) is True:
             ie.data = json.dumps(domains)
         else:
@@ -208,7 +208,7 @@ class IndraClient:
         ie = IndraEvent()
         ie.domain = "$cmd/unsubs"
         ie.from_id = "ws/python"
-        ie.data_type = "json/vector/string"
+        ie.data_type = "vector/string"
         if isinstance(domains, list) is True:
             ie.data = json.dumps(domains)
         else:
@@ -230,9 +230,9 @@ class IndraClient:
             "mode": "Intervall",
         }
         ie = IndraEvent()
-        ie.domain = "$cmd/db/req/event/number/float/history"
+        ie.domain = "$trx/db/req/event/history"
         ie.from_id = "ws/python"
-        ie.data_type = "json/dbreq"
+        ie.data_type = "eventrequest"
         ie.data = json.dumps(cmd)
         print("Sending: ", ie.to_json())
         await self.websocket.send(ie.to_json())
