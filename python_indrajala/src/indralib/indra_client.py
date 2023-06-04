@@ -8,8 +8,15 @@ import os
 
 from indra_event import IndraEvent
 
+
 class IndraClient:
-    def __init__(self, uri=None, ca_authority=None, auth_token=None, config_file="indra_client.toml"):
+    def __init__(
+        self,
+        uri=None,
+        ca_authority=None,
+        auth_token=None,
+        config_file="indra_client.toml",
+    ):
         self.log = logging.getLogger("IndraClient")
         self.websocket = None
         self.initialized = False
@@ -18,23 +25,25 @@ class IndraClient:
         elif uri is not None and uri != "":
             self.initialized = True
             self.uri = uri
-            if ca_authority is not None and ca_authority!="":
+            if ca_authority is not None and ca_authority != "":
                 self.ca_authority = ca_authority
             else:
                 self.ca_authority = None
-            if auth_token is not None and auth_token!="":
+            if auth_token is not None and auth_token != "":
                 self.auth_token = auth_token
             else:
                 self.auth_token = None
             if self.uri.startswith("wss://"):
                 self.use_ssl = True
         elif uri.startswith("ws://"):
-                self.use_ssl = False
+            self.use_ssl = False
         else:
             self.initialized = False
-            self.log.error("Please provide a valid uri, starting with ws:// or wss://, e.g. wss://localhost:8082")
+            self.log.error(
+                "Please provide a valid uri, starting with ws:// or wss://, e.g. wss://localhost:8082"
+            )
             return
-    
+
     def get_config(self, config_file, verbose=True):
         """Get config from file"""
         self.initialized = False
@@ -44,15 +53,19 @@ class IndraClient:
             if verbose is True:
                 self.log.error(f"{config_file} config file not found: {e}")
             return False
-        if 'uri' not in config:
+        if "uri" not in config:
             if verbose is True:
-                self.log.error(f"Please provide an uri=ws[s]://host:port in {config_file}")
+                self.log.error(
+                    f"Please provide an uri=ws[s]://host:port in {config_file}"
+                )
             return False
         self.uri = config["uri"]
         if "ca_authority" in config and config["ca_authority"] != "":
             if os.path.exists(config["ca_authority"]) is False:
                 if verbose is True:
-                    self.log.error(f"CA authority file {config['ca_authority']} not found!")
+                    self.log.error(
+                        f"CA authority file {config['ca_authority']} not found!"
+                    )
                 return False
             self.ca_authority = config["ca_authority"]
         else:
@@ -68,13 +81,14 @@ class IndraClient:
         self.initialized = True
         return True
 
-   
     async def init_connection(self, verbose=False):
         """Initialize connection"""
         if self.initialized is False:
             self.websocket = None
             if verbose is True:
-                self.log.error("Indrajala connection data not initialized, please provide at least an uri!")
+                self.log.error(
+                    "Indrajala connection data not initialized, please provide at least an uri!"
+                )
             return None
         if self.use_ssl is True:
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -82,7 +96,9 @@ class IndraClient:
                 try:
                     ssl_ctx.load_verify_locations(cafile=self.ca_authority)
                 except Exception as e:
-                    self.log.error(f"Could not load CA authority file {self.ca_authority}: {e}")
+                    self.log.error(
+                        f"Could not load CA authority file {self.ca_authority}: {e}"
+                    )
                     self.websocket = None
                     return None
         try:
@@ -92,28 +108,36 @@ class IndraClient:
             self.websocket = None
             return None
         return self.websocket
-    
+
     async def send_event(self, event):
         """Send event"""
         if self.initialized is False:
-            self.log.error("Indrajala connection data not initialized, please provide at least an uri!")
+            self.log.error(
+                "Indrajala connection data not initialized, please provide at least an uri!"
+            )
             return False
         if self.websocket is None:
-            self.log.error("Websocket not initialized, please call init_connection() first!")
+            self.log.error(
+                "Websocket not initialized, please call init_connection() first!"
+            )
             return False
         if isinstance(event, IndraEvent) is False:
             self.log.error("Please provide an IndraEvent object!")
             return False
         await self.websocket.send(event.to_json())
         return True
-    
+
     async def recv_event(self):
         """Receive event"""
         if self.initialized is False:
-            self.log.error("Indrajala connection data not initialized, please provide at least an uri!")
+            self.log.error(
+                "Indrajala connection data not initialized, please provide at least an uri!"
+            )
             return None
         if self.websocket is None:
-            self.log.error("Websocket not initialized, please call init_connection() first!")
+            self.log.error(
+                "Websocket not initialized, please call init_connection() first!"
+            )
             return None
         try:
             message = await self.websocket.recv()
@@ -123,26 +147,34 @@ class IndraClient:
         ie = IndraEvent()
         ie.from_json(message)
         return ie
-    
+
     async def close_connection(self):
         """Close connection"""
         if self.initialized is False:
-            self.log.error("Indrajala connection data not initialized, please provide at least an uri!")
+            self.log.error(
+                "Indrajala connection data not initialized, please provide at least an uri!"
+            )
             return False
         if self.websocket is None:
-            self.log.error("Websocket not initialized, please call init_connection() first!")
+            self.log.error(
+                "Websocket not initialized, please call init_connection() first!"
+            )
             return False
         await self.websocket.close()
         self.websocket = None
         return True
-    
+
     async def subscribe(self, domains):
         """Subscribe to domain"""
         if self.initialized is False:
-            self.log.error("Indrajala connection data not initialized, please provide at least an uri!")
+            self.log.error(
+                "Indrajala connection data not initialized, please provide at least an uri!"
+            )
             return False
         if self.websocket is None:
-            self.log.error("Websocket not initialized, please call init_connection() first!")
+            self.log.error(
+                "Websocket not initialized, please call init_connection() first!"
+            )
             return False
         if domains is None or domains == "":
             self.log.error("Please provide a valid domain(s)!")
@@ -157,14 +189,18 @@ class IndraClient:
             ie.data = json.dumps([domains])
         await self.websocket.send(ie.to_json())
         return True
-    
+
     async def unsubscribe(self, domains):
         """Unsubscribe from domain"""
         if self.initialized is False:
-            self.log.error("Indrajala connection data not initialized, please provide at least an uri!")
+            self.log.error(
+                "Indrajala connection data not initialized, please provide at least an uri!"
+            )
             return False
         if self.websocket is None:
-            self.log.error("Websocket not initialized, please call init_connection() first!")
+            self.log.error(
+                "Websocket not initialized, please call init_connection() first!"
+            )
             return False
         if domains is None or domains == "":
             self.log.error("Please provide a valid domain(s)!")
@@ -179,14 +215,19 @@ class IndraClient:
             ie.data = json.dumps([domains])
         await self.websocket.send(ie.to_json())
         return True
-   
+
     async def get_history(self, domain, start_time, end_time=None, sample_size=None):
+        """Get history of domain
+
+        Note: This assumes synchronous operation, i.e. the server will reply immediately.
+        If any other event occures, this will fail. XXX TODO: Implement asynchronous operation.
+        """
         cmd = {
             "domain": domain,
             "time_jd_start": start_time,
             "time_jd_end": end_time,
             "max_count": sample_size,
-            "mode": "Intervall"
+            "mode": "Intervall",
         }
         ie = IndraEvent()
         ie.domain = "$cmd/db/req/event/number/float/history"
@@ -208,7 +249,9 @@ async def tester():
     if ws is None:
         logging.error("Could not connect to Indrajala")
         return
-    hist = await cl.get_history("$event/omu/enviro-master/BME280-1/sensor/humidity", 0, None, 100)
+    hist = await cl.get_history(
+        "$event/omu/enviro-master/BME280-1/sensor/humidity", 0, None, 100
+    )
     print(hist)
     await cl.subscribe(["$event/#"])
     while True:

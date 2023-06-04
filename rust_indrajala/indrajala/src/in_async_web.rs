@@ -91,6 +91,7 @@ impl AsyncTaskSender for Web {
                 let mut st = req.state().clone();
                 let ie_res: Result<IndraEvent, tide::Error> = req.body_json().await;
                 let mut res: tide::Response = tide::Response::new(tide::StatusCode::Ok);
+                #[allow(clippy::unnecessary_unwrap)]
                 if ie_res.is_err() {
                     res.set_body(format!("bad request: {}", &ie_res.as_ref().err().unwrap()));
                     res.set_status(tide::StatusCode::BadRequest);

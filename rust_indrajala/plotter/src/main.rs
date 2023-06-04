@@ -195,6 +195,8 @@ fn build_ui(app: &Application) {
             ie.domain = "$cmd/subs".to_string();
             ie.from_id = "ws/plotter".to_string();
             ie.data_type = "cmd/subs".to_string();
+            // It is not redundant.
+            #[allow(clippy::redundant_clone)]
             let subs: Vec<String> = domain_topic2.clone();
             ie.data = serde_json::to_string(&subs).unwrap();
             let ie_txt = serde_json::to_string(&ie).unwrap();
@@ -251,13 +253,10 @@ fn build_ui(app: &Application) {
                             println!("domain: >{}<, value: {}", domain, value);
                             let mut time_series_lock = shared_time_series.lock().unwrap();
                             // time_series_lock.push((time.with_timezone(&Local), value));
-                            if time_series_lock.contains_key(&domain.clone()) {
-                                time_series_lock
-                                    .get_mut(domain.as_str())
-                                    .unwrap()
-                                    .push((time, value));
-                            } else {
-                                time_series_lock.insert(domain.clone(), Vec::new());
+                            if let std::collections::hash_map::Entry::Vacant(e) =
+                                time_series_lock.entry(domain.clone())
+                            {
+                                e.insert(Vec::new());
                                 time_series_lock
                                     .get_mut(domain.as_str())
                                     .unwrap()
@@ -281,6 +280,11 @@ fn build_ui(app: &Application) {
                                 let ie_txt = serde_json::to_string(&ie).unwrap();
                                 socket.write_message(ie_txt.into()).unwrap();
                                 println!("sent message request history of {}", domain);
+                            } else {
+                                time_series_lock
+                                    .get_mut(domain.as_str())
+                                    .unwrap()
+                                    .push((time, value));
                             }
                             // println!("Temperature at {}: {}", time, value);
                             /*
@@ -354,8 +358,10 @@ fn build_ui(app: &Application) {
                                     if !matched {
                                         continue;
                                     }
-                                    if !time_series_lock.contains_key(&domain.clone()) {
-                                        time_series_lock.insert(domain.clone(), Vec::new());
+                                    if let std::collections::hash_map::Entry::Vacant(e) =
+                                        time_series_lock.entry(domain.clone())
+                                    {
+                                        e.insert(Vec::new());
                                         Arc::new(&sender)
                                             .send(ChMessage::UpdateListBox(domain.clone()))
                                             .unwrap();
