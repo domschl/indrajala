@@ -74,7 +74,7 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
         let task_name = ie.from_id.split('/').collect::<Vec<&str>>()[0];
         debug!("IE-Event: {} {} {}", ie.time_jd_start, ie.domain, ie.data);
         for task in &mut tsk {
-            let subs: Vec<String>;
+            let subs;
             let act: bool;
             let acs: async_channel::Sender<IndraEvent>;
             let name: String;
