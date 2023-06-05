@@ -6,7 +6,8 @@ use std::time::Duration;
 use log::{debug, warn};
 
 use crate::indra_config::DingDongConfig; //, IndraTaskConfig};
-use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
+                                         //use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
+use crate::AsyncIndraTask;
 
 #[derive(Clone)]
 pub struct DingDong {
@@ -21,18 +22,18 @@ impl DingDong {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let subs = vec![format!("{}/#", config.name).to_string()];
+        let subs = vec![format!("{}/#", config.name)];
 
         DingDong {
-            config: config.clone(),
+            config,
             receiver: r1,
             sender: s1,
-            subs: subs,
+            subs,
         }
     }
 }
 
-impl AsyncTaskReceiver for DingDong {
+impl AsyncIndraTask for DingDong {
     async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
         loop {
             let msg = self.receiver.recv().await.unwrap();
@@ -47,9 +48,7 @@ impl AsyncTaskReceiver for DingDong {
             }
         }
     }
-}
 
-impl AsyncTaskSender for DingDong {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         loop {
             let a = &self.config.topic;

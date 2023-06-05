@@ -12,7 +12,7 @@
 use env_logger::Env;
 use log::{debug, error, info, warn};
 
-use async_channel;
+//use async_channel;
 use async_std::task;
 
 //mod OLD_indra_event;
@@ -35,7 +35,7 @@ use in_async_signal::Signal;
 mod in_async_tasker;
 use in_async_tasker::Tasker;
 mod in_async_llm;
-use in_async_llm::LLM;
+use in_async_llm::Llm;
 
 #[derive(Clone)]
 enum IndraTask {
@@ -46,18 +46,12 @@ enum IndraTask {
     Ws(Ws),
     Signal(Signal),
     Tasker(Tasker),
-    LLM(LLM),
+    Llm(Llm),
 }
 
-trait AsyncTaskInit {
-    async fn async_init(self) -> Vec<String>;
-}
-
-trait AsyncTaskSender {
+trait AsyncIndraTask {
+    //async fn async_init(self) -> Vec<String>;
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>);
-}
-
-trait AsyncTaskReceiver {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>);
 }
 
@@ -71,16 +65,16 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
         }
         let ie = msg.unwrap();
         let mut from_ident = false;
-        if ie.from_id == "" {
+        if ie.from_id.is_empty() {
             error!(
                 "ERROR: ignoring route to {}, from_id is not set: {}, can't avoid recursion.",
                 ie.domain, ie.from_id
             );
         }
-        let task_name = ie.from_id.split("/").collect::<Vec<&str>>()[0];
+        let task_name = ie.from_id.split('/').collect::<Vec<&str>>()[0];
         debug!("IE-Event: {} {} {}", ie.time_jd_start, ie.domain, ie.data);
         for task in &mut tsk {
-            let subs: Vec<String>;
+            let subs;
             let act: bool;
             let acs: async_channel::Sender<IndraEvent>;
             let name: String;
@@ -128,14 +122,14 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                     name = st.config.clone().name;
                     subs = st.subs.clone();
                 }
-                IndraTask::LLM(st) => {
+                IndraTask::Llm(st) => {
                     act = st.config.clone().active;
                     acs = st.sender.clone();
                     name = st.config.clone().name;
                     subs = st.subs.clone();
                 }
             }
-            if act == false {
+            if !act {
                 continue;
             }
             let name_subs = name.clone() + "/#";
@@ -158,7 +152,7 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                 if ie.domain == "$cmd/subs" {
                     let subs_res: Result<Vec<String>, serde_json::Error> =
                         serde_json::from_str(ie.data.as_str());
-                    if !subs_res.is_err() {
+                    if subs_res.is_ok() {
                         let mut subs = subs_res.unwrap();
                         warn!("{}: {} subs: {:?}", ie.from_id, name, subs);
                         match task {
@@ -197,7 +191,7 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                                 st.subs.append(&mut subs);
                                 debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
-                            IndraTask::LLM(st) => {
+                            IndraTask::Llm(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
                                 debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
@@ -210,7 +204,7 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                 if ie.domain == "$cmd/unsubs" {
                     let subs_res: Result<Vec<String>, serde_json::Error> =
                         serde_json::from_str(ie.data.as_str());
-                    if !subs_res.is_err() {
+                    if subs_res.is_ok() {
                         let subs = subs_res.unwrap().clone();
                         match task {
                             IndraTask::DingDong(st) => {
@@ -283,7 +277,7 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                                 }
                                 debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
-                            IndraTask::LLM(st) => {
+                            IndraTask::Llm(st) => {
                                 let old_subs = st.subs.clone();
                                 for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
@@ -316,13 +310,13 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                 let _ = acs.send(ie.clone()).await;
             }
         }
-        if from_ident == false {
+        if !from_ident {
             error!(
                 "ERROR: invalid from_instance in {:#?}, could not identify originating task!",
                 ie
             );
         }
-        if quit_cmd_received == true {
+        if quit_cmd_received {
             warn!("Router: QUIT command received, exiting.");
             break;
         }
@@ -340,52 +334,54 @@ fn main() {
 
     let mut tsk: Vec<IndraTask> = vec![];
 
-    if !indra_config.mqtt.is_none() {
+    if indra_config.mqtt.is_some() {
         for mq in indra_config.mqtt.clone().unwrap() {
             let m = Mqtt::new(mq.clone());
             tsk.push(IndraTask::Mqtt(m.clone()));
         }
     }
-    if !indra_config.ding_dong.is_none() {
+    if indra_config.ding_dong.is_some() {
         for dd in indra_config.ding_dong.clone().unwrap() {
             let d = DingDong::new(dd.clone());
             tsk.push(IndraTask::DingDong(d.clone()));
         }
     }
-    if !indra_config.web.is_none() {
+    if indra_config.web.is_some() {
         for rs in indra_config.web.clone().unwrap() {
             let r = Web::new(rs.clone());
             tsk.push(IndraTask::Web(r.clone()));
         }
     }
-    if !indra_config.sqlx.is_none() {
+    if indra_config.sqlx.is_some() {
         for sq in indra_config.sqlx.clone().unwrap() {
             let s = SQLx::new(sq.clone());
             tsk.push(IndraTask::SQLx(s.clone()));
         }
     }
-    if !indra_config.ws.is_none() {
+    if indra_config.ws.is_some() {
         for rs in indra_config.ws.clone().unwrap() {
             let w = Ws::new(rs.clone());
             tsk.push(IndraTask::Ws(w.clone()));
         }
     }
-    if !indra_config.signal.is_none() {
+    if indra_config.signal.is_some() {
         for si in indra_config.signal.clone().unwrap() {
             let si: Signal = Signal::new(si.clone());
             tsk.push(IndraTask::Signal(si.clone()));
         }
     }
-    if !indra_config.tasker.is_none() {
+    if indra_config.tasker.is_some() {
         for ta in indra_config.tasker.clone().unwrap() {
             let ta: Tasker = Tasker::new(ta.clone());
             tsk.push(IndraTask::Tasker(ta.clone()));
         }
     }
-    if !indra_config.llm.is_none() {
+    if indra_config.llm.is_some() {
+        // Technically, this is redundant, but once another task is added, this will be needed.
+        #[allow(clippy::redundant_clone)]
         for ll in indra_config.llm.clone().unwrap() {
-            let ll: LLM = LLM::new(ll.clone());
-            tsk.push(IndraTask::LLM(ll.clone()));
+            let ll: Llm = Llm::new(ll.clone());
+            tsk.push(IndraTask::Llm(ll.clone()));
         }
     }
 
@@ -424,7 +420,7 @@ fn main() {
                     join_handles.push(task::spawn(ta.clone().async_sender(sender.clone())));
                     join_handles.push(task::spawn(ta.clone().async_receiver(sender.clone())));
                 }
-                IndraTask::LLM(ll) => {
+                IndraTask::Llm(ll) => {
                     join_handles.push(task::spawn(ll.clone().async_sender(sender.clone())));
                     join_handles.push(task::spawn(ll.clone().async_receiver(sender.clone())));
                 }

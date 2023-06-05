@@ -2,7 +2,7 @@ use crate::IndraEvent;
 use std::time::Duration;
 
 use crate::indra_config::SignalConfig; //, IndraTaskConfig};
-use crate::{AsyncTaskReceiver, AsyncTaskSender}; // , IndraTask} //, TaskInit};
+use crate::AsyncIndraTask;
 
 //use env_logger::Env;
 //use log::{debug, error, info, warn};
@@ -28,18 +28,18 @@ impl Signal {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let subs = vec![format!("{}/#", config.name).to_string()];
+        let subs = vec![format!("{}/#", config.name)];
 
         Signal {
-            config: config.clone(),
+            config,
             receiver: r1,
             sender: s1,
-            subs: subs,
+            subs,
         }
     }
 }
 
-impl AsyncTaskReceiver for Signal {
+impl AsyncIndraTask for Signal {
     async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
         debug!("IndraTask Signal::sender");
         loop {
@@ -54,6 +54,28 @@ impl AsyncTaskReceiver for Signal {
                 debug!("Signal::sender: {:?}", msg);
             }
         }
+    }
+
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
+        let signals = Signals::new([SIGHUP, SIGTERM, SIGINT, SIGQUIT]).unwrap();
+        let handle = signals.handle();
+
+        let signals_task = async_std::task::spawn(self.clone().handle_signals(signals, sender));
+
+        loop {
+            // XXX remove this loop
+            async_std::task::sleep(Duration::from_millis(100)).await;
+            if !self.config.active {
+                debug!("Signal handler not active, quitting sender-loop.");
+                break;
+            }
+        }
+
+        // Terminate the signal stream.  XXX remove.
+        handle.close();
+        signals_task.await;
+
+        //Ok(())
     }
 }
 
@@ -98,29 +120,5 @@ impl Signal {
                 _ => unreachable!(),
             }
         }
-    }
-}
-
-impl AsyncTaskSender for Signal {
-    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
-        let signals = Signals::new(&[SIGHUP, SIGTERM, SIGINT, SIGQUIT]).unwrap();
-        let handle = signals.handle();
-
-        let signals_task = async_std::task::spawn(self.clone().handle_signals(signals, sender));
-
-        loop {
-            // XXX remove this loop
-            async_std::task::sleep(Duration::from_millis(100)).await;
-            if !self.config.active {
-                debug!("Signal handler not active, quitting sender-loop.");
-                break;
-            }
-        }
-
-        // Terminate the signal stream.  XXX remove.
-        handle.close();
-        signals_task.await;
-
-        //Ok(())
     }
 }

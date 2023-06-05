@@ -17,7 +17,7 @@ struct IndraEvent
     time_jd_end::Float64
 end;
 
-function new(domain::String, from_id::String, uuid4::UUID, to_scope::String, time_jd_start::Float64, data_type::String, data, auth_has::String, time_jd_end::Float64) :: IndraEvent
+function new(domain::String, from_id::String, uuid4::UUID, to_scope::String, time_jd_start::Float64, data_type::String, data, auth_has::String, time_jd_end::Float64)::IndraEvent
     return IndraEvent(domain, from_id, uuid4, to_scope, time_jd_start, data_type, data, auth_has, time_jd_end)
 end;
 
@@ -25,7 +25,7 @@ println("Starting...")
 sslconfig = MbedTLS.SSLConfig(false)
 println("Opening...")
 WebSockets.open("ws://localhost:8083", sslconfig=sslconfig) do ws
-    msg = IndraEvent("\$cmd/ws/subs", "ws/julia", UUIDs.uuid4(), "cmd/subs", datetime2julian(now(UTC)), "cmd/subs", JSON3.write(["omu/#"]), "", datetime2julian(now(UTC)))
+    msg = IndraEvent("\$cmd/subs", "ws/julia", UUIDs.uuid4(), "cmd/subs", datetime2julian(now(UTC)), "cmd/subs", JSON3.write(["omu/#"]), "", datetime2julian(now(UTC)))
     for msg in ws
         println("Received: $(msg)")
         msg.domain = "$log" * msg.domain

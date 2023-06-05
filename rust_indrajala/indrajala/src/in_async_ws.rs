@@ -1,8 +1,8 @@
 use crate::indra_config::WsConfig;
+use crate::AsyncIndraTask;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
-use async_channel;
+//use async_channel;
 use futures::stream::SplitSink;
 use std::net::SocketAddr;
 use std::{collections::HashMap, fs::File, io::BufReader, sync::Arc};
@@ -55,31 +55,36 @@ impl Ws {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let ws_config = config.clone();
-        let subs = vec![format!("{}/#", config.name).to_string()];
+        let ws_config = config;
+        let subs = vec![format!("{}/#", ws_config.name)];
 
         Ws {
-            config: ws_config.clone(),
+            config: ws_config,
             receiver: r1,
             sender: s1,
-            subs: subs,
+            subs,
             wss_connections: ActiveWssConnections::new(RwLock::new(HashMap::new())),
             ws_connections: ActiveWsConnections::new(RwLock::new(HashMap::new())),
         }
     }
 
-    pub fn unsub(self, unsubs: Vec<String>, sender: async_channel::Sender<IndraEvent>, from_id: String) {
-            let mut ie = IndraEvent::new();
-            ie.domain = "$cmd/unsubs".to_string();
-            ie.from_id = from_id;
-            ie.uuid4 = uuid::Uuid::new_v4().to_string();
-            ie.data_type = "json".to_string();  // XXX needs unification
-            ie.data = serde_json::to_string(&unsubs).unwrap();
-            sender.try_send(ie).unwrap();
+    pub fn unsub(
+        self,
+        unsubs: Vec<String>,
+        sender: async_channel::Sender<IndraEvent>,
+        from_id: String,
+    ) {
+        let mut ie = IndraEvent::new();
+        ie.domain = "$cmd/unsubs".to_string();
+        ie.from_id = from_id;
+        ie.uuid4 = uuid::Uuid::new_v4().to_string();
+        ie.data_type = "vector/string".to_string();
+        ie.data = serde_json::to_string(&unsubs).unwrap();
+        sender.try_send(ie).unwrap();
     }
 }
 
-impl AsyncTaskReceiver for Ws {
+impl AsyncIndraTask for Ws {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
         debug!("IndraTask Ws::receiver");
         loop {
@@ -87,14 +92,14 @@ impl AsyncTaskReceiver for Ws {
             if msg.domain == "$cmd/quit" {
                 debug!("Ws: Received quit command, quiting receive-loop.");
                 //if self.config.active {
-                    // self.config.active = false;
+                // self.config.active = false;
                 //}
                 break;
             }
             let msg_text = serde_json::to_string(&msg).unwrap();
             let mut ws_dead_conns = Vec::new();
             let mut wss_dead_conns = Vec::new();
-            if self.config.ssl == true {
+            if self.config.ssl {
                 let mut peers = self.wss_connections.write().await;
                 for (key, value) in peers.iter_mut() {
                     let subs: Vec<String> = value.subs.clone();
@@ -106,11 +111,13 @@ impl AsyncTaskReceiver for Ws {
                         }
                     }
                     let nn = self.clone().config.name.clone();
-                    if msg.domain == format!("{}/{}", nn, key).to_string() {
+                    if msg.domain == *format!("{}/{}", nn, key).to_string() {
                         matched = true;
                         info!(
                             "Matched direct-address websocket connection: {}/{:?}, {}",
-                            self.clone().config.clone().name, key, msg.domain
+                            self.clone().config.clone().name,
+                            key,
+                            msg.domain
                         );
                     }
                     if !matched {
@@ -130,7 +137,8 @@ impl AsyncTaskReceiver for Ws {
                     let res = ws_sink.tx.send(msg).await;
                     if res.is_err() {
                         warn!("Error sending message to websocket: {:?}", res);
-                        ws_dead_conns.push(key.clone());
+                        // ws_dead_conns.push(key.clone());
+                        ws_dead_conns.push(*key);
                     }
                 }
             } else {
@@ -144,7 +152,7 @@ impl AsyncTaskReceiver for Ws {
                             break;
                         }
                     }
-                    if msg.domain == format!("{}/{}", self.config.name, key).to_string() {
+                    if msg.domain == *format!("{}/{}", self.config.name, key).to_string() {
                         matched = true;
                         info!(
                             "Matched direct-address websocket connection: {}/{:?}, {}",
@@ -168,16 +176,18 @@ impl AsyncTaskReceiver for Ws {
                     let res = ws_sink.tx.send(msg).await;
                     if res.is_err() {
                         warn!("Error sending message to websocket: {:?}", res);
-                        wss_dead_conns.push(key.clone());
+                        //wss_dead_conns.push(key.clone());
+                        wss_dead_conns.push(*key);
                     }
                 }
             }
             // Remove dead connections:
-            if self.config.ssl == true {
+            if self.config.ssl {
                 let mut peers = self.wss_connections.write().await;
                 for key in ws_dead_conns.iter() {
                     let from_id = format!("{}/{}", self.config.name, key).to_string();
-                    self.clone().unsub(peers[key].subs.clone(), sender.clone(), from_id);
+                    self.clone()
+                        .unsub(peers[key].subs.clone(), sender.clone(), from_id);
                     info!("Removing dead connection: {:?}", key);
                     peers.remove(key);
                 }
@@ -186,10 +196,69 @@ impl AsyncTaskReceiver for Ws {
                 for key in wss_dead_conns.iter() {
                     let from_id = format!("{}/{}", self.config.name, key).to_string();
                     info!("Removing dead connection: {:?}", key);
-                    self.clone().unsub(peers[key].subs.clone(), sender.clone(), from_id);
+                    self.clone()
+                        .unsub(peers[key].subs.clone(), sender.clone(), from_id);
                     peers.remove(key);
                 }
             }
+        }
+    }
+
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            return;
+        }
+        let addr = self.config.address.as_str();
+        if self.config.ssl {
+            debug!("IndraTask Ws::sender: SSL enabled");
+
+            let f = File::open(self.config.cert).unwrap();
+            let mut cert_reader = BufReader::new(f);
+            let cert_chain = certs(&mut cert_reader)
+                .unwrap()
+                .iter()
+                .map(|v| rustls::Certificate(v.clone()))
+                .collect();
+            let f = File::open(self.config.key).unwrap();
+            let mut key_reader = BufReader::new(f);
+            let mut keys = pkcs8_private_keys(&mut key_reader)
+                .unwrap()
+                .iter()
+                .map(|v| rustls::PrivateKey(v.clone()))
+                .collect::<Vec<_>>();
+            let key = keys.remove(0);
+
+            let ws_config = ServerConfig::builder()
+                .with_safe_defaults()
+                .with_no_client_auth()
+                .with_single_cert(cert_chain, key)
+                .expect("bad certificate/key");
+
+            let listener = TcpListener::bind(addr).await.unwrap();
+            info!("Ws: Listening on wss://{} (ssl)", addr);
+            let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
+
+            wss_accept_loop(
+                self.wss_connections,
+                listener,
+                Arc::new(tls_acceptor),
+                self.config.name.as_str(),
+                sender,
+            )
+            .await;
+        } else {
+            debug!("IndraTask Ws::sender: SSL disabled");
+
+            let listener = TcpListener::bind(addr).await.unwrap();
+            info!("Ws: Listening on ws://{}", addr);
+
+            ws_accept_loop(
+                self.ws_connections,
+                listener,
+                self.config.name.as_str(),
+                sender,
+            )
+            .await;
         }
     }
 }
@@ -213,12 +282,12 @@ async fn handle_message(
                     if new_subs_res.is_ok() {
                         let new_subs = new_subs_res.unwrap();
                         for sub in new_subs.iter() {
-                            let ev_sub;
-                            if !sub.starts_with("$event/") {   // XXX useless hack, tbr.
-                                ev_sub = format!("$event/{}", sub);
+                            let ev_sub = if !sub.starts_with("$event/") {
+                                // XXX useless hack, tbr.
+                                format!("$event/{}", sub)
                             } else {
-                                ev_sub = sub.clone();
-                            }
+                                sub.clone()
+                            };
                             //if !subs.contains(&ev_sub) {  // XXX: allow dups
                             subs.push(ev_sub.clone());
                             //}
@@ -392,65 +461,5 @@ async fn wss_accept_loop(
                 warn!("failed to handle connection: {}", e);
             }
         });
-    }
-}
-
-impl AsyncTaskSender for Ws {
-    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
-        if self.config.active == false {
-            return;
-        }
-        let addr = self.config.address.as_str();
-        if self.config.ssl == true {
-            debug!("IndraTask Ws::sender: SSL enabled");
-
-            let f = File::open(self.config.cert).unwrap();
-            let mut cert_reader = BufReader::new(f);
-            let cert_chain = certs(&mut cert_reader)
-                .unwrap()
-                .iter()
-                .map(|v| rustls::Certificate(v.clone()))
-                .collect();
-            let f = File::open(self.config.key).unwrap();
-            let mut key_reader = BufReader::new(f);
-            let mut keys = pkcs8_private_keys(&mut key_reader)
-                .unwrap()
-                .iter()
-                .map(|v| rustls::PrivateKey(v.clone()))
-                .collect::<Vec<_>>();
-            let key = keys.remove(0);
-
-            let ws_config = ServerConfig::builder()
-                .with_safe_defaults()
-                .with_no_client_auth()
-                .with_single_cert(cert_chain, key)
-                .expect("bad certificate/key");
-
-            let listener = TcpListener::bind(addr).await.unwrap();
-            info!("Ws: Listening on wss://{} (ssl)", addr);
-            let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
-
-            wss_accept_loop(
-                self.wss_connections,
-                listener,
-                Arc::new(tls_acceptor),
-                self.config.name.as_str(),
-                sender,
-            )
-            .await;
-        } else {
-            debug!("IndraTask Ws::sender: SSL disabled");
-
-            let listener = TcpListener::bind(addr).await.unwrap();
-            info!("Ws: Listening on ws://{}", addr);
-
-            ws_accept_loop(
-                self.ws_connections,
-                listener,
-                self.config.name.as_str(),
-                sender,
-            )
-            .await;
-        }
     }
 }
