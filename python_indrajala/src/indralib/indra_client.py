@@ -19,6 +19,9 @@ class IndraClient:
     ):
         self.log = logging.getLogger("IndraClient")
         self.websocket = None
+        self.trx = {}
+        self.recv_queue = asyncio.Queue()
+        self.recv_task = None
         self.initialized = False
         if config_file is not None and config_file != "":
             self.initialized = self.get_config(config_file, verbose=False)
@@ -84,12 +87,20 @@ class IndraClient:
     async def init_connection(self, verbose=False):
         """Initialize connection"""
         if self.initialized is False:
+            self.trx = {}
             self.websocket = None
             if verbose is True:
                 self.log.error(
                     "Indrajala connection data not initialized, please provide at least an uri!"
                 )
             return None
+        if self.websocket is not None:
+            if verbose is True:
+                self.log.warning(
+                    "Websocket already initialized, please call close_connection() first!"
+                )
+            return self.websocket
+        self.trx = {}
         if self.use_ssl is True:
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             if self.ca_authority is not None:
@@ -107,7 +118,27 @@ class IndraClient:
             self.log.error(f"Could not connect to {self.uri}: {e}")
             self.websocket = None
             return None
+        self.recv_queue.empty()
+        self.recv_task = asyncio.create_task(self.recv_task())
         return self.websocket
+
+    async def recv_task(self):
+        """Receive task"""
+        while True:
+            try:
+                message = await self.websocket.recv()
+            except Exception as e:
+                self.log.error(f"Could not receive message: {e}")
+                break
+            ie = IndraEvent()
+            ie.from_json(message)
+            if ie.uuid in self.trx:
+                self.trx[ie.uuid].set_result(ie)
+                del self.trx[ie.uuid]
+            else:
+                await self.recv_queue.put(ie)
+        self.recv_task = None
+        return
 
     async def send_event(self, event):
         """Send event"""
@@ -124,8 +155,13 @@ class IndraClient:
         if isinstance(event, IndraEvent) is False:
             self.log.error("Please provide an IndraEvent object!")
             return False
+        if event.domain.startswith("$trx/") is True:
+            replyEventFuture = asyncio.futures.Future()
+            self.trx[event.domain] = replyEventFuture
+        else:
+            replyEventFuture = None
         await self.websocket.send(event.to_json())
-        return True
+        return replyEventFuture
 
     async def recv_event(self):
         """Receive event"""
@@ -140,10 +176,11 @@ class IndraClient:
             )
             return None
         try:
-            message = await self.websocket.recv()
+            message = await self.recv_queue.get()
         except Exception as e:
             self.log.error(f"Could not receive message: {e}")
             return None
+        self.recv_queue.task_done()
         ie = IndraEvent()
         ie.from_json(message)
         return ie
@@ -160,7 +197,11 @@ class IndraClient:
                 "Websocket not initialized, please call init_connection() first!"
             )
             return False
+        if self.recv_task is not None:
+            self.recv_task.cancel()
+            self.recv_task = None
         await self.websocket.close()
+        self.trx = {}
         self.websocket = None
         return True
 
@@ -219,8 +260,7 @@ class IndraClient:
     async def get_history(self, domain, start_time, end_time=None, sample_size=None):
         """Get history of domain
 
-        Note: This assumes synchronous operation, i.e. the server will reply immediately.
-        If any other event occures, this will fail. XXX TODO: Implement asynchronous operation.
+        returns a future object, which will be set when the reply is received
         """
         cmd = {
             "domain": domain,
@@ -235,12 +275,7 @@ class IndraClient:
         ie.data_type = "eventrequest"
         ie.data = json.dumps(cmd)
         print("Sending: ", ie.to_json())
-        await self.websocket.send(ie.to_json())
-        print("Waiting for reply")
-        repl = await self.websocket.recv()
-        print("Received: ", repl)
-        ie.from_json(repl)
-        return ie.data
+        return await self.websocket.send(ie.to_json())
 
 
 async def tester():
@@ -249,11 +284,12 @@ async def tester():
     if ws is None:
         logging.error("Could not connect to Indrajala")
         return
-    hist = await cl.get_history(
+    await cl.subscribe(["$event/#"])
+    hist_future = await cl.get_history(
         "$event/omu/enviro-master/BME280-1/sensor/humidity", 0, None, 100
     )
+    hist = await hist_future
     print(hist)
-    await cl.subscribe(["$event/#"])
     while True:
         ie = await cl.recv_event()
         if ie is None:
