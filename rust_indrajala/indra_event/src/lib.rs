@@ -100,7 +100,7 @@ pub struct IndraEvent {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum IndraEventRequestMode {
-    Intervall,
+    Interval,
     Latest,
 }
 
@@ -162,13 +162,13 @@ impl IndraEvent {
 
         let julian_day_number =
             day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045;
-        let julian_date = julian_day_number as f64
+        //let julian_date =
+        // Julian Date:
+        julian_day_number as f64
             + (dt.hour() as f64 - 12.0) / 24.0
             + dt.minute() as f64 / 1440.0
             + dt.second() as f64 / 86400.0
-            + dt.timestamp_subsec_micros() as f64 / 86400000000.0;
-
-        julian_date
+            + dt.timestamp_subsec_micros() as f64 / 86400000000.0
     }
 
     pub fn julian_to_datetime(jd: f64) -> DateTime<Utc> {
@@ -179,13 +179,13 @@ impl IndraEvent {
         let mut a = z;
         if z >= 2299161 {
             let alpha = ((z as f64 - 1867216.25) / 36524.25).floor() as i64;
-            a = z + 1 + alpha - (alpha / 4) as i64;
+            a = z + 1 + alpha - (alpha / 4);
         }
         let b = a + 1524;
-        let c = ((b as f64 - 122.1) / 365.25 as f64).floor() as i64;
-        let d = (365.25 as f64 * c as f64).floor() as i64;
+        let c = ((b as f64 - 122.1) / 365.25).floor() as i64;
+        let d = (365.25 * c as f64).floor() as i64;
         let e = ((b - d) as f64 / 30.6001).floor() as i64;
-        let day = b - d - (30.6001 as f64 * e as f64).floor() as i64;
+        let day = b - d - (30.6001 * e as f64).floor() as i64;
         let month = if e < 14 { e - 1 } else { e - 13 };
         let year = if month > 2 { c - 4716 } else { c - 4715 };
         let hour = (f * 24.0).floor() as u32;
@@ -196,14 +196,7 @@ impl IndraEvent {
                 * 1000.0)
                 .floor() as u32;
         chrono::Utc
-            .with_ymd_and_hms(
-                year as i32,
-                month as u32,
-                day as u32,
-                hour as u32,
-                minute as u32,
-                second as u32,
-            )
+            .with_ymd_and_hms(year as i32, month as u32, day as u32, hour, minute, second)
             .unwrap()
             .with_nanosecond(microsecond * 1_000)
             .unwrap()
@@ -245,34 +238,48 @@ impl IndraEvent {
                 return false;
             }
         }
-        if sub[inds..].len() == 0 {
+        if sub[inds..].is_empty() {
             return true;
         }
-        if sub[inds..].len() == 1 {
-            if sub.chars().nth(inds).unwrap() == '+' || sub.chars().nth(inds).unwrap() == '#' {
-                return true;
-            }
+        //if sub[inds..].len() == 1 {
+        //    if sub.chars().nth(inds).unwrap() == '+' || sub.chars().nth(inds).unwrap() == '#' {
+        //        return true;
+        //    }
+        //}
+        if sub[inds..].len() == 1
+            && (sub.chars().nth(inds).unwrap() == '+' || sub.chars().nth(inds).unwrap() == '#')
+        {
+            return true;
         }
+
         false
     }
 
     pub fn check_route(
-        ie_domain: &String,
-        _name: &String,
+        ie_domain: &str,
+        _name: &str,
         subs: &Vec<String>,
         blocks: Option<&Vec<String>>,
     ) -> bool {
         for topic in subs {
             if IndraEvent::mqcmp(ie_domain, topic) {
                 let mut blocked = false;
-                if !blocks.is_none() {
-                    for out_block in blocks.unwrap() {
-                        if IndraEvent::mqcmp(ie_domain, &out_block) {
+                if let Some(blocks) = blocks {
+                    for out_block in blocks {
+                        if IndraEvent::mqcmp(ie_domain, out_block) {
                             // println!("router: {} {} {} blocked", name, topic, ie_domain);
                             blocked = true;
                         }
                     }
                 }
+                //if blocks.is_some() {
+                //    for out_block in blocks.unwrap() {
+                //        if IndraEvent::mqcmp(ie_domain, out_block) {
+                //            // println!("router: {} {} {} blocked", name, topic, ie_domain);
+                //            blocked = true;
+                //        }
+                //    }
+                //}
 
                 if blocked {
                     continue;
@@ -287,6 +294,12 @@ impl IndraEvent {
         let mut elements: Vec<&str> = path.split('/').collect();
         elements.reverse();
         elements.join("/")
+    }
+}
+
+impl Default for IndraEvent {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

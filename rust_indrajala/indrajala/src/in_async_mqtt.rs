@@ -1,4 +1,4 @@
-use async_channel;
+//use async_channel;
 use paho_mqtt::{AsyncClient, ConnectOptionsBuilder, CreateOptionsBuilder};
 use std::time::Duration;
 //use async_std::task;
@@ -10,8 +10,8 @@ use uuid::Uuid;
 use log::{debug, error, warn};
 
 use crate::indra_config::MqttConfig;
+use crate::AsyncIndraTask;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 #[derive(Clone)]
 pub struct Mqtt {
@@ -26,19 +26,19 @@ impl Mqtt {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let mqtt_config = config.clone();
-        let subs = vec![format!("{}/#", config.name).to_string()];
+        let mqtt_config = config; //.clone();
+        let subs = vec![format!("{}/#", mqtt_config.name)];
 
         Mqtt {
-            config: mqtt_config.clone(),
+            config: mqtt_config,
             receiver: r1,
             sender: s1,
-            subs: subs,
+            subs,
         }
     }
 }
 
-impl AsyncTaskSender for Mqtt {
+impl AsyncIndraTask for Mqtt {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
             debug!("MQTT is not active");
@@ -81,57 +81,51 @@ impl AsyncTaskSender for Mqtt {
                 let payload = msg.payload_str();
                 // check if message was retained:
                 let retained = msg.retained();
-                if retained {
-                    // ignore! println!("Received retained message on topic: {}", topic);
-                } else {
-                    if self.config.active {
-                        let mut dd = IndraEvent::new();
-                        if topic.starts_with("$") {
-                            dd.domain = topic.to_string();
-                        } else {
-                            dd.domain = "$event/".to_string() + topic;
-                        }
+                if !retained && self.config.active {
+                    let mut dd = IndraEvent::new();
+                    if topic.starts_with('$') {
+                        dd.domain = topic.to_string();
+                    } else {
                         dd.domain = "$event/".to_string() + topic;
-                        dd.from_id = self.config.name.clone();
-                        dd.uuid4 = Uuid::new_v4().to_string();
-                        dd.to_scope = self.config.to_scope.clone();
-                        let num_int: Result<i64, _> = payload.trim().parse::<i64>();
-                        if num_int.is_ok() {
-                            dd.data_type = "number/int".to_string();
-                            dd.data = num_int.unwrap().to_string();
+                    }
+                    dd.domain = "$event/".to_string() + topic;
+                    dd.from_id = self.config.name.clone();
+                    dd.uuid4 = Uuid::new_v4().to_string();
+                    dd.to_scope = self.config.to_scope.clone();
+                    let num_int: Result<i64, _> = payload.trim().parse::<i64>();
+                    if num_int.is_ok() {
+                        dd.data_type = "number/int".to_string();
+                        dd.data = num_int.unwrap().to_string();
+                    } else {
+                        let num_float: Result<f64, _> = payload.trim().parse::<f64>();
+                        if num_float.is_ok() {
+                            dd.data_type = "number/float".to_string();
+                            dd.data = num_float.unwrap().to_string();
+                        } else if ["on", "true", "active"]
+                            .contains(&payload.trim().to_lowercase().as_str())
+                        {
+                            dd.data_type = "bool".to_string();
+                            dd.data = true.to_string();
+                        } else if ["off", "false", "inactive"]
+                            .contains(&payload.trim().to_lowercase().as_str())
+                        {
+                            dd.data_type = "bool".to_string();
+                            dd.data = false.to_string();
                         } else {
-                            let num_float: Result<f64, _> = payload.trim().parse::<f64>();
-                            if num_float.is_ok() {
-                                dd.data_type = "number/float".to_string();
-                                dd.data = num_float.unwrap().to_string();
+                            let val_json: Result<serde_json::Value, serde_json::Error> =
+                                serde_json::from_str(payload.to_string().as_str());
+                            if val_json.is_ok() {
+                                dd.data_type = "json".to_string();
+                                dd.data = payload.to_string();
                             } else {
-                                if ["on", "true", "active"]
-                                    .contains(&payload.trim().to_lowercase().as_str())
-                                {
-                                    dd.data_type = "bool".to_string();
-                                    dd.data = true.to_string();
-                                } else if ["off", "false", "inactive"]
-                                    .contains(&payload.trim().to_lowercase().as_str())
-                                {
-                                    dd.data_type = "bool".to_string();
-                                    dd.data = false.to_string();
-                                } else {
-                                    let val_json: Result<serde_json::Value, serde_json::Error> =
-                                        serde_json::from_str(payload.to_string().as_str());
-                                    if val_json.is_ok() {
-                                        dd.data_type = "json".to_string();
-                                        dd.data = payload.to_string();
-                                    } else {
-                                        dd.data_type = "string".to_string();
-                                        dd.data = payload.to_string();
-                                    }
-                                }
+                                dd.data_type = "string".to_string();
+                                dd.data = payload.to_string();
                             }
                         }
-                        if sender.send(dd).await.is_err() {
-                            warn!("Mqtt: Error sending message to channel, assuming shutdown.");
-                            break;
-                        }
+                    }
+                    if sender.send(dd).await.is_err() {
+                        warn!("Mqtt: Error sending message to channel, assuming shutdown.");
+                        break;
                     }
                 }
                 debug!("MQTT message: {}", msg);
@@ -158,9 +152,7 @@ impl AsyncTaskSender for Mqtt {
         // Explicit return type for the async block
         //Ok::<(), mqtt::Error>(())
     }
-}
 
-impl AsyncTaskReceiver for Mqtt {
     async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
         loop {
             let msg = self.receiver.recv().await.unwrap();
