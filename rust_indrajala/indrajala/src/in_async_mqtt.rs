@@ -10,8 +10,8 @@ use uuid::Uuid;
 use log::{debug, error, warn};
 
 use crate::indra_config::MqttConfig;
+use crate::AsyncIndraTask;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 #[derive(Clone)]
 pub struct Mqtt {
@@ -38,7 +38,7 @@ impl Mqtt {
     }
 }
 
-impl AsyncTaskSender for Mqtt {
+impl AsyncIndraTask for Mqtt {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
             debug!("MQTT is not active");
@@ -152,9 +152,7 @@ impl AsyncTaskSender for Mqtt {
         // Explicit return type for the async block
         //Ok::<(), mqtt::Error>(())
     }
-}
 
-impl AsyncTaskReceiver for Mqtt {
     async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
         loop {
             let msg = self.receiver.recv().await.unwrap();

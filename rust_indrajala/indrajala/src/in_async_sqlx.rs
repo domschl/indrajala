@@ -11,7 +11,7 @@ use std::time::Duration;
 use log::{debug, error, info, warn};
 
 use crate::indra_config::{DbSync, SQLxConfig};
-use crate::{AsyncTaskReceiver, AsyncTaskSender};
+use crate::AsyncIndraTask;
 
 #[derive(Clone)]
 pub struct SQLx {
@@ -148,7 +148,7 @@ async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
     pool
 }
 
-impl AsyncTaskReceiver for SQLx {
+impl AsyncIndraTask for SQLx {
     async fn async_receiver(mut self, sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
             return;
@@ -370,9 +370,7 @@ impl AsyncTaskReceiver for SQLx {
             }
         }
     }
-}
 
-impl AsyncTaskSender for SQLx {
     async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
         loop {
             let _dd: IndraEvent = IndraEvent::new();

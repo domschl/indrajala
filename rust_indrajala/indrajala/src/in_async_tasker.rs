@@ -8,8 +8,8 @@ use futures::select;
 use log::{debug, error, info, warn};
 
 use crate::indra_config::TaskerConfig;
+use crate::AsyncIndraTask;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 #[derive(Clone)]
 pub struct Tasker {
@@ -36,15 +36,13 @@ impl Tasker {
     }
 }
 
-impl AsyncTaskSender for Tasker {
+impl AsyncIndraTask for Tasker {
     async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
             debug!("Tasker is not active");
         }
     }
-}
 
-impl AsyncTaskReceiver for Tasker {
     async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
             debug!("Tasker is not active");

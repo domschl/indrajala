@@ -1,6 +1,6 @@
 use crate::indra_config::WebConfig;
+use crate::AsyncIndraTask;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 // use async_channel;
 use log::{debug, info, warn};
@@ -35,7 +35,7 @@ impl Web {
     }
 }
 
-impl AsyncTaskReceiver for Web {
+impl AsyncIndraTask for Web {
     async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
         debug!("IndraTask Web::sender");
         if !self.config.active {
@@ -52,33 +52,7 @@ impl AsyncTaskReceiver for Web {
             }
         }
     }
-}
 
-#[derive(Clone)]
-struct WebState {
-    sender: async_channel::Sender<IndraEvent>,
-    ie: IndraEvent,
-    sessions: HashMap<String, async_channel::Sender<IndraEvent>>,
-}
-
-impl WebState {
-    fn new(
-        sender: async_channel::Sender<IndraEvent>,
-        ie: IndraEvent,
-        sessions: HashMap<String, async_channel::Sender<IndraEvent>>,
-    ) -> Self {
-        WebState {
-            sender,
-            ie,
-            sessions,
-        }
-    }
-}
-
-// Test with:
-// curl --cacert ~/Nextcloud/Security/Certs/ca-root.pem  https://localhost:8081/api/v1/event/full -d '{"domain": "test/ok/XXXXXXXXXXXXXXXX", "from_id":"world-wide-web", "uuid4":"ui324234234234", "to_scope":"to-all-my-friend", "time_jd_start":3.13145, "data_type":"test", "data":"lots-of-data", "auth_hash":"XXX", "time_jd_end":3.2342}'
-
-impl AsyncTaskSender for Web {
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
         let evpath = self.config.url.clone() + "/event";
         let astate = WebState::new(sender.clone(), IndraEvent::new(), HashMap::new());
@@ -152,3 +126,27 @@ impl AsyncTaskSender for Web {
         info!("Web: Quitting.");
     }
 }
+
+#[derive(Clone)]
+struct WebState {
+    sender: async_channel::Sender<IndraEvent>,
+    ie: IndraEvent,
+    sessions: HashMap<String, async_channel::Sender<IndraEvent>>,
+}
+
+impl WebState {
+    fn new(
+        sender: async_channel::Sender<IndraEvent>,
+        ie: IndraEvent,
+        sessions: HashMap<String, async_channel::Sender<IndraEvent>>,
+    ) -> Self {
+        WebState {
+            sender,
+            ie,
+            sessions,
+        }
+    }
+}
+
+// Test with:
+// curl --cacert ~/Nextcloud/Security/Certs/ca-root.pem  https://localhost:8081/api/v1/event/full -d '{"domain": "test/ok/XXXXXXXXXXXXXXXX", "from_id":"world-wide-web", "uuid4":"ui324234234234", "to_scope":"to-all-my-friend", "time_jd_start":3.13145, "data_type":"test", "data":"lots-of-data", "auth_hash":"XXX", "time_jd_end":3.2342}'
