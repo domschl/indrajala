@@ -12,8 +12,8 @@ use std::convert::Infallible;
 use std::path::Path;
 
 use crate::indra_config::LLMConfig;
+use crate::AsyncIndraTask;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 #[derive(Clone)]
 pub struct Llm {
@@ -236,15 +236,13 @@ impl Llm {
     }
 }
 
-impl AsyncTaskSender for Llm {
+impl AsyncIndraTask for Llm {
     async fn async_sender(self, _sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
             debug!("Llm is not active");
         }
     }
-}
 
-impl AsyncTaskReceiver for Llm {
     async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
             debug!("Llm is not active");

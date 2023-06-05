@@ -1,6 +1,6 @@
 use crate::indra_config::WsConfig;
+use crate::AsyncIndraTask;
 use crate::IndraEvent;
-use crate::{AsyncTaskReceiver, AsyncTaskSender};
 
 //use async_channel;
 use futures::stream::SplitSink;
@@ -84,7 +84,7 @@ impl Ws {
     }
 }
 
-impl AsyncTaskReceiver for Ws {
+impl AsyncIndraTask for Ws {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
         debug!("IndraTask Ws::receiver");
         loop {
@@ -201,6 +201,64 @@ impl AsyncTaskReceiver for Ws {
                     peers.remove(key);
                 }
             }
+        }
+    }
+
+    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            return;
+        }
+        let addr = self.config.address.as_str();
+        if self.config.ssl {
+            debug!("IndraTask Ws::sender: SSL enabled");
+
+            let f = File::open(self.config.cert).unwrap();
+            let mut cert_reader = BufReader::new(f);
+            let cert_chain = certs(&mut cert_reader)
+                .unwrap()
+                .iter()
+                .map(|v| rustls::Certificate(v.clone()))
+                .collect();
+            let f = File::open(self.config.key).unwrap();
+            let mut key_reader = BufReader::new(f);
+            let mut keys = pkcs8_private_keys(&mut key_reader)
+                .unwrap()
+                .iter()
+                .map(|v| rustls::PrivateKey(v.clone()))
+                .collect::<Vec<_>>();
+            let key = keys.remove(0);
+
+            let ws_config = ServerConfig::builder()
+                .with_safe_defaults()
+                .with_no_client_auth()
+                .with_single_cert(cert_chain, key)
+                .expect("bad certificate/key");
+
+            let listener = TcpListener::bind(addr).await.unwrap();
+            info!("Ws: Listening on wss://{} (ssl)", addr);
+            let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
+
+            wss_accept_loop(
+                self.wss_connections,
+                listener,
+                Arc::new(tls_acceptor),
+                self.config.name.as_str(),
+                sender,
+            )
+            .await;
+        } else {
+            debug!("IndraTask Ws::sender: SSL disabled");
+
+            let listener = TcpListener::bind(addr).await.unwrap();
+            info!("Ws: Listening on ws://{}", addr);
+
+            ws_accept_loop(
+                self.ws_connections,
+                listener,
+                self.config.name.as_str(),
+                sender,
+            )
+            .await;
         }
     }
 }
@@ -403,65 +461,5 @@ async fn wss_accept_loop(
                 warn!("failed to handle connection: {}", e);
             }
         });
-    }
-}
-
-impl AsyncTaskSender for Ws {
-    async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
-        if !self.config.active {
-            return;
-        }
-        let addr = self.config.address.as_str();
-        if self.config.ssl {
-            debug!("IndraTask Ws::sender: SSL enabled");
-
-            let f = File::open(self.config.cert).unwrap();
-            let mut cert_reader = BufReader::new(f);
-            let cert_chain = certs(&mut cert_reader)
-                .unwrap()
-                .iter()
-                .map(|v| rustls::Certificate(v.clone()))
-                .collect();
-            let f = File::open(self.config.key).unwrap();
-            let mut key_reader = BufReader::new(f);
-            let mut keys = pkcs8_private_keys(&mut key_reader)
-                .unwrap()
-                .iter()
-                .map(|v| rustls::PrivateKey(v.clone()))
-                .collect::<Vec<_>>();
-            let key = keys.remove(0);
-
-            let ws_config = ServerConfig::builder()
-                .with_safe_defaults()
-                .with_no_client_auth()
-                .with_single_cert(cert_chain, key)
-                .expect("bad certificate/key");
-
-            let listener = TcpListener::bind(addr).await.unwrap();
-            info!("Ws: Listening on wss://{} (ssl)", addr);
-            let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
-
-            wss_accept_loop(
-                self.wss_connections,
-                listener,
-                Arc::new(tls_acceptor),
-                self.config.name.as_str(),
-                sender,
-            )
-            .await;
-        } else {
-            debug!("IndraTask Ws::sender: SSL disabled");
-
-            let listener = TcpListener::bind(addr).await.unwrap();
-            info!("Ws: Listening on ws://{}", addr);
-
-            ws_accept_loop(
-                self.ws_connections,
-                listener,
-                self.config.name.as_str(),
-                sender,
-            )
-            .await;
-        }
     }
 }

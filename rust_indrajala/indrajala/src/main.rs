@@ -49,15 +49,9 @@ enum IndraTask {
     Llm(Llm),
 }
 
-trait AsyncTaskInit {
-    async fn async_init(self) -> Vec<String>;
-}
-
-trait AsyncTaskSender {
+trait AsyncIndraTask {
+    //async fn async_init(self) -> Vec<String>;
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>);
-}
-
-trait AsyncTaskReceiver {
     async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>);
 }
 
