@@ -20,6 +20,16 @@
 
 _This is a provisional collection of protocol elements that are currently used to test integration between different Indrajala parts. These definitions will change and are neither consistent nor final._
 
+### Types of protocols
+
+There are (currently) three different protocol classes, identified by different domain prefixes:
+
+| domain prefix | description | example domain |
+| ------------- | ----------- | -------------- |
+| `$event/` | The default PUB messages has a domain that is prefixed by `$event\`, the remained of the domain is equivalent to MQTT's topic. | `$event/sensor/temperature` |
+| `$cmd/` | Messages starting with `$cmd/` are commands that somehow alter the server's state | `$cmd/subs` |
+| `$trx/` | Messages that are requests within a request/reply transaction pair, e.g. for database requests. Request and reply share the same `uuid`. | `$trx/db/req/event/history` |
+
 ### Subscribe to events from event router
 
 - IndraClient -> IndraServer
