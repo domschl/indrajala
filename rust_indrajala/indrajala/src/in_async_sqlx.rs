@@ -169,7 +169,7 @@ impl AsyncIndraTask for SQLx {
                 // Random-sampling: SELECT * FROM (SELECT * FROM mytable ORDER BY RANDOM() LIMIT 1000) ORDER BY time;
                 if msg.domain.starts_with("$trx/db/req/event/history") {
                     let req: IndraEventRequest = serde_json::from_str(msg.data.as_str()).unwrap();
-                    info!(
+                    warn!(
                         "SQLx: Received db/req/event command from {} search for: {:?}",
                         msg.from_id, req
                     );

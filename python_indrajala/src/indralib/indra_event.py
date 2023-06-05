@@ -30,14 +30,15 @@ class IndraEvent:
     def to_json(self):
         """Convert to JSON string"""
         return json.dumps(self.__dict__)
-    
+
     @staticmethod
     def from_json(json_str):
         """Convert from JSON string"""
         ie = IndraEvent()
         ie.__dict__ = json.loads(json_str)
+        print(f"from_json:  {ie.to_json()}")
         return ie
-    
+
     @staticmethod
     def mqcmp(pub, sub):
         """MQTT-style wildcard compare"""
@@ -73,7 +74,6 @@ class IndraEvent:
             if sub[inds] == "+" or sub[inds] == "#":
                 return True
         return False
-
 
     @staticmethod
     def datetime2julian(dt: datetime.datetime):
@@ -118,4 +118,3 @@ class IndraEvent:
         return datetime.datetime(
             year, month, int(day), int(hour), int(minute), int(second), int(microsecond)
         )
-

@@ -6,7 +6,7 @@ import json
 import toml
 import os
 
-from indra_event import IndraEvent
+from indralib.indra_event import IndraEvent
 
 
 class IndraClient:
@@ -15,16 +15,18 @@ class IndraClient:
         uri=None,
         ca_authority=None,
         auth_token=None,
-        config_file="indra_client.toml",
+        config_file=None,
+        verbose=True,
     ):
         self.log = logging.getLogger("IndraClient")
         self.websocket = None
+        self.verbose = verbose
         self.trx = {}
         self.recv_queue = asyncio.Queue()
         self.recv_task = None
         self.initialized = False
         if config_file is not None and config_file != "":
-            self.initialized = self.get_config(config_file, verbose=False)
+            self.initialized = self.get_config(config_file, verbose=self.verbose)
         elif uri is not None and uri != "":
             self.initialized = True
             self.uri = uri
@@ -42,9 +44,10 @@ class IndraClient:
             self.use_ssl = False
         else:
             self.initialized = False
-            self.log.error(
-                "Please provide a valid uri, starting with ws:// or wss://, e.g. wss://localhost:8082"
-            )
+            if verbose is True:
+                self.log.error(
+                    "Please provide a valid uri, starting with ws:// or wss://, e.g. wss://localhost:8082"
+                )
             return
 
     def get_config(self, config_file, verbose=True):
@@ -52,6 +55,8 @@ class IndraClient:
         self.initialized = False
         try:
             config = toml.load(config_file)
+            if verbose is True:
+                self.log.debug(f"Loaded config from {config_file}: {config}f")
         except Exception as e:
             if verbose is True:
                 self.log.error(f"{config_file} config file not found: {e}")
@@ -119,10 +124,10 @@ class IndraClient:
             self.websocket = None
             return None
         self.recv_queue.empty()
-        self.recv_task = asyncio.create_task(self.recv_task())
+        self.recv_task = asyncio.create_task(self.fn_recv_task())
         return self.websocket
 
-    async def recv_task(self):
+    async def fn_recv_task(self):
         """Receive task"""
         while True:
             try:
@@ -132,9 +137,9 @@ class IndraClient:
                 break
             ie = IndraEvent()
             ie.from_json(message)
-            if ie.uuid in self.trx:
-                self.trx[ie.uuid].set_result(ie)
-                del self.trx[ie.uuid]
+            if ie.uuid4 in self.trx:
+                self.trx[ie.uuid4].set_result(ie)
+                del self.trx[ie.uuid4]
             else:
                 await self.recv_queue.put(ie)
         self.recv_task = None
@@ -157,7 +162,8 @@ class IndraClient:
             return False
         if event.domain.startswith("$trx/") is True:
             replyEventFuture = asyncio.futures.Future()
-            self.trx[event.domain] = replyEventFuture
+            self.trx[event.uuid4] = replyEventFuture
+            print("Future: ", replyEventFuture)
         else:
             replyEventFuture = None
         await self.websocket.send(event.to_json())
@@ -176,13 +182,11 @@ class IndraClient:
             )
             return None
         try:
-            message = await self.recv_queue.get()
+            ie = await self.recv_queue.get()
         except Exception as e:
             self.log.error(f"Could not receive message: {e}")
             return None
         self.recv_queue.task_done()
-        ie = IndraEvent()
-        ie.from_json(message)
         return ie
 
     async def close_connection(self):
@@ -267,40 +271,12 @@ class IndraClient:
             "time_jd_start": start_time,
             "time_jd_end": end_time,
             "max_count": sample_size,
-            "mode": "Intervall",
+            "mode": "Interval",
         }
         ie = IndraEvent()
         ie.domain = "$trx/db/req/event/history"
         ie.from_id = "ws/python"
         ie.data_type = "eventrequest"
         ie.data = json.dumps(cmd)
-        print("Sending: ", ie.to_json())
+        self.log.info(f"Sending: {ie.to_json()}")
         return await self.websocket.send(ie.to_json())
-
-
-async def tester():
-    cl = IndraClient(config_file="indra_client.toml")
-    ws = await cl.init_connection(verbose=True)
-    if ws is None:
-        logging.error("Could not connect to Indrajala")
-        return
-    await cl.subscribe(["$event/#"])
-    hist_future = await cl.get_history(
-        "$event/omu/enviro-master/BME280-1/sensor/humidity", 0, None, 100
-    )
-    hist = await hist_future
-    print(hist)
-    while True:
-        ie = await cl.recv_event()
-        if ie is None:
-            logging.error("Could not receive event")
-            break
-        logging.info(f"Received event: {ie.to_json()}")
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    try:
-        asyncio.get_event_loop().run_until_complete(tester())
-    except KeyboardInterrupt:
-        pass
