@@ -1,15 +1,22 @@
 [citation]
-title="Monthly mean total sunspot number [1/1749 - now]"
-description="Monthly mean total sunspot number obtained by taking a simple arithmetic mean of the daily total sunspot number over all days of each calendar month. Monthly means are available only since 1749 because the original observations compiled by Rudolph Wolf were too sparse before that year. (Only yearly means are available back to 1700) A value of -1 indicates that no number is available (missing value)."
-authors=["Rudolph Wolf", "Royal Observatory of Belgium"]
-publication_date="2022-06"
-last_update="2022-06"
-publisher="WDC-SILSO, Royal Observatory of Belgium, Brussels"
-id=""
-version=""
-data_source="https://www.sidc.be/silso/DATA/SN_m_tot_V2.0.txt"
-related_publications=["https://www.sidc.be/silso/infosnmtot"]
-tags=['sunspots', 'direct_measurement']
+title = "Monthly mean total sunspot number [1/1749 - now]"
+description = "Monthly mean total sunspot number obtained by taking a simple arithmetic mean of the daily total sunspot number over all days of each calendar month. Monthly means are available only since 1749 because the original observations compiled by Rudolph Wolf were too sparse before that year. (Only yearly means are available back to 1700) A value of -1 indicates that no number is available (missing value)."
+authors = ["Rudolph Wolf", "Royal Observatory of Belgium"]
+publication_date = "2022-06"
+last_update = "2022-06"
+publisher = "WDC-SILSO, Royal Observatory of Belgium, Brussels"
+id = ""
+indra_id = "sunspotmonthlymean1749wolfrb"
+indra_domain = "$event/geodata/historical/{indra_id}/sunspots"
+version = ""
+data_source = "https://www.sidc.be/silso/DATA/SN_m_tot_V2.0.txt"
+related_publications = ["https://www.sidc.be/silso/infosnmtot"]
+tags = ["sunspots", "direct_measurement"]
 
 [datasets]
-sunspotsmonthlymean1749=[["decode","utf-8"],["add_prefix","Year Month FracYear MonthlyMean StdDev ObsCount"], ["replace", " *", "  "], ["pandas_csv_separator_nan", " ",-1]]
+sunspotsmonthlymean1749 = [
+    "decode('utf-8')",
+    "add_prefix('Year Month FracYear MonthlyMean StdDev ObsCount')",
+    "replace(' *', '  ')",
+    "pandas_csv_separator_nan(' ',-1)",
+]
