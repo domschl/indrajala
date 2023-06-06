@@ -122,6 +122,16 @@ class IndraDownloader:
         self.log.debug(f"Extracted {lno} lines, [{start}:{stop}]")
         return data
 
+    def remove_comments(self, comment_line_start="#"):
+        data = self.tf_data
+        lines = data.split("\n")
+        valid_data = []
+        for line in lines:
+            if line.startswith(comment_line_start) is False:
+                valid_data.append(line)
+        valid_data = "\n".join(valid_data)
+        return valid_data
+
     def extract_html_table(self, index):
         data = self.tf_data
         tables = pd.read_html(data)
