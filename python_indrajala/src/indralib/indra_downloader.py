@@ -10,7 +10,7 @@ import pandas as pd
 import json
 import datetime
 import requests
-import toml
+import tomllib as toml
 import uuid
 
 
@@ -329,7 +329,7 @@ class IndraDownloader:
                 filepath = os.path.join(data_sources_dir, file)
                 self.log.info(f"processing: {filepath}")
                 try:
-                    with open(filepath, "r") as f:
+                    with open(filepath, "rb") as f:
                         data_desc = toml.load(f)
                 except Exception as e:
                     self.log.error(f"Failed to read toml file {filepath}: {e}")
