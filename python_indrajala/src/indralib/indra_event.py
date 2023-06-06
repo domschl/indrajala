@@ -2,7 +2,7 @@ import json
 import datetime
 import uuid
 
-
+# XXX  https://en.wikipedia.org/wiki/Decimal_time
 class IndraEvent:
     def __init__(self):
         """Create an IndraEvent json object
