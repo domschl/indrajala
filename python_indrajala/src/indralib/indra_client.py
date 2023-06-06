@@ -3,7 +3,7 @@ import websockets
 import logging
 import ssl
 import json
-import toml
+import tomllib as toml
 import os
 
 from indralib.indra_event import IndraEvent
