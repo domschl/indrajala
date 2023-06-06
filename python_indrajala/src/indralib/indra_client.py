@@ -54,7 +54,8 @@ class IndraClient:
         """Get config from file"""
         self.initialized = False
         try:
-            config = toml.load(config_file)
+            with open(config_file, "rb") as f:
+                config = toml.load(f)
             if verbose is True:
                 self.log.debug(f"Loaded config from {config_file}: {config}f")
         except Exception as e:
@@ -132,12 +133,17 @@ class IndraClient:
         while True:
             try:
                 message = await self.websocket.recv()
+                if self.verbose is True:
+                    self.log.info(f"Received message: {message}")
             except Exception as e:
                 self.log.error(f"Could not receive message: {e}")
                 break
-            ie = IndraEvent()
-            ie.from_json(message)
+            # ie = IndraEvent()
+            ie = IndraEvent.from_json(message)
+            self.log.info(f"Received event: {ie.to_json()}")
             if ie.uuid4 in self.trx:
+                if self.verbose is True:
+                    self.log.info(f"Future triggered of trx event {ie.uuid4}")
                 self.trx[ie.uuid4].set_result(ie)
                 del self.trx[ie.uuid4]
             else:
@@ -279,4 +285,11 @@ class IndraClient:
         ie.data_type = "eventrequest"
         ie.data = json.dumps(cmd)
         self.log.info(f"Sending: {ie.to_json()}")
-        return await self.websocket.send(ie.to_json())
+        return await self.send_event(ie)
+
+    async def get_wait_history(
+        self, domain, start_time, end_time=None, sample_size=None
+    ):
+        future = await self.get_history(domain, start_time, end_time, sample_size)
+        hist_result = await future
+        return json.loads(hist_result.data)
