@@ -169,7 +169,7 @@ class IndraClient:
         if event.domain.startswith("$trx/") is True:
             replyEventFuture = asyncio.futures.Future()
             self.trx[event.uuid4] = replyEventFuture
-            print("Future: ", replyEventFuture)
+            self.log.debug("Future: ", replyEventFuture)
         else:
             replyEventFuture = None
         await self.websocket.send(event.to_json())
