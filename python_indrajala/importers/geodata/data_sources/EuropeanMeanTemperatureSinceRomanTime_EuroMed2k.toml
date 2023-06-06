@@ -1,14 +1,64 @@
 [citation]
-title="European Mean and Spatial Summer Temperature Reconstructions Since Roman Times"
-description="Spatial (5x5 degree grid) reconstructions of European summer (June-August) temperature back to 755 CE based on a Bayesian hierarchical modelling (BHM), plus estimates of the European mean temperature variation since 138 BCE, based on composite-plus-scaling (CPS)."
-authors=["Luterbacher, J.", "Werner, J.P.", "Smerdon, J.E.", "Fernández-Donado, L.", "González-Rouco, J.F.", "Barriopedro, D.", "Ljungqvist, F.C.", "Büntgen, U.", "Zorita, E.", "Wagner, S.", "Esper, J.", "McCarroll, D.", "Toreti, A.", "Frank, D.C.", "Jungclaus, J.H.", "Barriendos, M.", "Bertolin, C.", "Bothe, O.", "Brázdil, R.", "Camuffo, D.", "Dobrovolný, P.", "Gagen, M.H.", "García-Bustamante, E.", "Ge, Q.", "Gómez-Navarro, J.J.", "Guiot, J.", "Hao, Z.", "Hegerl, G.C.", "Holmgren, K.", "Klimenko, V.V.", "Martín-Chivelet, J.", "Pfister, C.", "Roberts, N.", "Schindler, A.", "Schurer, A.P.", "Solomina, O.", "von Gunten, L.", "Wahl, E.R.", "Wanner, H.", "Wetter, O.", "Xoplaki, E.", "Yuan, N.", "Zanchettin, D.", "Zhang, H.", "Zerefos, C."]
-publication_date="2016-01-04"
-publisher="Environmental Research Letters, 11, 2, 024001"
-id="doi: 10.1088/1748-9326/11/2/024001"
-version=""
-data_source="https://www.ncei.noaa.gov/pub/data/paleo/pages2k/EuroMed2k/eujja_2krecon_nested_cps.txt"
-related_publications=["https://www.ncei.noaa.gov/access/paleo-search/study/19600"]
-tags=['temperature', 'tree_ring', 'europe', 'summer']
+title = "European Mean and Spatial Summer Temperature Reconstructions Since Roman Times"
+description = "Spatial (5x5 degree grid) reconstructions of European summer (June-August) temperature back to 755 CE based on a Bayesian hierarchical modelling (BHM), plus estimates of the European mean temperature variation since 138 BCE, based on composite-plus-scaling (CPS)."
+authors = [
+    "Luterbacher, J.",
+    "Werner, J.P.",
+    "Smerdon, J.E.",
+    "Fernández-Donado, L.",
+    "González-Rouco, J.F.",
+    "Barriopedro, D.",
+    "Ljungqvist, F.C.",
+    "Büntgen, U.",
+    "Zorita, E.",
+    "Wagner, S.",
+    "Esper, J.",
+    "McCarroll, D.",
+    "Toreti, A.",
+    "Frank, D.C.",
+    "Jungclaus, J.H.",
+    "Barriendos, M.",
+    "Bertolin, C.",
+    "Bothe, O.",
+    "Brázdil, R.",
+    "Camuffo, D.",
+    "Dobrovolný, P.",
+    "Gagen, M.H.",
+    "García-Bustamante, E.",
+    "Ge, Q.",
+    "Gómez-Navarro, J.J.",
+    "Guiot, J.",
+    "Hao, Z.",
+    "Hegerl, G.C.",
+    "Holmgren, K.",
+    "Klimenko, V.V.",
+    "Martín-Chivelet, J.",
+    "Pfister, C.",
+    "Roberts, N.",
+    "Schindler, A.",
+    "Schurer, A.P.",
+    "Solomina, O.",
+    "von Gunten, L.",
+    "Wahl, E.R.",
+    "Wanner, H.",
+    "Wetter, O.",
+    "Xoplaki, E.",
+    "Yuan, N.",
+    "Zanchettin, D.",
+    "Zhang, H.",
+    "Zerefos, C.",
+]
+publication_date = "2016-01-04"
+publisher = "Environmental Research Letters, 11, 2, 024001"
+id = "doi: 10.1088/1748-9326/11/2/024001"
+indra_id = "europeanmeantemp2016luterbacher"
+indra_domain = "$event/geodata/historical/europe/{indra_id}/meantemp/august/treering"
+version = ""
+data_source = "https://www.ncei.noaa.gov/pub/data/paleo/pages2k/EuroMed2k/eujja_2krecon_nested_cps.txt"
+related_publications = [
+    "https://www.ncei.noaa.gov/access/paleo-search/study/19600",
+]
+tags = ["temperature", "tree_ring", "europe", "summer"]
 
 [datasets]
-euromed2k=[["decode", "utf-8"], ["pandas_csv_separator", '\t']]
+euromed2k = ["decode('utf-8')", "pandas_csv_separator('\t')"]

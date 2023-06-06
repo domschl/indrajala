@@ -86,13 +86,16 @@ class IndraDownloader:
             except Exception as e:
                 self.log.error(f"Failed to update cache_info: {e}")
 
-    def decode(self, data, encoding_name):
+    def decode(self, encoding_name):
+        data = self.tf_data
         return data.decode(encoding_name)
 
-    def unpickle(self, data):
+    def unpickle(self):
+        data = self.tf_data
         return pickle.loads(data)
 
-    def extract_lines(self, data, start, stop=0):
+    def extract_lines(self, start, stop=0):
+        data = self.tf_data
         lines = data.split("\n")
         if stop == 0:
             stop = len(lines)
@@ -119,7 +122,8 @@ class IndraDownloader:
         self.log.debug(f"Extracted {lno} lines, [{start}:{stop}]")
         return data
 
-    def extract_html_table(self, data, index):
+    def extract_html_table(self, index):
+        data = self.tf_data
         tables = pd.read_html(data)
         if len(tables) > index:
             return tables[index]
@@ -128,29 +132,34 @@ class IndraDownloader:
             self.log.error(f"No table with index {index}, table count is {lno}")
             return None
 
-    def pandas_csv_separator(self, data, sep):
+    def pandas_csv_separator(self, sep):
+        data = self.tf_data
         if sep == " ":
             return pd.read_csv(
                 io.StringIO(data), delim_whitespace=True, engine="python"
             )
         return pd.read_csv(io.StringIO(data), sep=sep, engine="python")
 
-    def pandas_filter(self, data, column_list):
+    def pandas_filter(self, column_list):
+        data = self.tf_data
         return data.filter(column_list, axis=1)
 
-    def pandas_csv_separator_nan(self, data, sep, nan):
+    def pandas_csv_separator_nan(self, sep, nan):
+        data = self.tf_data
         if sep == " ":
             return pd.read_csv(
                 io.StringIO(data), delim_whitespace=True, na_values=nan, engine="python"
             )
         return pd.read_csv(io.StringIO(data), sep=sep, na_values=nan, engine="python")
 
-    def pandas_excel_rowskips(self, data, skiprow_list):
+    def pandas_excel_rowskips(self, skiprow_list):
+        data = self.tf_data
         return pd.read_excel(data, skiprows=skiprow_list)
 
     def pandas_excel_worksheet_subset(
-        self, data, worksheet_name, include_rows, include_columns
+        self, worksheet_name, include_rows, include_columns
     ):
+        data = self.tf_data
         return pd.read_excel(
             data,
             sheet_name=worksheet_name,
@@ -158,30 +167,42 @@ class IndraDownloader:
             usecols=include_columns,
         )
 
-    def single_transform(self, data, transform):
-        for t in transform:
-            if len(t) > 0:
-                tf = getattr(self, t[0])
-                if tf is not None:
-                    data = tf(data, *t[1:])
-                else:
-                    self.log.error("Transform {t[0]} isn't available!")
-                    return None
-        return data
-
-    def add_prefix(self, data, prefix):
+    def add_prefix(self, prefix):
+        data = self.tf_data
         return prefix + "\n" + data
 
-    def replace(self, data, token, replacement):
+    def replace(self, token, replacement):
+        data = self.tf_data
         return data.replace(token, replacement)
+
+    def single_transform(self, data, transform):
+        try:
+            fn_name = transform.split("(")[0]
+        except Exception as e:
+            self.log.error(f"Failed to parse transform {transform}: {e}")
+            return None
+        tf = getattr(self, fn_name)
+        if tf is not None:
+            trs = "self." + transform
+            self.tf_data = data
+            try:
+                data = eval(trs)
+            except Exception as e:
+                self.log.error(f"Failed to eval {trs}: {e}")
+                return None
+        return data
 
     def transform(self, data, transforms):
         data_dict = {}
         if transforms is None:
             return data
+        original_data = data
         for dataset_name in transforms:
             self.log.info(f"Creating dataset {dataset_name}")
-            dataset = self.single_transform(data, transforms[dataset_name])
+            data = original_data
+            for transform in transforms[dataset_name]:
+                data = self.single_transform(data, transform)
+            dataset = data
             if dataset is not None:
                 data_dict[dataset_name] = dataset
         return data_dict
@@ -291,34 +312,36 @@ class IndraDownloader:
         data = self.transform(data, transforms)
         return data
 
-    def get_datasets(self, data_sources_dir, log=logging):
+    def get_datasets(self, data_sources_dir):
         dfs = {}
         for file in os.listdir(data_sources_dir):
             if file.endswith(".toml"):
                 filepath = os.path.join(data_sources_dir, file)
-                log.info(f"processing: {filepath}")
+                self.log.info(f"processing: {filepath}")
                 try:
                     with open(filepath, "r") as f:
-                        data_desc = toml.parse(f.read())
+                        data_desc = toml.load(f)
                 except Exception as e:
-                    log.error(f"Failed to read toml file {filepath}: {e}")
+                    self.log.error(f"Failed to read toml file {filepath}: {e}")
                     continue
                 req = ["citation/data_source", "datasets"]
                 for r in req:
                     pt = r.split("/")
                     if len(pt) == 1:
                         if pt[0] not in data_desc:
-                            log.error(f"{filepath} doesn't have [{pt[0]}] section.")
+                            self.log.error(
+                                f"{filepath} doesn't have [{pt[0]}] section."
+                            )
                             continue
                         continue
                     if len(pt) != 2:
-                        log.error(f"req-field doesn't parse: {r}")
+                        self.log.error(f"req-field doesn't parse: {r}")
                         continue
                     if pt[0] not in data_desc:
-                        log.error(f"{filepath} doesn't have [{pt[0]}] section.")
+                        self.log.error(f"{filepath} doesn't have [{pt[0]}] section.")
                         continue
                     if pt[1] not in data_desc[pt[0]]:
-                        log.error(
+                        self.log.error(
                             f"{filepath} doesn't have a {pt[1]}= entry in [{pt[0]}] section."
                         )
                         continue
@@ -339,7 +362,7 @@ class IndraDownloader:
                     resolve_redirects=use_redirect,
                 )
                 if data_dicts is None:
-                    log.error(
+                    self.log.error(
                         f"Failed to retrieve dataset(s) from {data_desc['citation']['data_source']}"
                     )
                     continue
