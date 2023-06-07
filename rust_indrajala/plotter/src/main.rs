@@ -389,7 +389,7 @@ fn build_ui(app: &Application) {
                                         let req: IndraHistoryRequest = IndraHistoryRequest {
                                             domain: domain.clone(),
                                             mode: IndraHistoryRequestMode::Sample,
-                                            data_type: "number/float".to_string(),
+                                            data_type: "number/float%".to_string(),
                                             time_jd_start: None,
                                             time_jd_end: None,
                                             limit: Some(1000),

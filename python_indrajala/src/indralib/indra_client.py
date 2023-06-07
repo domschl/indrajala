@@ -295,7 +295,7 @@ class IndraClient:
             "time_jd_start": start_time,
             "time_jd_end": end_time,
             "limit": sample_size,
-            "data_type": "number/float",
+            "data_type": "number/float%",
             "mode": "Sample",
         }
         ie = IndraEvent()
