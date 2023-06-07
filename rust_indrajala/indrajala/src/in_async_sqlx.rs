@@ -196,9 +196,9 @@ impl AsyncIndraTask for SQLx {
                             continue;
                         }
                     }
+                    let ut_start = Utc::now();
                     let pool = pool.clone().unwrap();
                     // XXX Support for differrent data_types and HistoryRequestModes
-
                     let rows_res = sqlx::query_as(
                         "SELECT id, time_jd_start, data FROM (SELECT * FROM indra_events WHERE domain LIKE ? AND data_type LIKE ? AND time_jd_start >= ? AND time_jd_start <= ? ORDER BY RANDOM() LIMIT ?) ORDER BY time_jd_start ASC",
                     )
@@ -216,7 +216,6 @@ impl AsyncIndraTask for SQLx {
                             continue;
                         }
                     };
-                    let ut_start = Utc::now();
                     let res: Vec<(f64, f64)> = rows
                         .iter()
                         .map(|row| {
@@ -416,8 +415,8 @@ impl AsyncIndraTask for SQLx {
                     );
 
                     //let rows: Vec<(String)>;
-                    let pool = pool.clone().unwrap();
                     let ut_start = Utc::now();
+                    let pool = pool.clone().unwrap();
                     let rows: Vec<String> =
                         sqlx::query("SELECT DISTINCT domain FROM indra_events WHERE domain LIKE ? AND data_type LIKE ?;")
                             .bind(req.domain.unwrap_or("%".to_string()).to_string())
