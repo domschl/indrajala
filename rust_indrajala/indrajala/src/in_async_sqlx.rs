@@ -5,6 +5,7 @@ use indra_event::{
 };
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use sqlx::Row;
+use std::str::pattern::CharArraySearcher;
 use std::time::Duration;
 //use std::path::Path;
 
@@ -185,6 +186,17 @@ impl AsyncIndraTask for SQLx {
                         "SQLx: Received db/req/history command from {} search for: {:?}",
                         msg.from_id, req
                     );
+                    match req.mode {
+                        IndraHistoryRequestMode::Sample => {}
+                        IndraHistoryRequestMode::Single => {
+                            error!("SQLx: Received db/req/history command from {} with unsupported mode: {:?}", msg.from_id, req.mode);
+                            continue;
+                        }
+                        IndraHistoryRequestMode::Interval => {
+                            error!("SQLx: Received db/req/history command from {} with unsupported mode: {:?}", msg.from_id, req.mode);
+                            continue;
+                        }
+                    }
                     let pool = pool.clone().unwrap();
                     // XXX Support for differrent data_types and HistoryRequestModes
 

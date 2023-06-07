@@ -278,7 +278,7 @@ class IndraClient:
             "time_jd_end": end_time,
             "max_count": sample_size,
             "data_type": "number/float",
-            "mode": "Interval",
+            "mode": "Sample",
         }
         ie = IndraEvent()
         ie.domain = "$trx/db/req/history"

@@ -379,7 +379,7 @@ fn build_ui(app: &Application) {
                                         ie.data_type = "eventhistory".to_string();
                                         let req: IndraHistoryRequest = IndraHistoryRequest {
                                             domain: domain.clone(),
-                                            mode: IndraHistoryRequestMode::Interval,
+                                            mode: IndraHistoryRequestMode::Sample,
                                             data_type: "number/float".to_string(),
                                             time_jd_start: None,
                                             time_jd_end: None,
