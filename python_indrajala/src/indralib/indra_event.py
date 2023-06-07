@@ -2,6 +2,7 @@ import json
 import datetime
 import uuid
 
+
 # XXX  https://en.wikipedia.org/wiki/Decimal_time
 class IndraEvent:
     def __init__(self):
@@ -36,7 +37,6 @@ class IndraEvent:
         """Convert from JSON string"""
         ie = IndraEvent()
         ie.__dict__ = json.loads(json_str)
-        print(f"from_json:  {ie.to_json()}")
         return ie
 
     @staticmethod
