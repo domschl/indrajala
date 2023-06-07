@@ -216,6 +216,7 @@ impl AsyncIndraTask for SQLx {
                             continue;
                         }
                     };
+                    let ut_start = Utc::now();
                     let res: Vec<(f64, f64)> = rows
                         .iter()
                         .map(|row| {
@@ -240,17 +241,17 @@ impl AsyncIndraTask for SQLx {
                         rows.len(),
                         msg.domain
                     );
-                    let ut_now = Utc::now();
+                    let ut_end = Utc::now();
                     let rmsg = IndraEvent {
                         domain: msg.from_id.clone(), // .replace("$trx/db/req", "$trx/db/reply"),
                         from_id: self.config.name.clone(),
                         uuid4: msg.uuid4.clone(),
                         to_scope: req.domain.clone(),
-                        time_jd_start: IndraEvent::datetime_to_julian(ut_now),
+                        time_jd_start: IndraEvent::datetime_to_julian(ut_start),
                         data_type: "vector/tuple/jd/float".to_string(),
                         data: serde_json::to_string(&res).unwrap(),
                         auth_hash: Default::default(),
-                        time_jd_end: Default::default(),
+                        time_jd_end: Some(IndraEvent::datetime_to_julian(ut_end)),
                     };
                     debug!("Sending: {}->{}", rmsg.from_id, rmsg.domain);
                     if sender.send(rmsg.clone()).await.is_err() {
@@ -416,6 +417,7 @@ impl AsyncIndraTask for SQLx {
 
                     //let rows: Vec<(String)>;
                     let pool = pool.clone().unwrap();
+                    let ut_start = Utc::now();
                     let rows: Vec<String> =
                         sqlx::query("SELECT DISTINCT domain FROM indra_events WHERE domain LIKE ? AND data_type LIKE ?;")
                             .bind(req.domain.unwrap_or("%".to_string()).to_string())
@@ -426,17 +428,17 @@ impl AsyncIndraTask for SQLx {
                             .iter()
                             .map(|rowi| rowi.try_get(0).unwrap())
                             .collect();
-                    let ut_now = Utc::now();
+                    let ut_end = Utc::now();
                     let rmsg = IndraEvent {
                         domain: msg.from_id.clone().replace("$trx/db/req", "$/trx/db/reply"),
                         from_id: self.config.name.clone(),
                         uuid4: msg.uuid4.clone(),
                         to_scope: "".to_string(),
-                        time_jd_start: IndraEvent::datetime_to_julian(ut_now),
+                        time_jd_start: IndraEvent::datetime_to_julian(ut_start),
                         data_type: "vector/string/uniquedomains".to_string(),
                         data: serde_json::to_string(&rows).unwrap(),
                         auth_hash: Default::default(),
-                        time_jd_end: Default::default(),
+                        time_jd_end: Some(IndraEvent::datetime_to_julian(ut_end)),
                     };
                     info!("Sending domain-list: {}->{}", rmsg.from_id, rmsg.domain);
                     if sender.send(rmsg.clone()).await.is_err() {

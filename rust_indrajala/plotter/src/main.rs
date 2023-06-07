@@ -312,6 +312,11 @@ fn build_ui(app: &Application) {
                                 let res: Vec<(f64, f64)> =
                                     serde_json::from_str(ier.data.to_string().as_str()).unwrap();
                                 println!("res: {}", res.len());
+                                println!(
+                                    "History DB Transaction time: {}",
+                                    ier.time_jd_end.unwrap() - ier.time_jd_start
+                                );
+
                                 let mut time_series_lock = shared_time_series.lock().unwrap();
                                 if time_series_lock.contains_key(&domain.clone()) {
                                     for r in res.iter() {
@@ -351,6 +356,10 @@ fn build_ui(app: &Application) {
                                 continue;
                             } else if ier.data_type.starts_with("vector/string") {
                                 println!("UNIQUE reply! {}.", ier.data_type);
+                                println!(
+                                    "UNIQUE DOMAIN DB Transaction time: {}",
+                                    ier.time_jd_end.unwrap() - ier.time_jd_start
+                                );
                                 let domains: Vec<String> =
                                     serde_json::from_str(ier.data.as_str()).unwrap(); //.to_string().as_str()).unwrap();
                                 let mut time_series_lock = shared_time_series.lock().unwrap();
