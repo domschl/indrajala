@@ -438,7 +438,7 @@ impl AsyncIndraTask for SQLx {
                         auth_hash: Default::default(),
                         time_jd_end: Default::default(),
                     };
-                    warn!("Sending domain-list: {}->{}", rmsg.from_id, rmsg.domain);
+                    info!("Sending domain-list: {}->{}", rmsg.from_id, rmsg.domain);
                     if sender.send(rmsg.clone()).await.is_err() {
                         error!(
                             "SQLx: Error sending reply-message to channel {}",
