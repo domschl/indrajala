@@ -150,11 +150,15 @@ class IndraClient:
                         "---------------------------------------------------------------"
                     )
                     self.log.info(
-                        f"Future triggered of trx event {ie.to_scope}, uuid: {ie.uuid4}, {ie.data_type}, dt={dt}"
+                        f"Future: trx event {ie.to_scope}, uuid: {ie.uuid4}, {ie.data_type}, dt={dt}"
                     )
                 fRec["future"].set_result(ie)
                 del self.trx[ie.uuid4]
             else:
+                if self.verbose is True:
+                    self.log.info(
+                        f"Received event {ie.to_scope}, uuid: {ie.uuid4}, {ie.data_type}"
+                    )
                 await self.recv_queue.put(ie)
         self.recv_task = None
         return
@@ -180,7 +184,7 @@ class IndraClient:
                 "future": replyEventFuture,
                 "start_time": time.time(),
             }
-            self.trx[event.uuid4] = replyEventFuture
+            self.trx[event.uuid4] = fRec
             self.log.debug("Future: ", replyEventFuture)
         else:
             replyEventFuture = None
@@ -286,12 +290,6 @@ class IndraClient:
 
         returns a future object, which will be set when the reply is received
         """
-        if start_time is None:
-            start_time = sys.float_info.min
-        if end_time is None:
-            end_time = sys.float_info.max
-        if sample_size is None:
-            sample_size = 1000000
         cmd = {
             "domain": domain,
             "time_jd_start": start_time,
