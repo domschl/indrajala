@@ -21,7 +21,9 @@ use plotters::style::WHITE;
 //{ChartBuilder, IntoDrawingArea, LabelAreaPosition, LineSeries};
 use plotters_cairo::CairoBackend;
 
-use indra_event::{IndraEvent, IndraEventRequest, IndraEventRequestMode};
+use indra_event::{
+    IndraEvent, IndraHistoryRequest, IndraHistoryRequestMode, IndraUniqueDomainsRequest,
+};
 
 //use std::time;
 //use chrono::prelude::*;
@@ -203,10 +205,14 @@ fn build_ui(app: &Application) {
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message $cmd/subs");
             let mut ie: IndraEvent = IndraEvent::new();
-            ie.domain = "$trx/db/req/event/uniquedomains".to_string();
+            ie.domain = "$trx/db/req/uniquedomains".to_string();
+            let hr: IndraUniqueDomainsRequest = IndraUniqueDomainsRequest {
+                domain: Some("$event/%".to_string()),
+                data_type: Some("number/float%".to_string()),
+            };
             ie.from_id = "ws/plotter".to_string();
-            ie.data_type = "".to_string();
-            ie.data = "".to_string();
+            ie.data_type = "uniquedomainsrequest".to_string();
+            ie.data = serde_json::to_string(&hr).unwrap();
             let ie_txt = serde_json::to_string(&ie).unwrap();
             socket.write_message(ie_txt.into()).unwrap();
             println!("sent message req/uniquedomains");
@@ -266,15 +272,16 @@ fn build_ui(app: &Application) {
                                     .unwrap();
                                 // request history
                                 let mut ie: IndraEvent = IndraEvent::new();
-                                ie.domain = "$trx/db/req/event/history".to_string();
+                                ie.domain = "$trx/db/req/history".to_string();
                                 ie.from_id = "ws/plotter".to_string();
-                                ie.data_type = "db/eventrequest".to_string();
-                                let req: IndraEventRequest = IndraEventRequest {
+                                ie.data_type = "historyrequest".to_string();
+                                let req: IndraHistoryRequest = IndraHistoryRequest {
                                     domain: domain.clone(),
-                                    mode: IndraEventRequestMode::Interval,
+                                    mode: IndraHistoryRequestMode::Interval,
+                                    data_type: "number/float".to_string(),
                                     time_jd_start: None,
                                     time_jd_end: None,
-                                    max_count: Some(1000),
+                                    limit: Some(1000),
                                 };
                                 ie.data = serde_json::to_string(&req).unwrap();
                                 let ie_txt = serde_json::to_string(&ie).unwrap();
@@ -367,15 +374,16 @@ fn build_ui(app: &Application) {
                                             .unwrap();
                                         // request history
                                         let mut ie: IndraEvent = IndraEvent::new();
-                                        ie.domain = "$trx/db/req/event/history".to_string();
+                                        ie.domain = "$trx/db/req/history".to_string();
                                         ie.from_id = "ws/plotter".to_string();
                                         ie.data_type = "eventhistory".to_string();
-                                        let req: IndraEventRequest = IndraEventRequest {
+                                        let req: IndraHistoryRequest = IndraHistoryRequest {
                                             domain: domain.clone(),
-                                            mode: IndraEventRequestMode::Interval,
+                                            mode: IndraHistoryRequestMode::Interval,
+                                            data_type: "number/float".to_string(),
                                             time_jd_start: None,
                                             time_jd_end: None,
-                                            max_count: Some(1000),
+                                            limit: Some(1000),
                                         };
                                         ie.data = serde_json::to_string(&req).unwrap();
                                         let ie_txt = serde_json::to_string(&ie).unwrap();

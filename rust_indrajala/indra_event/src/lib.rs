@@ -99,18 +99,26 @@ pub struct IndraEvent {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum IndraEventRequestMode {
+pub enum IndraHistoryRequestMode {
     Interval,
-    Latest,
+    Single,
+    Sample,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct IndraEventRequest {
+pub struct IndraHistoryRequest {
     pub domain: String,
-    pub mode: IndraEventRequestMode,
+    pub mode: IndraHistoryRequestMode,
+    pub data_type: String,
     pub time_jd_start: Option<f64>,
     pub time_jd_end: Option<f64>,
-    pub max_count: Option<usize>,
+    pub limit: Option<u32>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct IndraUniqueDomainsRequest {
+    pub domain: Option<String>,
+    pub data_type: Option<String>,
 }
 
 impl IndraEvent {
