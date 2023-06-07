@@ -5,7 +5,6 @@ use indra_event::{
 };
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use sqlx::Row;
-use std::str::pattern::CharArraySearcher;
 use std::time::Duration;
 //use std::path::Path;
 
