@@ -13,7 +13,7 @@ from indralib.indra_client import IndraClient
 
 
 async def tester():
-    cl = IndraClient(config_file="ws_indra.toml")
+    cl = IndraClient(config_file="ws_indra.toml", verbose=True)
     if cl is None:
         logging.error("Could not create Indrajala client")
         return
@@ -22,11 +22,14 @@ async def tester():
         logging.error("Could not connect to Indrajala")
         return
     await cl.subscribe(["$event/#"])
+    domain_list_future = await cl.get_unique_domains()
     hist_future = await cl.get_history(
         "$event/omu/enviro-master/BME280-1/sensor/humidity", 0, None, 100
     )
     if hist_future is None:
         logging.error("Could not get history")
+    if domain_list_future is None:
+        logging.error("Could not get domain list")
     else:
         hist = await hist_future
         print(hist)
@@ -35,7 +38,7 @@ async def tester():
         if ie is None:
             logging.error("Could not receive event")
             break
-        logging.info(f"Received event: {ie.to_json()}")
+        # logging.debug(f"Received event: {ie.to_json()}")
 
 
 logging.basicConfig(level=logging.INFO)

@@ -366,7 +366,7 @@ fn build_ui(app: &Application) {
                                 for domain in domains.iter() {
                                     let mut matched = false;
                                     for sub in domain_topic2.iter() {
-                                        if IndraEvent::mqcmp(sub, domain) {
+                                        if IndraEvent::mqcmp(domain, sub) {
                                             matched = true;
                                             break;
                                         }

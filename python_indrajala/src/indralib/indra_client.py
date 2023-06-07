@@ -5,6 +5,8 @@ import ssl
 import json
 import tomllib as toml
 import os
+import time
+import sys
 
 from indralib.indra_event import IndraEvent
 
@@ -16,7 +18,7 @@ class IndraClient:
         ca_authority=None,
         auth_token=None,
         config_file=None,
-        verbose=True,
+        verbose=False,
     ):
         self.log = logging.getLogger("IndraClient")
         self.websocket = None
@@ -140,11 +142,17 @@ class IndraClient:
                 break
             # ie = IndraEvent()
             ie = IndraEvent.from_json(message)
-            self.log.info(f"Received event: {ie.to_json()}")
             if ie.uuid4 in self.trx:
+                fRec = self.trx[ie.uuid4]
+                dt = time.time() - fRec["start_time"]
                 if self.verbose is True:
-                    self.log.info(f"Future triggered of trx event {ie.uuid4}")
-                self.trx[ie.uuid4].set_result(ie)
+                    self.log.info(
+                        "---------------------------------------------------------------"
+                    )
+                    self.log.info(
+                        f"Future triggered of trx event {ie.to_scope}, uuid: {ie.uuid4}, {ie.data_type}, dt={dt}"
+                    )
+                fRec["future"].set_result(ie)
                 del self.trx[ie.uuid4]
             else:
                 await self.recv_queue.put(ie)
@@ -168,6 +176,10 @@ class IndraClient:
             return False
         if event.domain.startswith("$trx/") is True:
             replyEventFuture = asyncio.futures.Future()
+            fRec = {
+                "future": replyEventFuture,
+                "start_time": time.time(),
+            }
             self.trx[event.uuid4] = replyEventFuture
             self.log.debug("Future: ", replyEventFuture)
         else:
@@ -267,16 +279,24 @@ class IndraClient:
         await self.websocket.send(ie.to_json())
         return True
 
-    async def get_history(self, domain, start_time, end_time=None, sample_size=None):
+    async def get_history(
+        self, domain, start_time=None, end_time=None, sample_size=None
+    ):
         """Get history of domain
 
         returns a future object, which will be set when the reply is received
         """
+        if start_time is None:
+            start_time = sys.float_info.min
+        if end_time is None:
+            end_time = sys.float_info.max
+        if sample_size is None:
+            sample_size = 1000000
         cmd = {
             "domain": domain,
             "time_jd_start": start_time,
             "time_jd_end": end_time,
-            "max_count": sample_size,
+            "limit": sample_size,
             "data_type": "number/float",
             "mode": "Sample",
         }
@@ -285,7 +305,8 @@ class IndraClient:
         ie.from_id = "ws/python"
         ie.data_type = "historyrequest"
         ie.data = json.dumps(cmd)
-        self.log.info(f"Sending: {ie.to_json()}")
+        if self.verbose is True:
+            self.log.info(f"Sending: {ie.to_json()}")
         return await self.send_event(ie)
 
     async def get_wait_history(
@@ -294,3 +315,25 @@ class IndraClient:
         future = await self.get_history(domain, start_time, end_time, sample_size)
         hist_result = await future
         return json.loads(hist_result.data)
+
+    async def get_unique_domains(self, domain=None, data_type=None):
+        """Get unique domains"""
+        if domain is None:
+            domain = "$event/%"
+        if data_type is None:
+            data_type = "%"
+        cmd = {
+            "domain": domain,
+            "data_type": data_type,
+        }
+        ie = IndraEvent()
+        ie.domain = "$trx/db/req/uniquedomains"
+        ie.from_id = "ws/python"
+        ie.data_type = "uniquedomainsrequest"
+        ie.data = json.dumps(cmd)
+        return await self.send_event(ie)
+
+    async def get_wait_unique_domains(self, domain=None, data_type=None):
+        future = await self.get_unique_domains(domain, data_type)
+        domain_result = await future
+        return json.loads(domain_result.data)
