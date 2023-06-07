@@ -1,6 +1,8 @@
 use async_std::task;
 use chrono::Utc;
-use indra_event::{IndraEvent, IndraEventRequest};
+use indra_event::{
+    IndraEvent, IndraHistoryRequest, IndraHistoryRequestMode, IndraUniqueDomainsRequest,
+};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use sqlx::Row;
 use std::time::Duration;
@@ -167,10 +169,92 @@ impl AsyncIndraTask for SQLx {
                 break;
             } else if msg.domain.starts_with("$trx/db/") {
                 // Random-sampling: SELECT * FROM (SELECT * FROM mytable ORDER BY RANDOM() LIMIT 1000) ORDER BY time;
-                if msg.domain.starts_with("$trx/db/req/event/history") {
-                    let req: IndraEventRequest = serde_json::from_str(msg.data.as_str()).unwrap();
+                if msg.domain == "$trx/db/req/history" {
+                    let req_res: Result<IndraHistoryRequest, serde_json::Error> =
+                        serde_json::from_str(msg.data.as_str());
+                    if req_res.is_err() {
+                        error!(
+                            "SQLx: Error parsing db/req/history command from {}, {:?}: {:?}",
+                            msg.from_id, msg.data, req_res
+                        );
+                        // XXX reply with error
+                        continue;
+                    }
+                    let req: IndraHistoryRequest = req_res.unwrap();
+                    info!(
+                        "SQLx: Received db/req/history command from {} search for: {:?}",
+                        msg.from_id, req
+                    );
+                    let pool = pool.clone().unwrap();
+                    // XXX Support for differrent data_types and HistoryRequestModes
+
+                    let rows_res = sqlx::query_as(
+                        "SELECT id, time_jd_start, data FROM (SELECT * FROM indra_events WHERE domain LIKE ? AND data_type LIKE ? AND time_jd_start >= ? AND time_jd_start <= ? ORDER BY RANDOM() LIMIT ?) ORDER BY time_jd_start ASC",
+                    )
+                    .bind(req.domain.to_string())
+                    .bind(req.data_type.to_string())
+                    .bind(req.time_jd_start.unwrap_or(f64::MIN))
+                    .bind(req.time_jd_end.unwrap_or(f64::MAX))
+                    .bind(req.limit.unwrap_or(u32::MAX))
+                    .fetch_all(&pool)
+                    .await;
+                    let rows: Vec<(i64, f64, String)> = match rows_res {
+                        Ok(rows) => rows,
+                        Err(e) => {
+                            error!("SQLx: Error executing query on database: {:?}", e);
+                            continue;
+                        }
+                    };
+                    let res: Vec<(f64, f64)> = rows
+                        .iter()
+                        .map(|row| {
+                            let time_jd_start: f64 = row.1;
+                            let data_f64_res = row.2.parse::<f64>();
+                            if data_f64_res.is_ok() {
+                                #[allow(clippy::unnecessary_unwrap)]
+                                let data_f64: f64 = data_f64_res.unwrap();
+                                (time_jd_start, data_f64)
+                            } else {
+                                // insert NaN for invalid data:
+                                warn!("SQLx: Invalid f64 value data in row: {:?}", row);
+                                let data_f64: f64 = std::f64::NAN;
+                                (time_jd_start, data_f64)
+                            }
+                        })
+                        .filter(|row| !row.1.is_nan())
+                        .collect();
+                    info!(
+                        "Found {} items out of raw {} for {}",
+                        res.len(),
+                        rows.len(),
+                        msg.domain
+                    );
+                    let ut_now = Utc::now();
+                    let rmsg = IndraEvent {
+                        domain: msg.from_id.clone(), // .replace("$trx/db/req", "$trx/db/reply"),
+                        from_id: self.config.name.clone(),
+                        uuid4: msg.uuid4.clone(),
+                        to_scope: req.domain.clone(),
+                        time_jd_start: IndraEvent::datetime_to_julian(ut_now),
+                        data_type: "vector/tuple/jd/float".to_string(),
+                        data: serde_json::to_string(&res).unwrap(),
+                        auth_hash: Default::default(),
+                        time_jd_end: Default::default(),
+                    };
+                    debug!("Sending: {}->{}", rmsg.from_id, rmsg.domain);
+                    if sender.send(rmsg.clone()).await.is_err() {
+                        error!(
+                            "SQLx: Error sending reply-message to channel {}",
+                            rmsg.domain
+                        );
+                    }
+                    continue;
+                }
+                /*
+                if msg.domain.starts_with("$trx/db/event/req/history") {
+                    let req: IndraHistoryRequest = serde_json::from_str(msg.data.as_str()).unwrap();
                     warn!(
-                        "SQLx: Received db/req/event command from {} search for: {:?}",
+                        "SQLx: Received OBSOLETE db/req/event command from {} search for: {:?}",
                         msg.from_id, req
                     );
                     let rows: Vec<(i64, f64, String)>;
@@ -229,18 +313,18 @@ impl AsyncIndraTask for SQLx {
                         continue;
                     }
                     debug!("Found {} items", rows.len());
-                    let step: usize;
-                    if req.max_count.is_none() {
+                    let step: u32;
+                    if req.limit.is_none() {
                         step = 1;
-                    } else if rows.len() > req.max_count.unwrap() {
-                        step = rows.len() / req.max_count.unwrap();
+                    } else if rows.len() as u32 > req.limit.unwrap() {
+                        step = rows.len() as u32 / req.limit.unwrap();
                     } else {
                         step = 1;
                     }
 
                     let res: Vec<(f64, f64)> = rows
                         .iter()
-                        .step_by(step)
+                        .step_by(step as usize)
                         .map(|row| {
                             //let data: serde_json::Value = serde_json::from_str(&row.2).unwrap();
                             //let num_text: String = data.to_string().replace("\"", "");
@@ -301,12 +385,30 @@ impl AsyncIndraTask for SQLx {
                     }
                     //}
                     continue;
-                } else if msg.domain.starts_with("$trx/db/req/event/uniquedomains") {
-                    debug!("SQLx: Received db/unq/req command from {}", msg.from_id);
+                    */
+                if msg.domain.starts_with("$trx/db/req/uniquedomains") {
+                    let req_res: Result<IndraUniqueDomainsRequest, serde_json::Error> =
+                        serde_json::from_str(msg.data.as_str());
+                    if req_res.is_err() {
+                        error!(
+                            "SQLx: Error parsing db/req/uniquedomains command from {}, {:?}: {:?}",
+                            msg.from_id, msg.data, req_res
+                        );
+                        // XXX reply with error
+                        continue;
+                    }
+                    let req: IndraUniqueDomainsRequest = req_res.unwrap();
+                    info!(
+                        "SQLx: Received db/req/uniquedomains command from {} search for: {:?}",
+                        msg.from_id, req
+                    );
+
                     //let rows: Vec<(String)>;
                     let pool = pool.clone().unwrap();
                     let rows: Vec<String> =
-                        sqlx::query("SELECT DISTINCT domain FROM indra_events WHERE data_type LIKE 'number/float%';")
+                        sqlx::query("SELECT DISTINCT domain FROM indra_events WHERE domain LIKE ? AND data_type LIKE ?;")
+                            .bind(req.domain.unwrap_or("%".to_string()).to_string())
+                            .bind(req.data_type.unwrap_or("%".to_string()).to_string())
                             .fetch_all(&pool)
                             .await
                             .unwrap()

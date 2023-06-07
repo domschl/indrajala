@@ -277,12 +277,13 @@ class IndraClient:
             "time_jd_start": start_time,
             "time_jd_end": end_time,
             "max_count": sample_size,
+            "data_type": "number/float",
             "mode": "Interval",
         }
         ie = IndraEvent()
-        ie.domain = "$trx/db/req/event/history"
+        ie.domain = "$trx/db/req/history"
         ie.from_id = "ws/python"
-        ie.data_type = "eventrequest"
+        ie.data_type = "historyrequest"
         ie.data = json.dumps(cmd)
         self.log.info(f"Sending: {ie.to_json()}")
         return await self.send_event(ie)
