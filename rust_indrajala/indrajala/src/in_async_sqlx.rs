@@ -199,17 +199,44 @@ impl AsyncIndraTask for SQLx {
                     let ut_start = Utc::now();
                     let pool = pool.clone().unwrap();
                     // XXX Support for differrent data_types and HistoryRequestModes
-                    let rows_res = sqlx::query_as(
-                        "SELECT id, time_jd_start, data FROM (SELECT * FROM indra_events WHERE domain LIKE ? AND data_type LIKE ? AND time_jd_start >= ? AND time_jd_start <= ? ORDER BY RANDOM() LIMIT ?) ORDER BY time_jd_start ASC",
-                    )
-                    .bind(req.domain.to_string())
-                    .bind(req.data_type.to_string())
-                    .bind(req.time_jd_start.unwrap_or(f64::MIN))
-                    .bind(req.time_jd_end.unwrap_or(f64::MAX))
-                    .bind(req.limit.unwrap_or(u32::MAX))
-                    .fetch_all(&pool)
-                    .await;
-                    let rows: Vec<(i64, f64, String)> = match rows_res {
+                    let eq1 = match req.domain.contains('%') {
+                        true => "LIKE",
+                        false => "=",
+                    };
+                    let eq2 = match req.data_type.contains('%') {
+                        true => "LIKE",
+                        false => "=",
+                    };
+                    let mut sql_cmd_str = format!("SELECT id, time_jd_start, data FROM (SELECT * FROM indra_events WHERE domain {} ? AND data_type {} ?", eq1, eq2);
+                    // AND time_jd_start >= ? AND time_jd_start <= ? ORDER BY RANDOM() LIMIT ?) ORDER BY time_jd_start ASC
+                    if req.time_jd_start.is_some() {
+                        sql_cmd_str.push_str(" AND time_jd_start >= ?");
+                    }
+                    if req.time_jd_end.is_some() {
+                        sql_cmd_str.push_str(" AND time_jd_start <= ?");
+                    }
+                    if req.limit.is_some() {
+                        sql_cmd_str.push_str(" ORDER BY RANDOM() LIMIT ?");
+                    }
+                    sql_cmd_str.push_str(") ORDER BY time_jd_start ASC");
+                    let sql_cmd = sql_cmd_str.as_str();
+                    let rows_res = sqlx::query_as(sql_cmd)
+                        .bind(req.domain.to_string())
+                        .bind(req.data_type.to_string());
+                    let rr2 = match req.time_jd_start {
+                        Some(t) => rows_res.bind(t),
+                        None => rows_res,
+                    };
+                    let rr3 = match req.time_jd_end {
+                        Some(t) => rr2.bind(t),
+                        None => rr2,
+                    };
+                    let rr4 = match req.limit {
+                        Some(t) => rr3.bind(t),
+                        None => rr3,
+                    };
+                    let rr5 = rr4.fetch_all(&pool).await;
+                    let rows: Vec<(i64, f64, String)> = match rr5 {
                         Ok(rows) => rows,
                         Err(e) => {
                             error!("SQLx: Error executing query on database: {:?}", e);
