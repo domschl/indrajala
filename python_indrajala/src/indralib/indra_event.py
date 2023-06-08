@@ -118,3 +118,42 @@ class IndraEvent:
         return datetime.datetime(
             year, month, int(day), int(hour), int(minute), int(second), int(microsecond)
         )
+
+    @staticmethod
+    def fracyear2datetime(fy):
+        """Convert fractional year to datetime
+
+        Scientific decimal time is based on the definition that a “Julian year” is exactly 365.25 days long.
+
+        These values, based on the Julian year, are most likely to be those used in astronomy and related
+        sciences. Note however that in a Gregorian year, which takes into account the 100 vs. 400 leap year
+        exception rule of the Gregorian calendar, is 365.2425 days (the average length of a year over a
+        400–year cycle).
+
+        This routines uses the Julian year definition, a year of 365.25 days, and is thus not Gregorian.
+
+        See: https://en.wikipedia.org/w/index.php?title=Decimal_time
+
+        :param fy: fractional year
+        :return: datetime
+        """
+        year = int(fy)
+        rem = fy - year
+        dt = datetime.datetime(year, 1, 1)
+        dt += datetime.timedelta(seconds=rem * 365.25 * 24 * 60 * 60)
+        return dt
+
+    @staticmethod
+    def datetime2fracyear(dt):
+        """
+        Convert datetime to fractional year
+
+        THis method uses the Julian year definition, a year of 365.25 days, see \ref fracyear2datetime
+        for further discussion.
+
+        @param dt: datetime
+        @return: fractional year
+        """
+        return dt.year + (dt - datetime.datetime(dt.year, 1, 1)).total_seconds() / (
+            365.25 * 24 * 60 * 60
+        )
