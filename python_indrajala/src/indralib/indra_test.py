@@ -1,5 +1,6 @@
 from indra_event import IndraEvent
 
+
 def test_mqcmp():
     td = [
         ("abc", "abc", True),
