@@ -77,7 +77,15 @@ class IndraEvent:
 
     @staticmethod
     def datetime2julian(dt: datetime.datetime):
-        """Convert datetime to Julian date"""
+        """Convert datetime to Julian date
+
+        Note: datetime must have a timezone!
+
+        :param dt: datetime object
+        :return: float Julian date
+        """
+        if dt.tzinfo is None:
+            raise ValueError(f"datetime {dt} must have a timezone!")
         return (
             dt.toordinal()
             + 1721425.5
@@ -115,9 +123,17 @@ class IndraEvent:
         minute = 60 * (hour - int(hour))
         second = 60 * (minute - int(minute))
         microsecond = 1000000 * (second - int(second))
-        return datetime.datetime(
-            year, month, int(day), int(hour), int(minute), int(second), int(microsecond)
+        dt = datetime.datetime(
+            year,
+            month,
+            int(day),
+            int(hour),
+            int(minute),
+            int(second),
+            int(microsecond),
+            tzinfo=datetime.timezone.utc,
         )
+        return dt
 
     @staticmethod
     def fracyear2datetime(fy):
@@ -139,7 +155,7 @@ class IndraEvent:
         """
         year = int(fy)
         rem = fy - year
-        dt = datetime.datetime(year, 1, 1)
+        dt = datetime.datetime(year, 1, 1, tzinfo=datetime.timezone.utc)
         dt += datetime.timedelta(seconds=rem * 365.25 * 24 * 60 * 60)
         return dt
 
@@ -148,16 +164,20 @@ class IndraEvent:
         """
         Convert datetime to fractional year
 
-        THis method uses the Julian year definition, a year of 365.25 days, see \ref fracyear2datetime
+        This method uses the Julian year definition, a year of 365.25 days, see \ref fracyear2datetime
         for further discussion.
+
+        Note: naive datetime objects are not accepted, as they are ambiguous, please set a timezone.
 
         @param dt: datetime
         @return: fractional year
         """
-        return dt.year + (dt - datetime.datetime(dt.year, 1, 1)).total_seconds() / (
-            365.25 * 24 * 60 * 60
-        )
-    
+        if dt.tzinfo is None:
+            raise ValueError(f"datetime {dt} must have a timezone!")
+        return dt.year + (
+            dt - datetime.datetime(dt.year, 1, 1, tzinfo=datetime.timezone.utc)
+        ).total_seconds() / (365.25 * 24 * 60 * 60)
+
     @staticmethod
     def fracyear2julian(fy):
         """Convert fractional year to Julian date
@@ -171,5 +191,3 @@ class IndraEvent:
         year = int(fy)
         rem = fy - year
         # no datetime!
-        
-
