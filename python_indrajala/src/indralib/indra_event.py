@@ -157,3 +157,19 @@ class IndraEvent:
         return dt.year + (dt - datetime.datetime(dt.year, 1, 1)).total_seconds() / (
             365.25 * 24 * 60 * 60
         )
+    
+    @staticmethod
+    def fracyear2julian(fy):
+        """Convert fractional year to Julian date
+
+        Note: fracyear fy is well defined for dates before 1AD, which are not representable in datetime.
+
+        :param fy: fractional year
+        :return: Julian date
+        """
+        # Do not use datetime or fracyear2datetime!
+        year = int(fy)
+        rem = fy - year
+        # no datetime!
+        
+

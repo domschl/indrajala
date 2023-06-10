@@ -7,15 +7,21 @@ last_update = "2022-06"
 publisher = "Dr. Pieter Tans, NOAA/GML (gml.noaa.gov/ccgg/trends/) and Dr. Ralph Keeling, Scripps Institution of Oceanography (scrippsco2.ucsd.edu/)."
 id = ""
 indra_id = "manualoaco2monthlymean"
-indra_domain = "$event/geodata/historical/{indra_id}"
+indra_domain = "$event/geodata/historical/{dataset}/{column}"
 version = ""
 data_source = "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_mm_mlo.csv"
 related_publications = ["https://gml.noaa.gov/ccgg/trends/data.html"]
 tags = ["co2", "mauna_loa", "direct_measurement"]
 
 [datasets]
-MaunaLoaMonthlyCO2 = [
+manualoaco2monthlymean = [
     "decode('utf-8')",
     "remove_comments('#')",
     "pandas_csv_separator_nan(',', [-1, -9.99, -0.99])",
+]
+
+[indra_import]
+manualoaco2monthlymean = [
+    "df['time']=fracyear2julia(imp['decimal date'])",
+    "df['mean/co2'] = imp['average']",
 ]
