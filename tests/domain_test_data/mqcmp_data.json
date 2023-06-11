@@ -1,0 +1,72 @@
+[
+    {
+        "pub": "abc",
+        "sub": "abc",
+        "result": true
+    },
+    {
+        "pub": "ab",
+        "sub": "abc",
+        "result": false
+    },
+    {
+        "pub": "ab",
+        "sub": "ab+",
+        "result": true
+    },
+    {
+        "pub": "abcd/dfew",
+        "sub": "abcd",
+        "result": false
+    },
+    {
+        "pub": "ba",
+        "sub": "bdc/ds",
+        "result": false
+    },
+    {
+        "pub": "abc/def",
+        "sub": "abc/+",
+        "result": true
+    },
+    {
+        "pub": "abc/def",
+        "sub": "asdf/+/asdf",
+        "result": false
+    },
+    {
+        "pub": "abc/def/asdf",
+        "sub": "abc/+/asdf",
+        "result": true
+    },
+    {
+        "pub": "abc/def/ghi",
+        "sub": "+/+/+",
+        "result": true
+    },
+    {
+        "pub": "abc/def/ghi",
+        "sub": "+/+/",
+        "result": false
+    },
+    {
+        "pub": "abc/def/ghi",
+        "sub": "+/+/+/+",
+        "result": false
+    },
+    {
+        "pub": "abc/def/ghi",
+        "sub": "+/#",
+        "result": true
+    },
+    {
+        "pub": "abc/def/ghi",
+        "sub": "+/+/#",
+        "result": true
+    },
+    {
+        "pub": "abc/def/ghi",
+        "sub": "+/+/+/#",
+        "result": false
+    }
+]
