@@ -5,13 +5,13 @@ import XCTest
 
 final class indralibTests: XCTestCase {
   struct TestData: Codable {
-    let pub: String
-    let sub: String
+    let publish: String
+    let subscribe: String
     let result: Bool
   }
   func test_mqcmp() {
     // Read mqcmp_data.json file in current directory (no bundle) with test data:
-    // format: [ { "pub": "abc", "sub": "abc", "result": true}, ...]
+    // format: [ { "publish": "abc", "subscribe": "abc", "result": true}, ...]
     let fileURL = URL(fileURLWithPath: "mqcmp_data.json")
     do {
       // Read the JSON data from the file
@@ -21,10 +21,11 @@ final class indralibTests: XCTestCase {
       let testCases = try decoder.decode([TestData].self, from: jsonData)
       // Process the tesst data
       for testCase in testCases {
-        let result = IndraEvent.mqcmp(pub: testCase.pub, sub: testCase.sub)
+        let result = IndraEvent.mqcmp(pub: testCase.publish, sub: testCase.subscribe)
 
         XCTAssertEqual(
-          result, testCase.result, "Failed for pub:\(testCase.pub), sub:\(testCase.sub)")
+          result, testCase.result,
+          "Failed for publish:\(testCase.publish), subscribe:\(testCase.subscribe)")
       }
     } catch {
       print("Error reading JSON file: \(error)")

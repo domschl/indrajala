@@ -1,72 +1,72 @@
 [
     {
-        "pub": "abc",
-        "sub": "abc",
+        "publish": "abc",
+        "subscribe": "abc",
         "result": true
     },
     {
-        "pub": "ab",
-        "sub": "abc",
+        "publish": "ab",
+        "subscribe": "abc",
         "result": false
     },
     {
-        "pub": "ab",
-        "sub": "ab+",
+        "publish": "ab",
+        "subscribe": "ab+",
         "result": true
     },
     {
-        "pub": "abcd/dfew",
-        "sub": "abcd",
+        "publish": "abcd/dfew",
+        "subscribe": "abcd",
         "result": false
     },
     {
-        "pub": "ba",
-        "sub": "bdc/ds",
+        "publish": "ba",
+        "subscribe": "bdc/ds",
         "result": false
     },
     {
-        "pub": "abc/def",
-        "sub": "abc/+",
+        "publish": "abc/def",
+        "subscribe": "abc/+",
         "result": true
     },
     {
-        "pub": "abc/def",
-        "sub": "asdf/+/asdf",
+        "publish": "abc/def",
+        "subscribe": "asdf/+/asdf",
         "result": false
     },
     {
-        "pub": "abc/def/asdf",
-        "sub": "abc/+/asdf",
+        "publish": "abc/def/asdf",
+        "subscribe": "abc/+/asdf",
         "result": true
     },
     {
-        "pub": "abc/def/ghi",
-        "sub": "+/+/+",
+        "publish": "abc/def/ghi",
+        "subscribe": "+/+/+",
         "result": true
     },
     {
-        "pub": "abc/def/ghi",
-        "sub": "+/+/",
+        "publish": "abc/def/ghi",
+        "subscribe": "+/+/",
         "result": false
     },
     {
-        "pub": "abc/def/ghi",
-        "sub": "+/+/+/+",
+        "publish": "abc/def/ghi",
+        "subscribe": "+/+/+/+",
         "result": false
     },
     {
-        "pub": "abc/def/ghi",
-        "sub": "+/#",
+        "publish": "abc/def/ghi",
+        "subscribe": "+/#",
         "result": true
     },
     {
-        "pub": "abc/def/ghi",
-        "sub": "+/+/#",
+        "publish": "abc/def/ghi",
+        "subscribe": "+/+/#",
         "result": true
     },
     {
-        "pub": "abc/def/ghi",
-        "sub": "+/+/+/#",
+        "publish": "abc/def/ghi",
+        "subscribe": "+/+/+/#",
         "result": false
     }
 ]

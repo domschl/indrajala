@@ -311,19 +311,28 @@ impl Default for IndraEvent {
     }
 }
 
-/*
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use std::fs::File;
+    use std::io::BufReader;
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn mqcmp_tests() {
+        // load mqcmp_data.json:
+        // format: [ { "pub": "abc", "sub": "abc", "result": true}, ...]
+        #[derive(Deserialize)]
+        struct MqcmpData {
+            publish: String,
+            subscribe: String,
+            result: bool,
+        }
+        let file = File::open("../../tests/domain_test_data/mqcmp_data.json").unwrap();
+        let reader = BufReader::new(file);
+        let data: Vec<MqcmpData> = serde_json::from_reader(reader).unwrap();
+
+        for d in data {
+            let result = IndraEvent::mqcmp(&d.publish, &d.subscribe);
+            assert_eq!(result, d.result);
+        }
     }
 }
-*/
