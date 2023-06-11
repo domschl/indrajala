@@ -17,15 +17,12 @@ class TestIndraEvent(unittest.TestCase):
         with open("mqcmp_data.json", "r") as f:
             td = json.load(f)
         for t in td:
-            result = IndraEvent.mqcmp(t["pub"], t["sub"])
+            result = IndraEvent.mqcmp(t["publish"], t["subscribe"])
             self.assertEqual(
                 result,
                 t["result"],
-                f"pub:{t['pub']}, sub:{t['sub']} = {result} != {t['result']} (ground truth)",
+                f"pub:{t['publish']}, sub:{t['subscribe']} = {result} != {t['result']} (ground truth)",
             )
-
-
-test_year = 2020
 
 
 class TestFracyearConversion(unittest.TestCase):
@@ -42,7 +39,7 @@ class TestFracyearConversion(unittest.TestCase):
 
         for t in td:
             result = IndraEvent.fracyear2datetime(t["frac_year"])
-            expected_datetime = datetime.fromisoformat(t["date"])
+            expected_datetime = datetime.fromisoformat(t["date"].replace("Z", "+00:00"))
             print(result, expected_datetime)
             self.assertDateTimeAlmostEqual(result, expected_datetime)
 
@@ -52,7 +49,7 @@ class TestFracyearConversion(unittest.TestCase):
             td = json.load(f)
 
         for t in td:
-            dt = datetime.fromisoformat(t["date"])
+            dt = datetime.fromisoformat(t["date"].replace("Z", "+00:00"))
             result = IndraEvent.datetime2fracyear(dt)
             expected_fracyear = t["frac_year"]
             self.assertAlmostEqual(result, expected_fracyear, delta=0.0001)
