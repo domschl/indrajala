@@ -43,6 +43,7 @@ class TestFracyearConversion(unittest.TestCase):
         for t in td:
             result = IndraEvent.fracyear2datetime(t["frac_year"])
             expected_datetime = datetime.fromisoformat(t["date"])
+            print(result, expected_datetime)
             self.assertDateTimeAlmostEqual(result, expected_datetime)
 
     def test_datetime2fracyear(self):
