@@ -80,20 +80,29 @@ class IndraEvent:
         """Convert datetime to Julian date
 
         Note: datetime must have a timezone!
+        Should work over the entire range of datetime, starting with year 1.
 
         :param dt: datetime object
         :return: float Julian date
         """
         if dt.tzinfo is None:
             raise ValueError(f"datetime {dt} must have a timezone!")
-        return (
-            dt.toordinal()
-            + 1721425.5
-            + (dt.hour / 24)
-            + (dt.minute / 1440)
-            + (dt.second / 86400)
-            + (dt.microsecond / 86400000000)
-        )
+        dt = dt.astimezone(datetime.timezone.utc)
+        year = dt.year
+        month = dt.month
+        day = dt.day
+        hour = dt.hour
+        minute = dt.minute
+        second = dt.second
+        microsecond = dt.microsecond
+        if month <= 2:
+            year -= 1
+            month += 12
+        A = int(year / 100)
+        B = 2 - A + int(A / 4)
+        jd = int(365.25 * (year + 4716)) + int(30.6001 * (month + 1)) + day + B - 1524.5
+        jd += hour / 24 + minute / 1440 + second / 86400 + microsecond / 86400000000
+        return jd
 
     @staticmethod
     def julian2datetime(jd):
@@ -155,7 +164,9 @@ class IndraEvent:
         """
         year = int(fy)
         rem = fy - year
-        dt = datetime.datetime(year, 1, 1, tzinfo=datetime.timezone.utc)
+        dt = datetime.datetime(
+            year, 1, 1, tzinfo=datetime.timezone.utc
+        )  #  XXX this is Gregorian! Fix.
         dt += datetime.timedelta(seconds=rem * 365.25 * 24 * 60 * 60)
         return dt
 
@@ -175,7 +186,10 @@ class IndraEvent:
         if dt.tzinfo is None:
             raise ValueError(f"datetime {dt} must have a timezone!")
         return dt.year + (
-            dt - datetime.datetime(dt.year, 1, 1, tzinfo=datetime.timezone.utc)
+            dt
+            - datetime.datetime(
+                dt.year, 1, 1, tzinfo=datetime.timezone.utc
+            )  # XXX this is Gregorian! Fix.
         ).total_seconds() / (365.25 * 24 * 60 * 60)
 
     @staticmethod
