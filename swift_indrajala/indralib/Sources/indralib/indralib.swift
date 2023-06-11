@@ -5,7 +5,7 @@ class IndraEvent: Codable {
     var from_id: String = ""
     var uuid4: String = UUID().uuidString
     var to_scope: String = ""
-    var time_jd_start: Double = Date().timeIntervalSince1970
+    var time_jd_start: Double = Date().Julian()
     var data_type: String = ""
     var data: String = ""
     var auth_hash: String = ""
