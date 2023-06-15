@@ -272,7 +272,14 @@ async fn handle_message(
 ) {
     match msg {
         Message::Text(text) => {
-            let mut msg: IndraEvent = serde_json::from_str(&text).unwrap();
+            let mut msg;
+            let msg_res: Result<IndraEvent, serde_json::Error> = serde_json::from_str(&text);
+            if msg_res.is_err() {
+                warn!("Error parsing message: {:?}", msg_res);
+                return;
+            } else {
+                msg = msg_res.unwrap();
+            }
             match msg.domain.as_str() {
                 "$cmd/subs" => {
                     warn!("Received subs command: {:?}", msg);
@@ -300,6 +307,13 @@ async fn handle_message(
                     } else {
                         warn!("Error parsing subs command: {:?}", msg);
                     }
+                }
+                "$cmd/echo" => {
+                    info!("Received echo command: {:?}", msg);
+                    let mut ie = msg.clone();
+                    ie.from_id = format!("{}/{}", name, peer_address);
+                    ie.time_jd_end = Some(IndraEvent::datetime_to_julian(chrono::Utc::now()));
+                    sx.send(ie).await.unwrap();
                 }
                 "$log/error" => {
                     error!("{}: {:?}", msg.from_id, msg.data);
