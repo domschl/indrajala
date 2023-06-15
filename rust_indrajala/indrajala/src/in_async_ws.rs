@@ -308,7 +308,7 @@ async fn handle_message(
                         warn!("Error parsing subs command: {:?}", msg);
                     }
                 }
-                "$cmd/echo" => {
+                "$trx/echo" => {
                     info!("Received echo command: {:?}", msg);
                     let mut ie = msg.clone();
                     ie.from_id = format!("{}/{}", name, peer_address);
