@@ -275,7 +275,7 @@ async fn handle_message(
             let mut msg;
             let msg_res: Result<IndraEvent, serde_json::Error> = serde_json::from_str(&text);
             if msg_res.is_err() {
-                warn!("Error parsing message: {:?}", msg_res);
+                warn!("Error parsing message: >{}<, {:?}", text, msg_res);
                 return;
             } else {
                 msg = msg_res.unwrap();
@@ -309,10 +309,16 @@ async fn handle_message(
                     }
                 }
                 "$trx/echo" => {
-                    info!("Received echo command: {:?}", msg);
                     let mut ie = msg.clone();
-                    ie.from_id = format!("{}/{}", name, peer_address);
-                    ie.time_jd_end = Some(IndraEvent::datetime_to_julian(chrono::Utc::now()));
+                    ie.from_id = ie.domain.clone();
+                    ie.domain = format!("{}/{}", name, peer_address);
+                    let jd_now = IndraEvent::datetime_to_julian(chrono::Utc::now());
+                    ie.time_jd_end = Some(jd_now);
+                    info!(
+                        "Received echo command: dt={} {:?}",
+                        (ie.time_jd_start - jd_now) * 86400.0,
+                        msg
+                    );
                     sx.send(ie).await.unwrap();
                 }
                 "$log/error" => {
