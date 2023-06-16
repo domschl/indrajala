@@ -71,7 +71,11 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                 ie.domain, ie.from_id
             );
         }
-        let task_name = ie.from_id.split('/').collect::<Vec<&str>>()[0];
+        let task_name = if ie.from_id == "$trx/echo" {
+            ie.domain.split('/').collect::<Vec<&str>>()[0]
+        } else {
+            ie.from_id.split('/').collect::<Vec<&str>>()[0]
+        };
         debug!("IE-Event: {} {} {}", ie.time_jd_start, ie.domain, ie.data);
         for task in &mut tsk {
             let subs;
@@ -140,13 +144,15 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                 );
             }
             if task_name == name {
-                if ie.domain != "$cmd/quit" {
-                    debug!(
-                        "NOT sending {} to {}, recursion avoidance.",
-                        ie.from_id, name
-                    );
-                } else {
+                if ie.domain == "$cmd/quit" {
                     quit_cmd_received = true;
+                }
+                if ie.from_id == "$trx/echo" {
+                    info!(
+                        "ROUTE ECHO REPLY for Task: {}, domain: {}, from_id: {}",
+                        name, ie.domain, ie.from_id
+                    );
+                    let _ = acs.send(ie.clone()).await;
                 }
                 from_ident = true;
                 if ie.domain == "$cmd/subs" {
@@ -295,6 +301,10 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                 } else {
                     debug!("{}, {} no match", ie.from_id, name_subs);
                 }
+            }
+
+            if ie.from_id == "$trx/echo" {
+                continue; // Echo is only sent to the originating task
             }
 
             if IndraEvent::check_route(&ie.domain, &name, &subs, None) || ie.domain == "$cmd/quit" {
