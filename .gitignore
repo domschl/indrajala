@@ -1,7 +1,7 @@
 /config
 csv_tree/
 target
-plotter.toml
+*.toml
 .vscode/
 __pycache__/
 .DS_Store
