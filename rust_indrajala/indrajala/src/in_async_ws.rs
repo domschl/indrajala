@@ -14,7 +14,7 @@ use async_std::{
 
 use log::{debug, error, info, warn};
 
-use rustls::ServerConfig;
+use rustls::server::ServerConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys}; //, rsa_private_keys};
 
 use async_tls::{server::TlsStream, TlsAcceptor};

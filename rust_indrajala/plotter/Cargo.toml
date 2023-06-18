@@ -16,5 +16,5 @@ serde_json = "*"
 indra_event = { path = "../../rust_indrajala/indra_event" }
 gtk = { version = "*", package = "gtk4" }
 glib = "*"
-plotters = { git = "https://github.com/plotters-rs/plotters" }
-plotters-cairo = { git = "https://github.com/plotters-rs/plotters-cairo" }
+plotters = "*"                                              #  { git = "https://github.com/plotters-rs/plotters" }
+plotters-cairo = "*"                                        # { git = "https://github.com/plotters-rs/plotters-cairo" }
