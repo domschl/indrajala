@@ -8,7 +8,7 @@ default-run = "indrajala"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-trait = "*"  # it stable tool-chain is used!
+async-trait = "*" # it stable tool-chain is used!
 indra_event = { path = "../../rust_indrajala/indra_event" }
 async-std = "*"
 uuid = { version = "*", features = ["v4"] }
@@ -22,13 +22,17 @@ serde_json = "*"
 chrono = "*"
 chrono-tz = "*"
 tide = "*"
-rustls = "0.20"
+rustls = "0.20" # Blocked because of stalled development at async-tls.
 rustls-pemfile = "*"
 tide-rustls = "*"
-sqlx = { version = "*", features = ["runtime-async-std-rustls", "sqlite", "macros"] }
+sqlx = { version = "0.6.3", features = [
+    "runtime-async-std-rustls",
+    "sqlite",
+    "macros",
+] }
 # native-tls = "*"
-async-tls = "*"  # { version = "*", features = ["server"]}
-async-tungstenite = "*"  # { version = "*", features = ["async-tls", "async-std-runtime"] }
+async-tls = "*"             # { version = "*", features = ["server"]}
+async-tungstenite = "*"     # { version = "*", features = ["async-tls", "async-std-runtime"] }
 futures = "*"
 signal-hook = "*"
 signal-hook-async-std = "*"
@@ -36,4 +40,4 @@ log = "*"
 env_logger = "*"
 
 # llm = "0.1.1"
-llm = { git = "https://github.com/rustformers/llm" , branch = "main" }
+llm = { git = "https://github.com/rustformers/llm", branch = "main" }
