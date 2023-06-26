@@ -18,10 +18,9 @@ manualoaco2monthlymean = [
     "decode('utf-8')",
     "remove_comments('#')",
     "pandas_csv_separator_nan(',', [-1, -9.99, -0.99])",
-]
-
-[indra_import]
-manualoaco2monthlymean = [
-    "df['time']=fracyear2julia(imp['decimal date'])",
-    "df['mean/co2'] = imp['average']",
+    "df['time_jd_start']=fracyear2julia(df['decimal date'])",
+    "df['mean/co'] = df['average']",
+    "df['deseasonalized/co2'] = df['deseasonalized']",
+    "indra_import(time='time_jd_start', column='mean/co')",
+    "indra_import(time='time_jd_start', column='deseasonalized/co2')",
 ]

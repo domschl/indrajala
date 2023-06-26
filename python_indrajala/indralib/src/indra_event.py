@@ -22,7 +22,9 @@ class IndraEvent:
         self.from_id = ""
         self.uuid4 = str(uuid.uuid4())
         self.to_scope = ""
-        self.time_jd_start = self.datetime2julian(datetime.datetime.now())
+        self.time_jd_start = self.datetime2julian(
+            datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        )
         self.data_type = ""
         self.data = ""
         self.auth_hash = ""

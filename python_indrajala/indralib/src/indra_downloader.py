@@ -185,22 +185,50 @@ class IndraDownloader:
         data = self.tf_data
         return data.replace(token, replacement)
 
+    def indra_import(self, time, column):
+        self.log.info(f"Indra import: {time}, {column} NOT IMPLEMENTED YET")
+        pass
+
+    def transform_df(self, df, transform, left, right):
+        return eval(transform)
+
     def single_transform(self, data, transform):
-        try:
-            fn_name = transform.split("(")[0]
-        except Exception as e:
-            self.log.error(f"Failed to parse transform {transform}: {e}")
-            return None
-        tf = getattr(self, fn_name)
-        if tf is not None:
-            trs = "self." + transform
-            self.tf_data = data
-            try:
-                data = eval(trs)
-            except Exception as e:
-                self.log.error(f"Failed to eval {trs}: {e}")
+        if transform.startswith("df['"):
+            ind = transform.find("=")
+            if ind == -1:
+                self.log.error(
+                    f"Format required: df['column_name'] = transform, e.g. df['column_name'] = df['column_name'].str.lower()"
+                )
                 return None
-        return data
+            left = transform[:ind]
+            right = transform[ind + 1 :]
+            ind = left.find("']")
+            if ind == -1:
+                self.log.error(
+                    f"Format required: df['column_name'] = transform, e.g. df['column_name'] = df['column_name'].str.lower()"
+                )
+                return None
+            # check, if data is a dataframe
+            if isinstance(data, pd.DataFrame) is False:
+                self.log.error(f"Data is not a dataframe, cannot apply transform")
+                return None
+            return self.transform_df(data, transform, left, right)
+        else:
+            try:
+                fn_name = transform.split("(")[0]
+            except Exception as e:
+                self.log.error(f"Failed to parse transform {transform}: {e}")
+                return None
+            tf = getattr(self, fn_name)
+            if tf is not None:
+                trs = "self." + transform
+                self.tf_data = data
+                try:
+                    data = eval(trs)
+                except Exception as e:
+                    self.log.error(f"Failed to eval {trs}: {e}")
+                    return None
+            return data
 
     def transform(self, data, transforms):
         data_dict = {}
@@ -217,7 +245,13 @@ class IndraDownloader:
                 data_dict[dataset_name] = dataset
         return data_dict
 
-    def get(self, url, transforms=None, user_agent=None, resolve_redirects=True):
+    def get(
+        self,
+        url,
+        transforms=None,
+        user_agent=None,
+        resolve_redirects=True,
+    ):
         cache_filename = None
         cache_path = None
         if resolve_redirects is True:
@@ -324,6 +358,7 @@ class IndraDownloader:
 
     def get_datasets(self, data_sources_dir):
         dfs = {}
+        self.indra_imports = {}
         for file in os.listdir(data_sources_dir):
             if file.endswith(".toml"):
                 filepath = os.path.join(data_sources_dir, file)
@@ -365,6 +400,11 @@ class IndraDownloader:
                     use_redirect = data_desc["citation"]["redirect"]
                 else:
                     use_redirect = True
+                if "indra_import" in data_desc:
+                    indra_imports = data_desc["indra_import"]
+                    self.log.info(f"indra_imports: {indra_imports}")
+                else:
+                    indra_imports = None
                 data_dicts = self.get(
                     data_desc["citation"]["data_source"],
                     transforms=data_desc["datasets"],
