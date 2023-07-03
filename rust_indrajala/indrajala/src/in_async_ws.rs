@@ -289,14 +289,14 @@ async fn handle_message(
                     if new_subs_res.is_ok() {
                         let new_subs = new_subs_res.unwrap();
                         for sub in new_subs.iter() {
-                            let ev_sub = if !sub.starts_with("$event/") {
-                                // XXX useless hack, tbr.
-                                format!("$event/{}", sub)
-                            } else {
-                                sub.clone()
-                            };
+                            //let ev_sub = if !sub.starts_with("$event/") {
+                            //    // XXX useless hack, tbr.
+                            //    format!("$event/{}", sub)
+                            //} else {
+                            //    sub.clone()
+                            //};
                             //if !subs.contains(&ev_sub) {  // XXX: allow dups
-                            subs.push(ev_sub.clone());
+                            subs.push(sub.clone());
                             //}
                         }
                         warn!("Subscribing to: {:?} -> {:?}", new_subs, subs);
