@@ -1,7 +1,7 @@
 //use async_channel;
-use async_std::task;
-use futures::future::FutureExt;
-use futures::select;
+//use async_std::task;
+//use futures::future::FutureExt;
+//use futures::select;
 // use futures::Future;
 
 //use chrono::Duration;
@@ -32,7 +32,7 @@ impl Llm {
         (s1, r1) = async_channel::unbounded();
         let llm_config = config; //.clone();
         if llm_config.active {
-            info!("Model loaded.");
+            info!("Config loaded.");
         }
         let subs = vec![format!("{}/#", llm_config.name)];
 
@@ -97,8 +97,10 @@ impl Llm {
     }
 
     pub fn inference_callback(
+        self,
         stop_sequence: String,
         buf: &mut String,
+        router_sender: async_channel::Sender<IndraEvent>,
     ) -> impl FnMut(llm::InferenceResponse) -> Result<llm::InferenceFeedback, Infallible> + '_ {
         move |resp| match resp {
             llm::InferenceResponse::InferredToken(t) => {
@@ -113,9 +115,9 @@ impl Llm {
                 }
 
                 if buf.is_empty() {
-                    Llm::send_answer(t)
+                    self.clone().send_answer(t, router_sender.clone())
                 } else {
-                    Llm::send_answer(reverse_buf)
+                    self.clone().send_answer(reverse_buf, router_sender.clone())
                 }
             }
             llm::InferenceResponse::EotToken => Ok(llm::InferenceFeedback::Halt),
@@ -145,15 +147,26 @@ impl Llm {
         model
     }
 
-    pub fn send_answer(token: String) -> Result<llm::InferenceFeedback, Infallible> {
+    pub fn send_answer(
+        self,
+        token: String,
+        router_sender: async_channel::Sender<IndraEvent>,
+    ) -> Result<llm::InferenceFeedback, Infallible> {
         let answer = token;
         info!("Llm: Answer: {}", answer);
+        let mut ie = IndraEvent::new();
+        ie.domain = "CHAT.1/1".to_string();
+        ie.from_id = "LLM.1".to_string();
+        ie.data_type = "string/chat".to_string();
+        ie.data = answer;
+        let _ = futures::executor::block_on(router_sender.send(ie));
         Ok(llm::InferenceFeedback::Continue)
     }
 
     pub async fn infer(
+        self,
         llm_config: LLMConfig,
-        _sender: async_channel::Sender<IndraEvent>,
+        sender: async_channel::Sender<IndraEvent>,
         receiver: async_channel::Receiver<IndraEvent>,
     ) {
         info!("Llm: Starting Llm in long-running thread");
@@ -163,6 +176,8 @@ impl Llm {
             return;
         }
         let model = model.unwrap();
+
+        info!("Llm: Starting session.");
         let mut session = model.start_session(Default::default());
 
         let character_name = "### Assistant";
@@ -176,7 +191,8 @@ impl Llm {
 
         let inference_parameters = llm::InferenceParameters::default();
 
-        session
+        info!("Llm: Ingesting initial prompt.");
+        if session
             .feed_prompt(
                 model.as_ref(),
                 &inference_parameters,
@@ -184,16 +200,32 @@ impl Llm {
                 &mut Default::default(),
                 llm::feed_prompt_callback(|resp| match resp {
                     llm::InferenceResponse::PromptToken(t)
-                    | llm::InferenceResponse::InferredToken(t) => Llm::send_answer(t),
+                    | llm::InferenceResponse::InferredToken(t) => {
+                        self.clone().send_answer(t, sender.clone())
+                    }
                     _ => Ok(llm::InferenceFeedback::Continue),
                 }),
             )
-            .expect("Failed to ingest initial prompt.");
-
-        let mut res = llm::InferenceStats::default();
+            .is_err()
+        {
+            error!("Llm: Failed to ingest initial prompt");
+            return;
+        }
+        // .expect("Failed to ingest initial prompt.");
+        /*
+        if res.is_err() {
+            error!(
+                "Llm: Failed to ingest initial prompt: {}",
+                res.err().unwrap()
+            );
+            return;
+        }
+        */
+        let mut res = llm::InferenceStats::default(); // .clone();
         let mut buf = String::new();
 
         // let rec = receiver.clone();
+        info!("Llm: Starting inference loop.");
         loop {
             let ie_rcv = receiver.recv().await;
             // get ie from channel:
@@ -231,9 +263,16 @@ impl Llm {
                         maximum_token_count: None,
                     },
                     &mut Default::default(),
-                    Llm::inference_callback(String::from(user_name), &mut buf),
+                    self.clone().inference_callback(
+                        String::from(user_name),
+                        &mut buf,
+                        sender.clone(),
+                    ),
                 )
-                .unwrap_or_else(|e| panic!("{e}"));
+                .unwrap_or_else(|e| {
+                    error!("{e}");
+                    Default::default()
+                });
 
             res.feed_prompt_duration = res
                 .feed_prompt_duration
@@ -241,14 +280,6 @@ impl Llm {
             res.prompt_tokens += stats.prompt_tokens;
             res.predict_duration = res.predict_duration.saturating_add(stats.predict_duration);
             res.predict_tokens += stats.predict_tokens;
-            //                    }
-            //                  Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => {
-            //                      break;
-            //                  }
-            //                  Err(err) => {
-            //                      println!("{err}");
-            //                  }
-            //              }
         }
         info!("\n\nInference stats:\n{res}");
     }
@@ -261,20 +292,32 @@ impl AsyncIndraTask for Llm {
         }
     }
 
-    async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
+    async fn async_receiver(self, sender: async_channel::Sender<IndraEvent>) {
         if !self.config.active {
             debug!("Llm is not active");
             return;
         }
         let llm_config = self.config.clone();
-        let name = llm_config.name.clone();
-        let sender = self.sender.clone();
+        let _name = llm_config.name.clone();
+        let sender = sender.clone();
         let receiver = self.receiver.clone();
         info!("Llm: Starting Llm in async thread");
-        let tsk = async_std::task::spawn_blocking(async move || {
-            Llm::infer(llm_config, sender, receiver).await;
+        // let _tsk = async_std::task::spawn_blocking(async move || {
+        let tsk = async_std::task::spawn(async {
+            self.infer(llm_config, sender, receiver).await;
         });
+        info!("Llm: Started Llm in async thread, sleeping...");
+        let _blue = tsk.await;
+        info!("LLm: Llm async thread terminated.");
+        // Sleep forever:
+        // let abrt = false;
+        while false {
+            // sleep 1 sec
+            async_std::task::sleep(core::time::Duration::from_secs(1)).await;
+        }
+    }
 
+    /*
         let mut msg_fut = self.receiver.recv().fuse();
         loop {
             select!(
@@ -285,10 +328,11 @@ impl AsyncIndraTask for Llm {
                     }
                     let msg = msg.unwrap();
                     if msg.domain == "$cmd/quit" {
-                        debug!("Llm: Received quit command, quiting receive-loop.");
+                        info!("Llm: Received quit command, quiting receive-loop.");
                         // self.config.active = false;
                     } else {
                         msg_fut = self.receiver.recv().fuse();
+                        info!("llm: Received message: {:?} in wrong loop", msg)
                     }
                 },
                 complete => {
@@ -302,5 +346,7 @@ impl AsyncIndraTask for Llm {
         let _tt = task::block_on(tsk);
         info!("End long-running thread llm ");
         info!("Llm {}: Receive-loop exited (llm thread running)", name);
+
     }
+    */
 }

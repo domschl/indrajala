@@ -191,7 +191,7 @@ class IndraClient:
         await self.websocket.send(event.to_json())
         return replyEventFuture
 
-    async def recv_event(self):
+    async def recv_event(self, timeout=None):
         """Receive event"""
         if self.initialized is False:
             self.log.error(
@@ -203,11 +203,20 @@ class IndraClient:
                 "Websocket not initialized, please call init_connection() first!"
             )
             return None
-        try:
-            ie = await self.recv_queue.get()
-        except Exception as e:
-            self.log.error(f"Could not receive message: {e}")
-            return None
+        if timeout is None:
+            try:
+                ie = await self.recv_queue.get()
+            except Exception as e:
+                self.log.error(f"Could not receive message: {e}")
+                return None
+        else:
+            try:
+                ie = await asyncio.wait_for(self.recv_queue.get(), timeout=timeout)
+            except TimeoutError:
+                return None
+            except:
+                self.log.error(f"Timeout receive failed!")
+                return None
         self.recv_queue.task_done()
         return ie
 
