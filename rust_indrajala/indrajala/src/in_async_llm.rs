@@ -1,19 +1,21 @@
 //use async_channel;
 use async_std::task;
-//use futures::future::FutureExt;
-//use futures::Future;
-//use futures::select;
+use futures::future::FutureExt;
+use futures::select;
+// use futures::Future;
 
 //use chrono::Duration;
 //use llm;
 use log::{debug, error, info, warn};
 //use rand;
 use std::convert::Infallible;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::indra_config::LLMConfig;
 use crate::AsyncIndraTask;
 use crate::IndraEvent;
+
+// References: https://github.com/rustformers/llm/blob/main/crates/llm/examples/vicuna-chat.rs
 
 #[derive(Clone)]
 pub struct Llm {
@@ -39,6 +41,20 @@ impl Llm {
             receiver: r1,
             sender: s1,
             subs,
+        }
+    }
+
+    pub fn to_tokenizer_source(
+        tokenizer_path: Option<PathBuf>,
+        tokenizer_repository: Option<&str>,
+    ) -> llm::TokenizerSource {
+        match (tokenizer_path, tokenizer_repository) {
+            (Some(_), Some(_)) => {
+                panic!("Cannot specify both --tokenizer-path and --tokenizer-repository");
+            }
+            (Some(path), None) => llm::TokenizerSource::HuggingFaceTokenizerFile(path), // .to_owned()),
+            (None, Some(repo)) => llm::TokenizerSource::HuggingFaceRemote(repo.to_owned()),
+            (None, None) => llm::TokenizerSource::Embedded,
         }
     }
 
@@ -112,12 +128,14 @@ impl Llm {
 
         let model_architecture: llm::ModelArchitecture = llm_config.model_arch.parse().unwrap();
         let model_path = Path::new(&llm_config.model_path);
+        let tokenizer_path: Option<PathBuf> = llm_config.tokenizer_path.map(PathBuf::from);
+        let tokenizer_repo: Option<&str> = llm_config.tokenizer_repo.as_deref();
         // check if file exists:
 
         //let overrides = serde_json::from_str(llm_config.model_overrides.as_str()).unwrap();
-        let vocabulary_source = llm::VocabularySource::Model;
+        let vocabulary_source = Llm::to_tokenizer_source(tokenizer_path, tokenizer_repo); // llm::VocabularySource::Model;
         let model = llm::load_dynamic(
-            model_architecture,
+            Some(model_architecture),
             model_path,
             vocabulary_source,
             Default::default(),
@@ -251,12 +269,12 @@ impl AsyncIndraTask for Llm {
         let llm_config = self.config.clone();
         let name = llm_config.name.clone();
         let sender = self.sender.clone();
-        let receiver = self.receiver; // .clone();
+        let receiver = self.receiver.clone();
         info!("Llm: Starting Llm in async thread");
         let tsk = async_std::task::spawn_blocking(async move || {
             Llm::infer(llm_config, sender, receiver).await;
         });
-        /*
+
         let mut msg_fut = self.receiver.recv().fuse();
         loop {
             select!(
@@ -268,14 +286,18 @@ impl AsyncIndraTask for Llm {
                     let msg = msg.unwrap();
                     if msg.domain == "$cmd/quit" {
                         debug!("Llm: Received quit command, quiting receive-loop.");
-                        self.config.active = false;
+                        // self.config.active = false;
                     } else {
                         msg_fut = self.receiver.recv().fuse();
                     }
                 },
+                complete => {
+                    info!("Llm: complete received, terminating...");
+                    break;
+                }
             );
         }
-        */
+
         //let _unused = inf.await;
         let _tt = task::block_on(tsk);
         info!("End long-running thread llm ");

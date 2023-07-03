@@ -122,6 +122,8 @@ pub struct LLMConfig {
     pub model_path: String,
     pub model_arch: String,
     pub model_overrides: String,
+    pub tokenizer_path: Option<String>,
+    pub tokenizer_repo: Option<String>,
 }
 
 impl IndraConfig {
