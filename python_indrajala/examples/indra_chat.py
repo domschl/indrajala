@@ -54,7 +54,7 @@ async def chat():
             else:
                 prompt = "### Human:"
                 msg = ie.data
-                for i in range(len(prompt), 0, -1):
+                for i in range(len(prompt), 1, -1):
                     if msg.startswith(prompt[:i]):
                         msg = msg[i:]
                         timeout = 2
