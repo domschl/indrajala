@@ -38,6 +38,7 @@ async def chat():
     while True:
         print("Input: ", end="")
         msg = input()
+        timeout = 5
         if msg == "exit":
             break
         ie = IndraEvent()
@@ -46,19 +47,26 @@ async def chat():
         ie.data = msg
         await cl.send_event(ie)
         while True:
-            ie = await cl.recv_event(timeout=5)
+            ie = await cl.recv_event(timeout=timeout)
             if ie is None:
                 print()
                 break
             else:
-                print(
-                    ie.data.replace("###", "").replace("##", "").replace("}", ""),
-                    end="",
-                    flush=True,
-                )
-                if ie.data.endswith("}"):
-                    print()
-                    # break
+                prompt = "### Human:"
+                msg = ie.data
+                for i in range(len(prompt), 0, -1):
+                    if msg.startswith(prompt[:i]):
+                        msg = msg[i:]
+                        timeout = 2
+                if msg.endswith("}"):
+                    print(msg[:-1])
+                    break
+                else:
+                    print(
+                        msg,
+                        end="",
+                        flush=True,
+                    )
 
 
 logging.basicConfig(level=logging.INFO)
