@@ -36,9 +36,9 @@ async def chat():
     #     hist = await hist_future
     #     print(hist)
     while True:
+        timeout = 15
         print("Input: ", end="")
         msg = input()
-        timeout = 5
         if msg == "exit":
             break
         ie = IndraEvent()
@@ -55,9 +55,12 @@ async def chat():
                 prompt = "### Human:"
                 msg = ie.data
                 for i in range(len(prompt), 1, -1):
+                    if prompt[:i].endswith(" "):
+                        continue
                     if msg.startswith(prompt[:i]):
                         msg = msg[i:]
-                        timeout = 2
+                        break
+                timeout = 5
                 if msg.endswith("}"):
                     print(msg[:-1])
                     break
