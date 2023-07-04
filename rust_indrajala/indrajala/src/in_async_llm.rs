@@ -4,12 +4,14 @@
 //use futures::select;
 // use futures::Future;
 
+use llm::{InferenceParameters, InferenceSessionConfig, ModelKVMemoryType, ModelParameters};
 //use chrono::Duration;
 //use llm;
 use log::{debug, error, info, warn};
 //use rand;
 use std::convert::Infallible;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use crate::indra_config::LLMConfig;
 use crate::AsyncIndraTask;
@@ -136,11 +138,17 @@ impl Llm {
 
         //let overrides = serde_json::from_str(llm_config.model_overrides.as_str()).unwrap();
         let vocabulary_source = Llm::to_tokenizer_source(tokenizer_path, tokenizer_repo); // llm::VocabularySource::Model;
+        let params = ModelParameters {
+            prefer_mmap: llm_config.prefer_mmap,
+            context_size: llm_config.context_size,
+            use_gpu: llm_config.use_gpu,
+            lora_adapters: llm_config.lora_paths.clone(),
+        };
         let model = llm::load_dynamic(
             Some(model_architecture),
             model_path,
             vocabulary_source,
-            Default::default(),
+            params, // Default::default(),
             // overrides,
             Llm::load_progress_callback_logger,
         );
@@ -170,15 +178,25 @@ impl Llm {
         receiver: async_channel::Receiver<IndraEvent>,
     ) {
         info!("Llm: Starting Llm in long-running thread");
-        let model = Llm::get_model(llm_config);
+        let model = Llm::get_model(llm_config.clone());
         if model.is_err() {
             error!("Llm: Failed to load model: {}", model.err().unwrap());
             return;
         }
         let model = model.unwrap();
 
+        let mem_typ = if llm_config.no_float16.unwrap_or(false) {
+            ModelKVMemoryType::Float32
+        } else {
+            ModelKVMemoryType::Float16
+        };
+        let inference_session_config = InferenceSessionConfig {
+            memory_k_type: mem_typ,
+            memory_v_type: mem_typ,
+            use_gpu: llm_config.use_gpu,
+        };
         info!("Llm: Starting session.");
-        let mut session = model.start_session(Default::default());
+        let mut session = model.start_session(inference_session_config);
 
         let character_name = "### Assistant";
         let user_name = "### Human";
@@ -189,7 +207,19 @@ impl Llm {
              {character_name}:  Paris is the capital of France."
         );
 
-        let inference_parameters = llm::InferenceParameters::default();
+        let inference_parameters = InferenceParameters {
+            n_threads: llm_config.n_threads.unwrap_or_else(num_cpus::get),
+            n_batch: llm_config.n_batch.unwrap_or(8),
+            sampler: Arc::new(llm::samplers::TopPTopK {
+                top_k: llm_config.top_k.unwrap_or(40),
+                top_p: llm_config.top_p.unwrap_or(0.95),
+                repeat_penalty: llm_config.repeat_penalty.unwrap_or(1.30),
+                temperature: llm_config.temperature.unwrap_or(0.8),
+                bias_tokens: llm::TokenBias::new(vec![]),
+                repetition_penalty_last_n: llm_config.repetition_penalty_last_n.unwrap_or(64),
+            }),
+        };
+        //llm::InferenceParameters::default();
 
         info!("Llm: Ingesting initial prompt.");
         if session

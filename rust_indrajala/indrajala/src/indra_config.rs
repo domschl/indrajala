@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 //use toml;
 //use env_logger::Env;
 //use log::{debug, error, info, warn};
@@ -124,6 +124,18 @@ pub struct LLMConfig {
     pub model_overrides: String,
     pub tokenizer_path: Option<String>,
     pub tokenizer_repo: Option<String>,
+    pub prefer_mmap: bool,
+    pub context_size: usize,
+    pub use_gpu: bool,
+    pub lora_paths: Option<Vec<PathBuf>>,
+    pub n_threads: Option<usize>,
+    pub n_batch: Option<usize>,
+    pub top_k: Option<usize>,
+    pub top_p: Option<f32>,
+    pub repeat_penalty: Option<f32>,
+    pub temperature: Option<f32>,
+    pub repetition_penalty_last_n: Option<usize>,
+    pub no_float16: Option<bool>,
 }
 
 impl IndraConfig {

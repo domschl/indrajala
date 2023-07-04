@@ -38,6 +38,9 @@ signal-hook = "*"
 signal-hook-async-std = "*"
 log = "*"
 env_logger = "*"
+num_cpus = "*"
 
 # llm = "0.1.1"
-llm = { git = "https://github.com/rustformers/llm", branch = "main" }
+llm = { git = "https://github.com/rustformers/llm", branch = "main", features = [
+    "metal",
+] }
