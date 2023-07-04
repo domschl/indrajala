@@ -2219,6 +2219,7 @@ dependencies = [
  "indra_event",
  "llm",
  "log",
+ "num_cpus",
  "paho-mqtt",
  "rand 0.8.5",
  "rustls 0.20.8",
