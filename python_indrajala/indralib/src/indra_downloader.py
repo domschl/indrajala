@@ -13,6 +13,8 @@ import requests
 import tomllib as toml
 import uuid
 
+from indra_event import IndraEvent
+
 
 class IndraDownloader:
     def __init__(self, cache_dir="download_cache", use_cache=True):
@@ -190,7 +192,13 @@ class IndraDownloader:
         pass
 
     def transform_df(self, df, transform, left, right):
-        return eval(transform)
+        try:
+            eval(transform)
+        except Exception as e:
+            self.log.error(f"Failed to apply transform: {e}")
+            print(df.head(5))
+            return None
+        return df
 
     def single_transform(self, data, transform):
         if transform.startswith("df['"):
