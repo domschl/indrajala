@@ -154,4 +154,4 @@ if __name__ == "__main__":
             await get_data(cl)
             await asyncio.sleep(timer_value)
 
-    asyncio.run(main())
+    asyncio.run(main(timer_value=timer_value))
