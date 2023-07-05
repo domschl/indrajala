@@ -21,7 +21,7 @@ except:
 print(path)
 sys.path.append(path)
 
-from indra_event import IndraEvent
+from indra_evqent import IndraEvent
 from indra_client import IndraClient
 
 
