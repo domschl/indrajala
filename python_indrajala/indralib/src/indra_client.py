@@ -3,7 +3,12 @@ import websockets
 import logging
 import ssl
 import json
-import tomllib as toml
+
+try:
+    import tomllib as toml
+except ImportError:
+    import tomli as toml
+
 import os
 import time
 import sys
@@ -19,8 +24,13 @@ class IndraClient:
         auth_token=None,
         config_file=None,
         verbose=False,
+        module_name=None,
     ):
         self.log = logging.getLogger("IndraClient")
+        if module_name is None:
+            self.module_name = "IndraClient (python)"
+        else:
+            self.module_name = module_name
         self.websocket = None
         self.verbose = verbose
         self.trx = {}
@@ -344,3 +354,33 @@ class IndraClient:
         future = await self.get_unique_domains(domain, data_type)
         domain_result = await future
         return json.loads(domain_result.data)
+
+    async def indra_log(self, level, message, module_name=None):
+        """Log message"""
+        if module_name is None:
+            module_name = self.module_name
+        if level not in ["debug", "info", "warn", "error"]:
+            self.log.error(f"Invalid log level: {level}, {message}")
+            return False
+        ie = IndraEvent()
+        ie.domain = f"$log/{level}"
+        ie.from_id = f"ws/python/{module_name}"
+        ie.data_type = "log"
+        ie.data = json.dumps(message)
+        return await self.send_event(ie)
+
+    async def debug(self, message, module_name=None):
+        self.log.debug(f"Indra_log-Debug: {message}")
+        return await self.indra_log("debug", message, module_name)
+
+    async def info(self, message, module_name=None):
+        self.log.info(f"Indra_log-Info: {message}")
+        return await self.indra_log("info", message, module_name)
+
+    async def warn(self, message, module_name=None):
+        self.log.warn(f"Indra_log-Warn: {message}")
+        return await self.indra_log("warn", message, module_name)
+
+    async def error(self, message, module_name=None):
+        self.log.error(f"Indra_log-Error: {message}")
+        return await self.indra_log("error", message, module_name)
