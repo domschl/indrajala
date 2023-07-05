@@ -56,7 +56,7 @@ impl AsyncIndraTask for Mqtt {
             std::process::exit(1); // XXX exit really?
         });
 
-        let mut strm = client.get_stream(25);
+        let mut strm = client.get_stream(5000);
         let conn_opts = ConnectOptionsBuilder::new()
             .user_name(&self.config.username)
             .password(&self.config.password)
