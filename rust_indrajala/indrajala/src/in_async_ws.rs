@@ -344,7 +344,7 @@ async fn handle_message(
             warn!("Received binary message: {:?}", bin);
         }
         Message::Ping(ping) => {
-            warn!("Received ping message: {:?}", ping);
+            info!("Received ping message: {:?}", ping);
         }
         Message::Pong(pong) => {
             warn!("Received pong message: {:?}", pong);
