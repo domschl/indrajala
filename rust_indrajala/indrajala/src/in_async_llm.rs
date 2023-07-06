@@ -139,9 +139,9 @@ impl Llm {
         //let overrides = serde_json::from_str(llm_config.model_overrides.as_str()).unwrap();
         let vocabulary_source = Llm::to_tokenizer_source(tokenizer_path, tokenizer_repo); // llm::VocabularySource::Model;
         let params = ModelParameters {
-            prefer_mmap: llm_config.prefer_mmap,
-            context_size: llm_config.context_size,
-            use_gpu: llm_config.use_gpu,
+            prefer_mmap: llm_config.prefer_mmap.unwrap_or(false),
+            context_size: llm_config.context_size.unwrap_or(2048),
+            use_gpu: llm_config.use_gpu.unwrap_or(false),
             lora_adapters: llm_config.lora_paths.clone(),
         };
         let model = llm::load_dynamic(
@@ -193,7 +193,7 @@ impl Llm {
         let inference_session_config = InferenceSessionConfig {
             memory_k_type: mem_typ,
             memory_v_type: mem_typ,
-            use_gpu: llm_config.use_gpu,
+            use_gpu: llm_config.use_gpu.unwrap_or(false),
         };
         info!("Llm: Starting session.");
         let mut session = model.start_session(inference_session_config);
@@ -208,7 +208,7 @@ impl Llm {
         );
 
         let inference_parameters = InferenceParameters {
-            n_threads: llm_config.n_threads.unwrap_or_else(num_cpus::get),
+            n_threads: llm_config.n_threads.unwrap_or_else(|| num_cpus::get() / 2),
             n_batch: llm_config.n_batch.unwrap_or(8),
             sampler: Arc::new(llm::samplers::TopPTopK {
                 top_k: llm_config.top_k.unwrap_or(40),
