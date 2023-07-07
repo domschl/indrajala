@@ -90,6 +90,8 @@ pub struct IndraEvent {
     pub domain: String,
     pub from_id: String,
     pub uuid4: String,
+    pub parent_uuid4: Option<String>,
+    pub seq_no: Option<i64>,
     pub to_scope: String,
     pub time_jd_start: f64,
     pub data_type: String,
@@ -122,16 +124,7 @@ pub struct IndraUniqueDomainsRequest {
 }
 
 impl IndraEvent {
-    pub fn new(// domain: String,
-       // from_instance: String,
-        //from_uuid4: String,
-        //to_scope: String,
-        //time_start: String,
-        //data_type: String,
-        //data: serde_json::Value,
-        //auth_hash: Option<String>,
-        //time_end: Option<String>,
-    ) -> IndraEvent {
+    pub fn new() -> IndraEvent {
         let now: DateTime<Utc> = Utc::now();
         //Utc::now();
         // let iso_string = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
@@ -141,6 +134,8 @@ impl IndraEvent {
             domain: "".to_string(), // The recipient domain, PUBLISHER topic which can be subscribed to
             from_id: "".to_string(), // The sender instance domain , a reverse PUBLISHER topic which can be used to reply, if used in transaction mode
             uuid4: "".to_string(),   // A uuid for the event, used to prevent duplicate events
+            parent_uuid4: None,      // A uuid for the parent event, used to allow event hierarchies
+            seq_no: None,            // A sequence number, used to allow event hierarchies
             to_scope: "".to_string(), // A session scope, used to group events into sessions and to allow authentication hierachies. Domain-like syntax.
             time_jd_start: Self::datetime_to_julian(now), // The start time of the event, in Julian Date
             data_type: "".to_string(), // The type of the data, used to allow filtering, domain-like syntax, e.g. "number/float"
