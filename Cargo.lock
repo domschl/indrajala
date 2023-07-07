@@ -2226,6 +2226,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "indra_cli"
+version = "0.1.0"
+dependencies = [
+ "async-std",
+ "serde",
+ "serde_json",
+ "sqlx",
+]
+
+[[package]]
 name = "indra_event"
 version = "0.1.0"
 dependencies = [
