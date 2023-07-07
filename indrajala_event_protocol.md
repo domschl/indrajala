@@ -9,6 +9,8 @@
 | `domain` | String | MQTT-like path, publisher topic | `$event/sensor/temperature` |
 | `from_id` | String | MQTT-like path, originator-path, used for replies in transaction-mode | `Ws.1/192.168.1.1:8083` |
 | `uuid4` | UUID4 | unique id, is unchanged over transactions, can thus be used as correlator | `45ba88f6-5997-4aa4-9864-8683fdcdaf42` |
+| `parent_uuid4` | UUID4 | optional uuid4 of a parent record for tree hierarchies | "" |
+| `seq_no` | Int64 | sequence number assigned by the storage backend, can be use for differential syncs |
 | `to_scope` | String | MQTT-like path, session scope as domain hierarchy, identifies sessions or groups, can imply security scope or context | e.g. `/chat/session/45ba88f6-5997-4aa4-9864-8683fdcdaf42` |
 | `time_jd_start` | Float64 | event time as float julian date (Why JD? because not limited to 1AD dates, is used for asto- and geological timespans!) | `2460088.5710301` (that is 2023-05-24 01:42:17 (UTC)) | 
 | `data_type` | String | MQTT-like path, describes data format of `data` field, short descriptor-path | `number/float` |

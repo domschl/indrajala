@@ -94,6 +94,7 @@ pub struct SQLxConfig {
     pub db_type: DbType,
     pub db_sync: DbSync,
     pub database_url: String,
+    pub last_state_file: String,
 }
 
 #[derive(Deserialize, Clone, Debug)]

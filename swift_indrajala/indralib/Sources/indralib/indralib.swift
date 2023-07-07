@@ -4,6 +4,8 @@ class IndraEvent: Codable {
   var domain: String = ""
   var from_id: String = ""
   var uuid4: String = UUID().uuidString
+  var parent_uuid4: String = ""
+  var seq_no: Int = 0
   var to_scope: String = ""
   var time_jd_start: Double = Date().timeIntervalSince1970  // XXX Julian date! Wrong!
   var data_type: String = ""

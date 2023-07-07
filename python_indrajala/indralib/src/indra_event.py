@@ -11,6 +11,8 @@ class IndraEvent:
         :param domain:        MQTT-like path
         :param from_id:       originator-path, used for replies in transaction-mode
         :param uuid4:         unique id, is unchanged over transactions, can thus be used as correlator
+        :paran parent_uuid4:  uui4 of (optional) parent event
+        :param seq_no:        sequence number, can be used to order events and cluster sync
         :param to_scope:      session scope as domain hierarchy, identifies sessions or groups, can imply security scope or context
         :param time_jd_start:    event time as float julian date
         :param data_type      short descriptor-path
@@ -21,6 +23,8 @@ class IndraEvent:
         self.domain = ""
         self.from_id = ""
         self.uuid4 = str(uuid.uuid4())
+        self.parent_uuid4 = ""
+        self.seq_no = 0
         self.to_scope = ""
         self.time_jd_start = self.datetime2julian(
             datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
