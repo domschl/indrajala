@@ -31,7 +31,7 @@ pub struct IndraEvent02 {
     pub time_jd_end: Option<f64>,
 }
 
-async fn export_records(version: String) -> Result<(), sqlx::Error> {
+async fn export_records(version: &str) -> Result<(), sqlx::Error> {
     // Open a connection to the SQLite database
     let mut conn = sqlx::sqlite::SqliteConnection::connect("config/db/indrajala.db").await?;
 
@@ -66,7 +66,7 @@ async fn export_records(version: String) -> Result<(), sqlx::Error> {
 }
 
 fn main() {
-    let rt = async_std::task::block_on(export_records("01".to_string()));
+    let rt = async_std::task::block_on(export_records("01"));
     if let Err(e) = rt {
         eprintln!("Error: {}", e);
     }
