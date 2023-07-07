@@ -4,4 +4,5 @@ members = [
     "rust_indrajala/indrajala",
     "rust_indrajala/plotter",
     "rust_indrajala/indra_event",
+    "rust_indrajala/indra_cli",
 ]
