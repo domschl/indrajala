@@ -28,10 +28,26 @@ pub struct MqttConfig {
     pub topics: Vec<String>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
-pub struct MqttConfigs {
-    pub mqtt: Vec<MqttConfig>,
+impl Default for MqttConfig {
+    fn default() -> Self {
+        MqttConfig {
+            name: "MQTT.1".to_string(),
+            active: false,
+            host: "localhost".to_string(),
+            port: 1883,
+            username: "".to_string(),
+            password: "".to_string(),
+            client_id: "indra_{{machine_name}}".to_string(),
+            to_scope: "home".to_string(),
+            topics: vec!["#".to_string()],
+        }
+    }
 }
+
+//#[derive(Deserialize, Clone, Debug)]
+//pub struct MqttConfigs {
+//    pub mqtt: Vec<MqttConfig>,
+//}
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct DingDongConfig {
@@ -42,11 +58,33 @@ pub struct DingDongConfig {
     pub message: String,
 }
 
+impl Default for DingDongConfig {
+    fn default() -> Self {
+        DingDongConfig {
+            name: "DingDong.1".to_string(),
+            active: false,
+            timer: 1000,
+            topic: "Ding".to_string(),
+            message: "Dong".to_string(),
+        }
+    }
+}
+
 #[derive(Deserialize, Clone, Debug)]
 pub struct SignalConfig {
     pub name: String,
     pub active: bool,
     pub shutdown_delay_ms: u64,
+}
+
+impl Default for SignalConfig {
+    fn default() -> Self {
+        SignalConfig {
+            name: "Signal.1".to_string(),
+            active: true,
+            shutdown_delay_ms: 1000,
+        }
+    }
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -58,6 +96,20 @@ pub struct WebConfig {
     pub ssl: bool,
     pub cert: String,
     pub key: String,
+}
+
+impl Default for WebConfig {
+    fn default() -> Self {
+        WebConfig {
+            name: "Web.1".to_string(),
+            active: false,
+            address: "0.0.0.0:8081".to_string(),
+            url: "/api/v1".to_string(),
+            ssl: true,
+            cert: "{{data_directory}}/certs/{{machine_name}}.pem".to_string(),
+            key: "{{data_directory}}/certs/{{machine_name}}-key.pem".to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -139,24 +191,11 @@ pub struct LLMConfig {
 impl IndraConfig {
     pub fn new() -> (IndraMainConfig, IndraConfig) {
         // read command line arguments
-        let imc = IndraMainConfig::new();
-        /*
-        let args: Vec<String> = env::args().collect();
-        // Check if at least one argument is passed
-        if args.len() < 2 {
-            println!("Usage: {} <config_file>", args[0]);
-            std::process::exit(1);
-        }
-        // Check if the file exists
-        let config_filename = args[1].to_string();
-        if !Path::new(&config_filename).exists() {
-            println!("File {} does not exist, it should be a TOML file", args[1]);
-            std::process::exit(1);
-        }
-        */
-        let config_filename = imc.data_directory.join("indra_tasks.toml");
+        let (imc, ctp) = IndraMainConfig::new();
+        let config_filename = ctp;
         if !Path::new(&config_filename).exists() {
             println!(
+                // XXX default handler
                 "File {} does not exist, it should be a TOML file",
                 config_filename.to_string_lossy()
             );
@@ -202,7 +241,7 @@ impl Default for IndraMainConfig {
             check_internet_interval: 5,
             check_internet_max_duration: 60,
             data_directory: dirs::home_dir()
-                .unwrap_or_else(|| panic!("Failed to determine home directory"))
+                .unwrap_or(PathBuf::new())
                 .join(".local/share/indrajala"),
             default_term_log: "info".to_string(),
             default_file_log: "info".to_string(),
@@ -211,21 +250,20 @@ impl Default for IndraMainConfig {
 }
 
 impl IndraMainConfig {
-    pub fn new() -> IndraMainConfig {
-        let home_dir = dirs::home_dir()
-            .ok_or("Failed to determine home directory")
-            .unwrap_or_else(|_| panic!("Failed to determine home directory"));
+    pub fn new() -> (IndraMainConfig, PathBuf) {
+        let home_dir = dirs::home_dir().unwrap_or(PathBuf::new());
 
         let main_config_dir = home_dir.join(".config/indrajala");
         let main_config_path = home_dir.join(".config/indrajala/indra_server.toml");
+        let ctp = home_dir.join("./config/indrajala/indra_tasks.toml");
 
         if main_config_path.exists() {
             let content = fs::read_to_string(main_config_path);
             let imc: Result<IndraMainConfig, _> =
                 toml::from_str(content.unwrap_or("".to_string()).as_str());
             match imc {
-                Ok(imc) => imc,
-                Err(_) => IndraMainConfig::default(),
+                Ok(imc) => (imc, ctp),
+                Err(_) => (IndraMainConfig::default(), ctp),
             }
         } else {
             let imc = IndraMainConfig::default();
@@ -241,7 +279,7 @@ impl IndraMainConfig {
             let toml_string = toml::to_string(&imc).unwrap();
             let mut file = File::create(main_config_path).unwrap();
             file.write_all(toml_string.as_bytes()).unwrap();
-            imc
+            (imc, ctp)
         }
     }
 }
