@@ -347,22 +347,26 @@ fn check_internet_connection() -> bool {
         "https://azure.microsoft.com",
     ];
 
+    let mut timed_out = false;
     let start_time = Instant::now();
     while start_time.elapsed() < MAX_CHECK_DURATION {
         for server in &servers {
             match get(*server) {
                 Ok(response) => {
                     if response.status().is_success() {
+                        if timed_out {
+                            warn!("Internet connection is now available! Continuing normal operation.");
+                        }
                         return true; // At least one server is accessible
                     }
                 }
                 Err(_) => continue, // Try the next server
             }
         }
-        warn!(
-            "No internet connection available, retrying in {} seconds...",
-            CHECK_INTERVAL.as_secs()
-        );
+        if !timed_out {
+            warn!("No internet connection available, halting operation while retrying connection to internet...",);
+        }
+        timed_out = true;
         thread::sleep(CHECK_INTERVAL);
     }
     warn!("No internet connection available, giving up.");
