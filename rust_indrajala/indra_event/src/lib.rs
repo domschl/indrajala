@@ -83,7 +83,20 @@ impl IndraTime {
 }
 */
 
-pub const INDRA_EVENT_VERSION: i64 = 1;
+pub const INDRA_EVENT_VERSION: &str = "02";
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct IndraEvent01 {
+    pub domain: String,
+    pub from_id: String,
+    pub uuid4: String,
+    pub to_scope: String,
+    pub time_jd_start: f64,
+    pub data_type: String,
+    pub data: String,
+    pub auth_hash: Option<String>,
+    pub time_jd_end: Option<f64>,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IndraEvent {
@@ -145,6 +158,13 @@ impl IndraEvent {
         }
     }
 
+    pub fn version() -> String {
+        INDRA_EVENT_VERSION.to_string()
+    }
+
+    pub fn old_versions() -> Vec<String> {
+        vec!["".to_string(), "01".to_string()]
+    }
     //pub fn to_json(&self) -> Result<String> {
     //    serde_json::to_string(self)
     //}

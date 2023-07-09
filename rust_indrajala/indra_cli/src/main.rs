@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sqlx::sqlite::SqliteConnection;
 use sqlx::Connection;
 use std::fs::{self, File};
 use std::io::{self, Write};
@@ -32,9 +33,13 @@ pub struct IndraEvent02 {
     pub time_jd_end: Option<f64>,
 }
 
-async fn export_records(version: &str) -> Result<(), sqlx::Error> {
+async fn export_records(
+    db_path: &str,
+    output_json: &str,
+    version: &str,
+) -> Result<(), sqlx::Error> {
     // Open a connection to the SQLite database
-    let mut conn = sqlx::sqlite::SqliteConnection::connect("config/db/indrajala.db").await?;
+    let mut conn = sqlx::sqlite::SqliteConnection::connect(db_path).await?;
 
     if version == "01" {
         // Fetch all records from the database
@@ -45,7 +50,7 @@ async fn export_records(version: &str) -> Result<(), sqlx::Error> {
         let json_data = serde_json::to_string(&records).unwrap();
 
         // Write JSON data to a text file
-        let mut file = File::create("indra_export.json")?;
+        let mut file = File::create(output_json)?;
         file.write_all(json_data.as_bytes())?;
 
         return Ok(());
@@ -58,7 +63,7 @@ async fn export_records(version: &str) -> Result<(), sqlx::Error> {
         let json_data = serde_json::to_string(&records).unwrap();
 
         // Write JSON data to a text file
-        let mut file = File::create("indra_export.json")?;
+        let mut file = File::create(output_json)?;
         file.write_all(json_data.as_bytes())?;
 
         return Ok(());
@@ -66,14 +71,95 @@ async fn export_records(version: &str) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-/*
-fn main() {
-    let rt = async_std::task::block_on(export_records("01"));
-    if let Err(e) = rt {
-        eprintln!("Error: {}", e);
+enum ImportError {
+    Sqlx(sqlx::Error),
+    Serde(serde_json::Error),
+    File(std::io::Error),
+}
+
+impl From<sqlx::Error> for ImportError {
+    fn from(err: sqlx::Error) -> Self {
+        ImportError::Sqlx(err)
     }
 }
-*/
+
+impl From<serde_json::Error> for ImportError {
+    fn from(err: serde_json::Error) -> Self {
+        ImportError::Serde(err)
+    }
+}
+
+impl From<std::io::Error> for ImportError {
+    fn from(err: std::io::Error) -> Self {
+        ImportError::File(err)
+    }
+}
+
+async fn import_records(db_path: &str, input_json: &str, version: &str) -> Result<(), ImportError> {
+    // Open a connection to the SQLite database
+    let mut conn = SqliteConnection::connect(db_path).await?;
+
+    // Read JSON data from the input file
+    let json_data = std::fs::read_to_string(input_json)?;
+
+    if version == "01" {
+        // Parse JSON data into a vector of IndraEvent01 structs
+        let records: Vec<IndraEvent01> = serde_json::from_str(&json_data)?;
+
+        // Insert records into the database
+        for record in records {
+            sqlx::query(
+                "INSERT INTO indra_events (domain, from_id, uuid4, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            )
+            .bind(&record.domain)
+            .bind(&record.from_id)
+            .bind(&record.uuid4)
+            .bind(&record.to_scope)
+            .bind(record.time_jd_start)
+            .bind(&record.data_type)
+            .bind(&record.data)
+            .bind(&record.auth_hash)
+            .bind(record.time_jd_end)
+            .execute(&mut conn)
+            .await?;
+        }
+    } else if version == "02" {
+        // Parse JSON data into a vector of IndraEvent02 structs
+        let records: Vec<IndraEvent02> = serde_json::from_str(&json_data)?;
+
+        // Insert records into the database
+        for record in records {
+            sqlx::query(
+                "INSERT INTO indra_events (domain, from_id, uuid4, parent_uuid4, seq_no, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            )
+            .bind(&record.domain)
+            .bind(&record.from_id)
+            .bind(&record.uuid4)
+            .bind(&record.parent_uuid4)
+            .bind(record.seq_no)
+            .bind(&record.to_scope)
+            .bind(record.time_jd_start)
+            .bind(&record.data_type)
+            .bind(&record.data)
+            .bind(&record.auth_hash)
+            .bind(record.time_jd_end)
+            .execute(&mut conn)
+            .await?;
+        }
+    }
+
+    Ok(())
+}
+/*
+fn main() {
+      let rt = async_std::task::block_on(export_records("01"));
+      if let Err(e) = rt {
+          eprintln!("Error: {}", e);
+      }
+  }
+  */
 
 const DEFAULTS_FILE: &str = ".config/indrajala/cli_state.toml";
 
@@ -96,10 +182,10 @@ impl IndraCli {
     fn new() -> Result<IndraCli, Box<dyn std::error::Error>> {
         let connected = false;
         let mut cfg = IndraClientConfig {
-            uri: "<server-uri>".to_string(),
-            version: "<version>".to_string(),
-            db_path: "<path-to-sqlite-db>".to_string(),
-            output_path: "<output-file-json>".to_string(),
+            uri: "".to_string(),
+            version: "".to_string(),
+            db_path: "".to_string(),
+            output_path: "indra_backup.json".to_string(),
             mode: "offline".to_string(),
         };
         cfg = IndraCli::load_defaults(&cfg);
@@ -151,11 +237,31 @@ impl IndraCli {
         println!("Disconnected");
     }
 
-    fn backup(&self, version: &str, input: &str, output: &str) {
-        println!(
-            "Backup: version={}, input={}, output={}",
-            version, input, output
-        );
+    fn backup(&self, version: &str, db_path: &str, output_json: &str, confirm: bool) {
+        if confirm {
+            // Prompt the user to confirm the backup operation
+            print!(
+                "Are you sure you want to backup the database {}, version {} to file {}? (y/n) ",
+                db_path, version, output_json
+            );
+            io::stdout().flush().unwrap();
+
+            let mut input = String::new();
+            io::stdin().read_line(&mut input).unwrap();
+
+            if input.trim().to_lowercase() == "y" {
+                // Perform the backup operation
+                println!("Starting backup...");
+                let rt = async_std::task::block_on(export_records(db_path, output_json, version));
+                if let Err(e) = rt {
+                    eprintln!("Error: {}", e);
+                } else {
+                    println!("Backup completed successfully.");
+                }
+            } else {
+                println!("Backup cancelled.");
+            }
+        }
     }
 
     fn restore(&self, version: &str, output: &str, input: &str) {
@@ -201,7 +307,7 @@ impl IndraCli {
                     }
                 }
 
-                self.backup(version, input, output);
+                self.backup(version, input, output, true);
             }
             "restore" => {
                 let mut version = self.cfg.version.as_str();
