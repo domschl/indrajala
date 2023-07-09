@@ -14,6 +14,9 @@ use log::{debug, error, info, warn};
 
 //use async_channel;
 use async_std::task;
+use reqwest::blocking::get;
+use std::thread;
+use std::time::{Duration, Instant};
 
 //mod OLD_indra_event;
 use indra_event::IndraEvent;
@@ -333,6 +336,40 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
     }
 }
 
+const CHECK_INTERVAL: Duration = Duration::from_secs(3);
+const MAX_CHECK_DURATION: Duration = Duration::from_secs(60);
+
+fn check_internet_connection() -> bool {
+    let servers = vec![
+        "https://www.google.com",
+        "https://www.cloudflare.com",
+        "https://aws.amazon.com",
+        "https://azure.microsoft.com",
+    ];
+
+    let start_time = Instant::now();
+    while start_time.elapsed() < MAX_CHECK_DURATION {
+        for server in &servers {
+            match get(*server) {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        return true; // At least one server is accessible
+                    }
+                }
+                Err(_) => continue, // Try the next server
+            }
+        }
+        warn!(
+            "No internet connection available, retrying in {} seconds...",
+            CHECK_INTERVAL.as_secs()
+        );
+        thread::sleep(CHECK_INTERVAL);
+    }
+    warn!("No internet connection available, giving up.");
+
+    false // None of the servers were accessible within the maximum check duration
+}
+
 fn main() {
     //let indra_config: IndraConfig = IndraConfig::new();
 
@@ -341,6 +378,12 @@ fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("indrajala=info"))
         .format_timestamp(Some(env_logger::TimestampPrecision::Millis))
         .init();
+
+    if check_internet_connection() {
+        debug!("Internet connection is available.");
+    } else {
+        error!("No internet connection available!");
+    }
 
     let mut tsk: Vec<IndraTask> = vec![];
 
