@@ -21,7 +21,8 @@ futures = "*"
 signal-hook = "*"
 signal-hook-async-std = "*"
 log = "*"
-env_logger = "*"
+# env_logger = "*"
+flexi_logger = { version = "*", features = ["async", "colors"] }
 num_cpus = "*"
 
 # llm = "0.1.1"
@@ -46,3 +47,5 @@ tide = "*"
 rustls = "0.20"                                             # Blocked because of stalled development at async-tls.
 rustls-pemfile = "*"
 tide-rustls = "*"
+dirs = "*"
+hostname = "*"

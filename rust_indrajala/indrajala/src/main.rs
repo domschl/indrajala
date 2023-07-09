@@ -9,8 +9,15 @@
 // avoid boxing: (exp!)
 #![feature(type_alias_impl_trait)]
 
-use env_logger::Env;
+//use env_logger::Env;
+use flexi_logger::{
+    colored_detailed_format, detailed_format, Age, Cleanup, Criterion, Duplicate, FileSpec,
+    LevelFilter, Logger, Naming, WriteMode,
+};
 use log::{debug, error, info, warn};
+use std::fs;
+use std::str::FromStr;
+//use std::path::Path;
 
 //use async_channel;
 use async_std::task;
@@ -377,11 +384,41 @@ fn check_internet_connection() -> bool {
 fn main() {
     //let indra_config: IndraConfig = IndraConfig::new();
 
-    let indra_config = IndraConfig::new();
-
-    env_logger::Builder::from_env(Env::default().default_filter_or("indrajala=info"))
-        .format_timestamp(Some(env_logger::TimestampPrecision::Millis))
-        .init();
+    let (imc, indra_config) = IndraConfig::new();
+    if !imc.data_directory.exists() {
+        error!(
+            "Data directory {} does not exist!",
+            imc.data_directory.to_string_lossy()
+        );
+        std::process::exit(1);
+    }
+    let log_dir = imc.data_directory.join("log");
+    if !log_dir.exists() {
+        // create dir
+        match fs::create_dir(&log_dir) {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Failed to create log directory: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+    let lf = LevelFilter::from_str(&imc.default_term_log).unwrap_or(LevelFilter::Info);
+    Logger::try_with_str(imc.default_file_log.as_str())
+        .unwrap_or_else(|_| panic!("Failed to initialize term logger {}", imc.default_term_log))
+        .format_for_files(detailed_format)
+        .format_for_stdout(colored_detailed_format)
+        .log_to_file(FileSpec::default().directory(log_dir))
+        .write_mode(WriteMode::BufferDontFlush)
+        .rotate(
+            // If the program runs long enough,
+            Criterion::Age(Age::Day), // - create a new file every day
+            Naming::Timestamps,       // - let the rotated files have a timestamp in their name
+            Cleanup::KeepLogFiles(7), // - keep at most 7 log files
+        )
+        .duplicate_to_stdout(Duplicate::from(lf))
+        .start()
+        .unwrap();
 
     if check_internet_connection() {
         debug!("Internet connection is available.");
