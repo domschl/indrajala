@@ -384,7 +384,7 @@ fn check_internet_connection() -> bool {
 fn main() {
     //let indra_config: IndraConfig = IndraConfig::new();
 
-    let (imc, indra_config) = IndraConfig::new();
+    let (imc, indra_config, state_msg) = IndraConfig::new();
     if !imc.data_directory.exists() {
         error!(
             "Data directory {} does not exist!",
@@ -420,6 +420,9 @@ fn main() {
         .start()
         .unwrap();
 
+    if !state_msg.is_empty() {
+        warn!("{}", state_msg);
+    }
     if check_internet_connection() {
         debug!("Internet connection is available.");
     } else {
