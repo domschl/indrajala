@@ -3,7 +3,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct IndraConfig {
     pub mqtt: Option<Vec<MqttConfig>>,
     pub ding_dong: Option<Vec<DingDongConfig>>,
@@ -15,7 +15,21 @@ pub struct IndraConfig {
     pub llm: Option<Vec<LLMConfig>>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+impl Default for IndraConfig {
+    fn default() -> Self {
+        IndraConfig {
+            mqtt: Some(vec![MqttConfig::default()]),
+            ding_dong: Some(vec![DingDongConfig::default()]),
+            web: Some(vec![WebConfig::default()]),
+            sqlx: Some(vec![SQLxConfig::default()]),
+            ws: Some(vec![WsConfig::default()]),
+            signal: Some(vec![SignalConfig::default()]),
+            tasker: Some(vec![TaskerConfig::default()]),
+            llm: Some(vec![LLMConfig::default()]),
+        }
+    }
+}
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct MqttConfig {
     pub name: String,
     pub active: bool,
@@ -44,12 +58,7 @@ impl Default for MqttConfig {
     }
 }
 
-//#[derive(Deserialize, Clone, Debug)]
-//pub struct MqttConfigs {
-//    pub mqtt: Vec<MqttConfig>,
-//}
-
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct DingDongConfig {
     pub name: String,
     pub active: bool,
@@ -70,7 +79,7 @@ impl Default for DingDongConfig {
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct SignalConfig {
     pub name: String,
     pub active: bool,
@@ -87,7 +96,7 @@ impl Default for SignalConfig {
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct WebConfig {
     pub name: String,
     pub active: bool,
@@ -112,7 +121,7 @@ impl Default for WebConfig {
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct WsConfig {
     pub name: String,
     pub active: bool,
@@ -123,20 +132,34 @@ pub struct WsConfig {
     pub key: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+impl Default for WsConfig {
+    fn default() -> Self {
+        WsConfig {
+            name: "Ws.1".to_string(),
+            active: false,
+            address: "0.0.0.0:8082".to_string(),
+            url: "/ws/v1".to_string(),
+            ssl: true,
+            cert: "{{data_directory}}/certs/{{machine_name}}.pem".to_string(),
+            key: "{{data_directory}}/certs/{{machine_name}}-key.pem".to_string(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum DbType {
     Postgres,
     MySQL,
     SQLite,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum DbSync {
     Sync,
     Async,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct SQLxConfig {
     pub name: String,
     pub active: bool,
@@ -146,18 +169,31 @@ pub struct SQLxConfig {
     pub last_state_file: String,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+impl Default for SQLxConfig {
+    fn default() -> Self {
+        SQLxConfig {
+            name: "SQLx.1".to_string(),
+            active: false,
+            db_type: DbType::SQLite,
+            db_sync: DbSync::Async,
+            database_url: "{{data_directory}}/db/indrajala.db".to_string(),
+            last_state_file: "{{data_directory}}/db/last_state.json".to_string(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum TaskerMode {
     Periodic,
     Oneshot,
     Continuous,
 }
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum TaskerIpc {
     Stdio,
     Net,
 }
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TaskerConfig {
     pub name: String,
     pub active: bool,
@@ -165,7 +201,18 @@ pub struct TaskerConfig {
     pub args: Vec<String>,
 }
 
-#[derive(Deserialize, Clone, Debug)]
+impl Default for TaskerConfig {
+    fn default() -> Self {
+        TaskerConfig {
+            name: "Tasker.1".to_string(),
+            active: false,
+            cmd: "echo".to_string(),
+            args: vec!["Hello World".to_string()],
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct LLMConfig {
     pub name: String,
     pub active: bool,
@@ -188,18 +235,46 @@ pub struct LLMConfig {
     pub no_float16: Option<bool>,
 }
 
+impl Default for LLMConfig {
+    fn default() -> Self {
+        LLMConfig {
+            name: "LLM.1".to_string(),
+            active: false,
+            model_path: "{{data_directory}}/models/llm".to_string(),
+            model_arch: "llama".to_string(),
+            model_overrides: "{}".to_string(),
+            tokenizer_path: None,
+            tokenizer_repo: None,
+            prefer_mmap: Some(true),
+            context_size: Some(2048),
+            use_gpu: Some(false),
+            lora_paths: None,
+            n_threads: None,
+            n_batch: None,
+            top_k: None,
+            top_p: None,
+            repeat_penalty: None,
+            temperature: None,
+            repetition_penalty_last_n: None,
+            no_float16: None,
+        }
+    }
+}
+
 impl IndraConfig {
-    pub fn new() -> (IndraMainConfig, IndraConfig) {
-        // read command line arguments
+    pub fn new() -> (IndraMainConfig, IndraConfig, String) {
         let (imc, ctp) = IndraMainConfig::new();
         let config_filename = ctp;
+        let mut state_msg = "".to_string();
         if !Path::new(&config_filename).exists() {
-            println!(
-                // XXX default handler
-                "File {} does not exist, it should be a TOML file",
+            // create default file
+            let mut file = File::create(&config_filename).unwrap();
+            let toml_string = toml::to_string_pretty(&IndraConfig::default()).unwrap();
+            file.write_all(toml_string.as_bytes()).unwrap();
+            state_msg = format!(
+                "Created default config file at {}",
                 config_filename.to_string_lossy()
             );
-            std::process::exit(1);
         }
         let toml_string = fs::read_to_string(config_filename).unwrap();
         // replace {{data_directory}} with the actual data directory
@@ -213,7 +288,7 @@ impl IndraConfig {
         let toml_str = toml_string.as_str();
 
         let cfg: IndraConfig = toml::from_str(toml_str).unwrap();
-        (imc, cfg)
+        (imc, cfg, state_msg)
     }
 }
 
@@ -231,7 +306,15 @@ pub struct IndraMainConfig {
 impl Default for IndraMainConfig {
     fn default() -> Self {
         let hostname = match hostname::get() {
-            Ok(h) => h.to_string_lossy().to_string(),
+            Ok(h) => {
+                h.to_string_lossy().to_string();
+                // remove domain name
+                let mut hn = h.to_string_lossy().to_string();
+                if let Some(pos) = hn.find('.') {
+                    hn.truncate(pos);
+                }
+                hn
+            }
             Err(_) => panic!("Failed to get hostname"),
         };
         IndraMainConfig {
@@ -255,7 +338,7 @@ impl IndraMainConfig {
 
         let main_config_dir = home_dir.join(".config/indrajala");
         let main_config_path = home_dir.join(".config/indrajala/indra_server.toml");
-        let ctp = home_dir.join("./config/indrajala/indra_tasks.toml");
+        let ctp = home_dir.join(".config/indrajala/indra_tasks.toml");
 
         if main_config_path.exists() {
             let content = fs::read_to_string(main_config_path);
