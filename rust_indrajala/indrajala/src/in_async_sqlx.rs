@@ -106,6 +106,39 @@ impl SQLx {
         last_seq_no
     }
 
+    async fn check_column_exists(
+        pool: &SqlitePool,
+        table_name: &str,
+        column_name: &str,
+    ) -> Result<bool, sqlx::Error> {
+        #[derive(Debug, sqlx::FromRow)]
+        struct TableInfo {
+            _name: String,
+            // Add other fields as needed from the table_info result
+        }
+        let schema_query = format!("PRAGMA table_info({})", table_name);
+        let columns: Vec<TableInfo> = sqlx::query_as(&schema_query).fetch_all(pool).await?;
+        // Check if the column exists
+        let exists = columns.iter().any(|column| column._name == column_name);
+        Ok(exists)
+    }
+
+    async fn add_seq_no_column(pool: &SqlitePool, seq_no_init: i64) -> Result<(), sqlx::Error> {
+        // Add the seq_no column to the table
+        let add_column_query =
+            "ALTER TABLE indra_event ADD COLUMN seq_no INTEGER NOT NULL DEFAULT 0";
+        sqlx::query(add_column_query).execute(pool).await?;
+
+        // Update each record with a sequentially incremented value for seq_no
+        let update_query = "UPDATE indra_event SET seq_no = ? WHERE seq_no = 0";
+        sqlx::query(update_query)
+            .bind(seq_no_init)
+            .execute(pool)
+            .await?;
+
+        Ok(())
+    }
+
     async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
         let fnam = config.database_url.clone();
         let db_sync: &str = match config.db_sync {
@@ -177,6 +210,61 @@ impl SQLx {
                 error!("SQLx::init: Error creating table: {:?}", e);
                 config.active = false;
                 pool = None;
+                return pool;
+            }
+        }
+
+        match Self::check_column_exists(&pool.clone().unwrap(), "indra_events", "seq_no").await {
+            Ok(exists) => {
+                if !exists {
+                    match Self::add_seq_no_column(&pool.clone().unwrap(), 0).await {
+                        Ok(_) => {
+                            warn!("SQLx::init: New Column seq_no added and initialized with sequential values");
+                        }
+                        Err(e) => {
+                            error!("SQLx::init: Error adding column seq_no: {:?}", e);
+                            config.active = false;
+                            pool = None;
+                            return pool;
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                error!("SQLx::init: Error checking column seq_no: {:?}", e);
+                config.active = false;
+                pool = None;
+                return pool;
+            }
+        }
+
+        match Self::check_column_exists(&pool.clone().unwrap(), "indra_events", "parent_uuid4")
+            .await
+        {
+            Ok(exists) => {
+                if !exists {
+                    let add_column_query = "ALTER TABLE indra_event ADD COLUMN parent_uuid4 UUID";
+                    match sqlx::query(add_column_query)
+                        .execute(&pool.clone().unwrap())
+                        .await
+                    {
+                        Ok(_) => {
+                            warn!("SQLx::init: New Column parent_uuid4 added");
+                        }
+                        Err(e) => {
+                            error!("SQLx::init: Error adding column parent_uuid4: {:?}", e);
+                            config.active = false;
+                            pool = None;
+                            return pool;
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                error!("SQLx::init: Error checking column parent_uui4: {:?}", e);
+                config.active = false;
+                pool = None;
+                return pool;
             }
         }
 

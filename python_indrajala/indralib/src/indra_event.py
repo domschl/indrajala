@@ -34,6 +34,12 @@ class IndraEvent:
         self.auth_hash = ""
         self.time_jd_end = None
 
+    def version(self):
+        return "02"
+
+    def old_versions(self):
+        return ["", "01"]
+
     def to_json(self):
         """Convert to JSON string"""
         return json.dumps(self.__dict__)
