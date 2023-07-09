@@ -53,7 +53,6 @@ impl SQLx {
         ];
 
         task::block_on(async {
-            let pool = SQLx::async_init(&mut config).await;
             let stnam: String = config.last_state_file.clone();
             let mut last_state: LastState;
             let last_state_path: PathBuf = PathBuf::from(stnam);
@@ -66,6 +65,7 @@ impl SQLx {
             } else {
                 last_state = LastState { last_seq_no: 0 };
             }
+            let pool = SQLx::async_init(&mut config, last_state.last_seq_no).await;
             if pool.is_some() {
                 last_state.last_seq_no =
                     SQLx::read_last_seq_no(&pool.clone().unwrap(), last_state.last_seq_no).await;
@@ -83,10 +83,9 @@ impl SQLx {
     }
 
     async fn read_last_seq_no(pool: &SqlitePool, old_last_seq_no: i64) -> i64 {
-        // Read highest value of seq_no, and put it in last_state:
-        let mut last_seq_no: i64 = 0;
-        let q_res3 =
-            sqlx::query("SELECT seq_no FROM indra_events ORDER BY seq_no DESC LIMIT 1 as seq_no;");
+        // Read highest value of seq_no from the database
+        let mut last_seq_no: i64;
+        let q_res3 = sqlx::query("SELECT seq_no FROM indra_events ORDER BY seq_no DESC LIMIT 1;");
         let q_res3 = q_res3.fetch_one(&pool.clone()).await;
         match q_res3 {
             Ok(q_res3) => {
@@ -94,10 +93,14 @@ impl SQLx {
                 if last_seq_no < old_last_seq_no {
                     last_seq_no = old_last_seq_no;
                 }
-                debug!("SQLx::init: last_seq_no: {}", last_seq_no);
+                debug!(
+                    "SQLx::init: last_seq_no from database: {} from state_file: {}",
+                    last_seq_no, old_last_seq_no
+                );
             }
             Err(e) => {
-                debug!(
+                last_seq_no = old_last_seq_no;
+                info!(
                     "SQLx::init: Error reading last_seq_no: {:?}, current last_seq_no is {}",
                     e, last_seq_no
                 );
@@ -113,24 +116,29 @@ impl SQLx {
     ) -> Result<bool, sqlx::Error> {
         #[derive(Debug, sqlx::FromRow)]
         struct TableInfo {
-            _name: String,
+            name: String,
             // Add other fields as needed from the table_info result
         }
+        info!(
+            "Checking if column {} exists in table {}",
+            column_name, table_name
+        );
         let schema_query = format!("PRAGMA table_info({})", table_name);
         let columns: Vec<TableInfo> = sqlx::query_as(&schema_query).fetch_all(pool).await?;
+        info!("Columns: {:?}", columns);
         // Check if the column exists
-        let exists = columns.iter().any(|column| column._name == column_name);
+        let exists = columns.iter().any(|column| column.name == column_name);
         Ok(exists)
     }
 
     async fn add_seq_no_column(pool: &SqlitePool, seq_no_init: i64) -> Result<(), sqlx::Error> {
         // Add the seq_no column to the table
         let add_column_query =
-            "ALTER TABLE indra_event ADD COLUMN seq_no INTEGER NOT NULL DEFAULT 0";
+            "ALTER TABLE indra_events ADD COLUMN seq_no INTEGER NOT NULL DEFAULT 0";
         sqlx::query(add_column_query).execute(pool).await?;
 
         // Update each record with a sequentially incremented value for seq_no
-        let update_query = "UPDATE indra_event SET seq_no = ? WHERE seq_no = 0";
+        let update_query = "UPDATE indra_events SET seq_no = ? + rowid";
         sqlx::query(update_query)
             .bind(seq_no_init)
             .execute(pool)
@@ -139,7 +147,7 @@ impl SQLx {
         Ok(())
     }
 
-    async fn async_init(config: &mut SQLxConfig) -> Option<SqlitePool> {
+    async fn async_init(config: &mut SQLxConfig, sq_no: i64) -> Option<SqlitePool> {
         let fnam = config.database_url.clone();
         let db_sync: &str = match config.db_sync {
             DbSync::Sync => "NORMAL",
@@ -217,7 +225,7 @@ impl SQLx {
         match Self::check_column_exists(&pool.clone().unwrap(), "indra_events", "seq_no").await {
             Ok(exists) => {
                 if !exists {
-                    match Self::add_seq_no_column(&pool.clone().unwrap(), 0).await {
+                    match Self::add_seq_no_column(&pool.clone().unwrap(), sq_no).await {
                         Ok(_) => {
                             warn!("SQLx::init: New Column seq_no added and initialized with sequential values");
                         }
@@ -243,7 +251,7 @@ impl SQLx {
         {
             Ok(exists) => {
                 if !exists {
-                    let add_column_query = "ALTER TABLE indra_event ADD COLUMN parent_uuid4 UUID";
+                    let add_column_query = "ALTER TABLE indra_events ADD COLUMN parent_uuid4 UUID";
                     match sqlx::query(add_column_query)
                         .execute(&pool.clone().unwrap())
                         .await
@@ -314,6 +322,10 @@ impl AsyncIndraTask for SQLx {
                 let last_state_json = serde_json::to_string(&self.last_state).unwrap();
                 let mut file = File::create(self.config.last_state_file.clone()).unwrap();
                 file.write_all(last_state_json.as_bytes()).unwrap();
+                info!(
+                    "SQLx: Last state written to file: {}: {:?}",
+                    self.config.last_state_file, self.last_state
+                );
 
                 if self.config.active {
                     let _ret = &pool.unwrap().close().await;
@@ -531,7 +543,7 @@ impl AsyncIndraTask for SQLx {
                     msg.seq_no = Some(self.last_state.last_seq_no);
                     let rows_affected = sqlx::query(
                             r#"
-                                INSERT INTO indra_events (domain, from_id, uuid4, parent_uuid, seq_no, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
+                                INSERT INTO indra_events (domain, from_id, uuid4, parent_uuid4, seq_no, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end)
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                                 "#,
                         )
