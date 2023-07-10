@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 url = "*"
-chrono = "*"
+chrono = { version = "*", features = ["std", "clock"] }
 serde = "*"
 toml = "*"
 partial-min-max = "*"
