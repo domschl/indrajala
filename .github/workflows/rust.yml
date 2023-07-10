@@ -9,11 +9,15 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+
+
 jobs:
   build:
     name: Build
     
     runs-on: ubuntu-latest
+
+# install pango
 
     steps:
     - uses: actions/checkout@v3
@@ -22,7 +26,9 @@ jobs:
       with:
         toolchain: nightly
         override: true
+    - name: Install dependencies
+      run: sudo apt-get install -y libpango1.0-dev
     - name: Build
-      run: cargo build --verbose
+      run: cargo build
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
