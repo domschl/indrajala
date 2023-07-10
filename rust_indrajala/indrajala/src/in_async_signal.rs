@@ -41,6 +41,9 @@ impl Signal {
 
 impl AsyncIndraTask for Signal {
     async fn async_receiver(self, _sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            return;
+        }
         debug!("IndraTask Signal::sender");
         loop {
             let msg = self.receiver.recv().await.unwrap();
@@ -57,6 +60,9 @@ impl AsyncIndraTask for Signal {
     }
 
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            return;
+        }
         let signals = Signals::new([SIGHUP, SIGTERM, SIGINT, SIGQUIT]).unwrap();
         let handle = signals.handle();
 
