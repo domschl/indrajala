@@ -15,8 +15,9 @@ sqlx = { version = "0.7", features = [
 ] }
 reqwest = "*"
 # native-tls = "*"
-async-tls = "*"             # { version = "*", features = ["server"]}
-async-tungstenite = "*"     # { version = "*", features = ["async-tls", "async-std-runtime"] }
+# async-tls = "*"             # { version = "*", features = ["server"]}
+async-tls = { git = "https://github.com/async-rs/async-tls", branch = "master" }
+async-tungstenite = "*"                                                          # { version = "*", features = ["async-tls", "async-std-runtime"] }
 futures = "*"
 signal-hook = "*"
 signal-hook-async-std = "*"
@@ -41,10 +42,10 @@ async-channel = "*"
 async-mutex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
-chrono = "*"
+chrono = { version = "*", features = ["std", "clock"] }
 chrono-tz = "*"
 tide = "*"
-rustls = "0.20"                                             # Blocked because of stalled development at async-tls.
+rustls = "*"                                                # "0.20"                                             # Blocked because of stalled development at async-tls.
 rustls-pemfile = "*"
 tide-rustls = "*"
 dirs = "*"
