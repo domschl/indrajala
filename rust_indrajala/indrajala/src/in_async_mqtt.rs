@@ -154,6 +154,9 @@ impl AsyncIndraTask for Mqtt {
     }
 
     async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            return;
+        }
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {
