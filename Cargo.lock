@@ -355,12 +355,11 @@ checksum = "ecc7ab41815b3c653ccd2978ec3255c81349336702dfdf62ee6f7069b12a3aae"
 [[package]]
 name = "async-tls"
 version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfeefd0ca297cbbb3bd34fd6b228401c2a5177038257afd751bc29f0a2da4795"
+source = "git+https://github.com/async-rs/async-tls?branch=master#97a5121a69390795422074456745ad24823577ae"
 dependencies = [
  "futures-core",
  "futures-io",
- "rustls 0.20.8",
+ "rustls 0.21.3",
  "rustls-pemfile",
  "webpki 0.22.0",
  "webpki-roots 0.22.6",
@@ -374,7 +373,7 @@ checksum = "a564d521dd56509c4c47480d00b80ee55f7e385ae48db5744c67ad50c92d2ebf"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
 ]
 
 [[package]]
@@ -1526,7 +1525,7 @@ checksum = "89ca545a94061b6365f2c7355b4b32bd20df3ff95f02da9329b34ccc3bd6ee72"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
 ]
 
 [[package]]
@@ -1660,7 +1659,7 @@ dependencies = [
 [[package]]
 name = "ggml"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "ggml-sys",
  "memmap2",
@@ -1670,7 +1669,7 @@ dependencies = [
 [[package]]
 name = "ggml-sys"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "cc",
 ]
@@ -2300,7 +2299,7 @@ dependencies = [
  "paho-mqtt",
  "rand 0.8.5",
  "reqwest",
- "rustls 0.20.8",
+ "rustls 0.21.3",
  "rustls-pemfile",
  "serde",
  "serde_json",
@@ -2488,7 +2487,7 @@ checksum = "09fc20d2ca12cb9f044c93e3bd6d32d523e6e2ec3db4f7b2939cd99026ecd3f0"
 [[package]]
 name = "llm"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "llm-base",
  "llm-bloom",
@@ -2503,7 +2502,7 @@ dependencies = [
 [[package]]
 name = "llm-base"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "bytemuck",
  "ggml",
@@ -2521,7 +2520,7 @@ dependencies = [
 [[package]]
 name = "llm-bloom"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "llm-base",
 ]
@@ -2529,7 +2528,7 @@ dependencies = [
 [[package]]
 name = "llm-gpt2"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "bytemuck",
  "llm-base",
@@ -2538,7 +2537,7 @@ dependencies = [
 [[package]]
 name = "llm-gptj"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "llm-base",
 ]
@@ -2546,7 +2545,7 @@ dependencies = [
 [[package]]
 name = "llm-gptneox"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "llm-base",
 ]
@@ -2554,7 +2553,7 @@ dependencies = [
 [[package]]
 name = "llm-llama"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "llm-base",
 ]
@@ -2562,7 +2561,7 @@ dependencies = [
 [[package]]
 name = "llm-mpt"
 version = "0.2.0-dev"
-source = "git+https://github.com/rustformers/llm?branch=main#7d6eee38b750a75c8dc0d943e00667632dbd7e0e"
+source = "git+https://github.com/rustformers/llm?branch=main#7f13bb90f678e2bdf70d221f1b790fab55cb4d7f"
 dependencies = [
  "llm-base",
 ]
@@ -2693,7 +2692,7 @@ checksum = "e72f4d2e10fde62a0f2fcb4b44ccbf4f9899dcc30c9193449f8dfb9123d71377"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
 ]
 
 [[package]]
@@ -2874,7 +2873,7 @@ checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
 ]
 
 [[package]]
@@ -3131,7 +3130,7 @@ checksum = "ec2e072ecce94ec471b13398d5402c188e76ac03cf74dd1a975161b23a3f6d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
 ]
 
 [[package]]
@@ -3680,22 +3679,11 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.20.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fff78fc74d175294f4e83b28343315ffcfb114b156f0185e9741cb5570f50e2f"
-dependencies = [
- "log",
- "ring",
- "sct 0.7.0",
- "webpki 0.22.0",
-]
-
-[[package]]
-name = "rustls"
 version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b19faa85ecb5197342b54f987b142fb3e30d0c90da40f80ef4fa9a726e6676ed"
 dependencies = [
+ "log",
  "ring",
  "rustls-webpki 0.101.1",
  "sct 0.7.0",
@@ -3844,9 +3832,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.169"
+version = "1.0.171"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd51c3db8f9500d531e6c12dd0fd4ad13d133e9117f5aebac3cdbb8b6d9824b0"
+checksum = "30e27d1e4fd7659406c492fd6cfaf2066ba8773de45ca75e855590f856dc34a9"
 dependencies = [
  "serde_derive",
 ]
@@ -3862,13 +3850,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.169"
+version = "1.0.171"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27738cfea0d944ab72c3ed01f3d5f23ec4322af8a1431e40ce630e4c01ea74fd"
+checksum = "389894603bd18c46fa56231694f8d827779c0951a667087194cf9de94ed24682"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
 ]
 
 [[package]]
@@ -4466,9 +4454,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.24"
+version = "2.0.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36ccaf716a23c35ff908f91c971a86a9a71af5998c1d8f10e828d9f55f68ac00"
+checksum = "15e3fc8c0c74267e2df136e5e5fb656a464158aa57624053375eb9c8c6e25ae2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4536,7 +4524,7 @@ checksum = "463fe12d7993d3b327787537ce8dd4dfa058de32fc2b195ef3cde03dc4771e8f"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
 ]
 
 [[package]]
@@ -4792,7 +4780,7 @@ checksum = "5f4f31f56159e98206da9efd823404b79b6ef3143b4a7ab76e67b1751b25a4ab"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
 ]
 
 [[package]]
@@ -5052,7 +5040,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
  "wasm-bindgen-shared",
 ]
 
@@ -5086,7 +5074,7 @@ checksum = "54681b18a46765f095758388f2d0cf16eb8d4169b639ab575a8f5693af210c7b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.24",
+ "syn 2.0.25",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
