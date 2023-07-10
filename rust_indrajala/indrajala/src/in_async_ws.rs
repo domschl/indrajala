@@ -14,7 +14,7 @@ use async_std::{
 
 use log::{debug, error, info, warn};
 
-use rustls::server::ServerConfig;
+use rustls::ServerConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys}; //, rsa_private_keys};
 
 use async_tls::{server::TlsStream, TlsAcceptor};
@@ -236,8 +236,7 @@ impl AsyncIndraTask for Ws {
 
             let listener = TcpListener::bind(addr).await.unwrap();
             info!("Ws: Listening on wss://{} (ssl)", addr);
-            let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config));
-
+            let tls_acceptor = TlsAcceptor::from(Arc::new(ws_config)); //.unwrap();
             wss_accept_loop(
                 self.wss_connections,
                 listener,
