@@ -54,6 +54,9 @@ impl AsyncIndraTask for Web {
     }
 
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            return;
+        }
         let evpath = self.config.url.clone() + "/event";
         let astate = WebState::new(sender.clone(), IndraEvent::new(), HashMap::new());
         let mut app = tide::with_state(astate); //new();

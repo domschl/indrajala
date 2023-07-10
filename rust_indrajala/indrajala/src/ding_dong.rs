@@ -35,6 +35,9 @@ impl DingDong {
 
 impl AsyncIndraTask for DingDong {
     async fn async_receiver(mut self, _sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            return;
+        }
         loop {
             let msg = self.receiver.recv().await.unwrap();
             if msg.domain == "$cmd/quit" {
@@ -50,6 +53,9 @@ impl AsyncIndraTask for DingDong {
     }
 
     async fn async_sender(self, sender: async_channel::Sender<IndraEvent>) {
+        if !self.config.active {
+            return;
+        }
         loop {
             let a = &self.config.topic;
             let b = &self.config.message;
