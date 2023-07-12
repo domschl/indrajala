@@ -3,9 +3,8 @@ Description=Indrajala Event Server
 After=network.target mosquitto.service
 
 [Service]
-User=dsc
-Environment="RUST_LOG=warn"
-ExecStart=<insert_the_path_to_the_release_binary_here>/indrajala <insert_path_to_config_here>/indrajala/config/indrajala.toml
+User=indrajala
+ExecStart=<insert_the_path_to_the_release_binary_here>/indrajala <insert_path_to_config_here>/indrajala/indrajala.toml
 Restart=always
 
 [Install]
