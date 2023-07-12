@@ -386,7 +386,7 @@ fn main() {
 
     let (imc, indra_config, state_msg) = IndraConfig::new();
     if !imc.data_directory.exists() {
-        error!(
+        println!(
             "Data directory {} does not exist!",
             imc.data_directory.to_string_lossy()
         );

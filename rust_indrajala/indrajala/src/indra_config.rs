@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::env::consts::OS;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -317,6 +318,14 @@ impl Default for IndraMainConfig {
             }
             Err(_) => panic!("Failed to get hostname"),
         };
+        // check, if linux os and root user:
+        //if OS == "linux" {
+        //    // check for root user:
+        //
+        //} else {
+        //    let data_path = '.local/share/indrajala';
+        //}
+
         IndraMainConfig {
             // get hostname:
             machine_name: hostname,
@@ -334,12 +343,14 @@ impl Default for IndraMainConfig {
 
 impl IndraMainConfig {
     pub fn new() -> (IndraMainConfig, PathBuf) {
+        let mut os_service = false;
+        if OS == "linux" {
+            os_service = true;
+        }
         let home_dir = dirs::home_dir().unwrap_or(PathBuf::new());
-
         let main_config_dir = home_dir.join(".config/indrajala");
         let main_config_path = home_dir.join(".config/indrajala/indra_server.toml");
         let ctp = home_dir.join(".config/indrajala/indra_tasks.toml");
-
         if main_config_path.exists() {
             let content = fs::read_to_string(main_config_path);
             let imc: Result<IndraMainConfig, _> =
