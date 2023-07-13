@@ -7,3 +7,8 @@ __pycache__/
 .DS_Store
 .ipynb_checkpoints/
 cache/
+log/
+certs/
+db/
+models/
+

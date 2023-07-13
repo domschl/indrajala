@@ -299,6 +299,7 @@ pub struct IndraMainConfig {
     pub check_internet: bool,
     pub check_internet_interval: u64,
     pub check_internet_max_duration: u64,
+    pub config_directory: PathBuf,
     pub data_directory: PathBuf,
     pub default_term_log: String,
     pub default_file_log: String,
@@ -326,15 +327,24 @@ impl Default for IndraMainConfig {
         //    let data_path = '.local/share/indrajala';
         //}
 
+        let data_directory = {
+            if OS == "linux" {
+                PathBuf::from("/var/lib/indrajala")
+            } else {
+                dirs::home_dir()
+                    .unwrap_or(PathBuf::new())
+                    .join(".local/share/indrajala")
+            }
+        };
+
         IndraMainConfig {
             // get hostname:
             machine_name: hostname,
             check_internet: true,
             check_internet_interval: 5,
             check_internet_max_duration: 60,
-            data_directory: dirs::home_dir()
-                .unwrap_or(PathBuf::new())
-                .join(".local/share/indrajala"),
+            config_directory,
+            data_directory,
             default_term_log: "info".to_string(),
             default_file_log: "info".to_string(),
         }
@@ -343,37 +353,49 @@ impl Default for IndraMainConfig {
 
 impl IndraMainConfig {
     pub fn new() -> (IndraMainConfig, PathBuf) {
-        let mut os_service = false;
+        let mut config_path: PathBuf = PathBuf::new();
         if OS == "linux" {
-            os_service = true;
-        }
-        let home_dir = dirs::home_dir().unwrap_or(PathBuf::new());
-        let main_config_dir = home_dir.join(".config/indrajala");
-        let main_config_path = home_dir.join(".config/indrajala/indra_server.toml");
-        let ctp = home_dir.join(".config/indrajala/indra_tasks.toml");
-        if main_config_path.exists() {
-            let content = fs::read_to_string(main_config_path);
-            let imc: Result<IndraMainConfig, _> =
-                toml::from_str(content.unwrap_or("".to_string()).as_str());
-            match imc {
-                Ok(imc) => (imc, ctp),
-                Err(_) => (IndraMainConfig::default(), ctp),
+            config_path = PathBuf::from("/etc/indrajala");
+            if !config_path.exists() {
+                config_path.clear();
             }
-        } else {
-            let imc = IndraMainConfig::default();
-            if !main_config_dir.exists() {
-                match fs::create_dir(main_config_dir) {
+        }
+        if config_path.to_string_lossy().as_ref().is_empty() {
+            config_path = dirs::home_dir()
+                .unwrap_or(PathBuf::new())
+                .join(".config/indrajala");
+            if !config_path.exists() {
+                match fs::create_dir(&config_path) {
                     Ok(_) => {}
                     Err(e) => {
-                        print!("Failed to create .config/indrajala directory: {}", e);
+                        print!("Failed to create ~/.config/indrajala directory: {}", e);
                         std::process::exit(1);
                     }
                 }
             }
+        }
+        let main_config_file = config_path.join("indra_server.toml");
+        if main_config_file.exists() {
+            let content = fs::read_to_string(&main_config_file);
+            let imc: Result<IndraMainConfig, _> =
+                toml::from_str(content.unwrap_or("".to_string()).as_str());
+            match imc {
+                Ok(imc) => (imc, main_config_file),
+                Err(e) => {
+                    print!(
+                        "Failed to parse main config file {}: {}",
+                        main_config_file.to_string_lossy(),
+                        e
+                    );
+                    std::process::exit(1);
+                }
+            }
+        } else {
+            let imc = IndraMainConfig::default();
             let toml_string = toml::to_string(&imc).unwrap();
-            let mut file = File::create(main_config_path).unwrap();
+            let mut file = File::create(&main_config_file).unwrap();
             file.write_all(toml_string.as_bytes()).unwrap();
-            (imc, ctp)
+            (imc, main_config_file)
         }
     }
 }
