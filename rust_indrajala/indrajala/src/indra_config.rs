@@ -343,7 +343,7 @@ impl Default for IndraMainConfig {
             check_internet: true,
             check_internet_interval: 5,
             check_internet_max_duration: 60,
-            config_directory,
+            config_directory: "".into(),
             data_directory,
             default_term_log: "info".to_string(),
             default_file_log: "info".to_string(),
@@ -375,12 +375,13 @@ impl IndraMainConfig {
             }
         }
         let main_config_file = config_path.join("indra_server.toml");
+        let tasks_file = config_path.join("indra_tasks.toml");
         if main_config_file.exists() {
             let content = fs::read_to_string(&main_config_file);
             let imc: Result<IndraMainConfig, _> =
                 toml::from_str(content.unwrap_or("".to_string()).as_str());
             match imc {
-                Ok(imc) => (imc, main_config_file),
+                Ok(imc) => (imc, tasks_file),
                 Err(e) => {
                     print!(
                         "Failed to parse main config file {}: {}",
@@ -391,11 +392,14 @@ impl IndraMainConfig {
                 }
             }
         } else {
-            let imc = IndraMainConfig::default();
+            let imc = IndraMainConfig {
+                config_directory: config_path,
+                ..Default::default()
+            };
             let toml_string = toml::to_string(&imc).unwrap();
             let mut file = File::create(&main_config_file).unwrap();
             file.write_all(toml_string.as_bytes()).unwrap();
-            (imc, main_config_file)
+            (imc, tasks_file)
         }
     }
 }

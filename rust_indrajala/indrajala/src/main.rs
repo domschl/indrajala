@@ -387,9 +387,9 @@ fn main() {
     let (imc, indra_config, state_msg) = IndraConfig::new();
     if !imc.data_directory.exists() {
         println!(
-            "Data directory {} does not exist, please create it, or change entry in {}.",
+            "Data directory {} does not exist, please create it, or change data_directory entry in {}/indra_server.toml.",
             imc.data_directory.to_string_lossy(),
-            imc.config_file.to_string_lossy()
+            imc.config_directory.to_string_lossy()
         );
         std::process::exit(1);
     }
@@ -424,11 +424,16 @@ fn main() {
     if !state_msg.is_empty() {
         warn!("{}", state_msg);
     }
-    if check_internet_connection() {
-        debug!("Internet connection is available.");
-    } else {
-        error!("No internet connection available!");
+
+    if imc.check_internet {
+        if check_internet_connection() {
+            debug!("Internet connection is available.");
+        } else {
+            error!("No internet connection available!");
+        }
     }
+
+    info!("Starting IndraJala server.");
 
     let mut tsk: Vec<IndraTask> = vec![];
 
