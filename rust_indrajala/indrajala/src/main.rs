@@ -387,8 +387,9 @@ fn main() {
     let (imc, indra_config, state_msg) = IndraConfig::new();
     if !imc.data_directory.exists() {
         println!(
-            "Data directory {} does not exist!",
-            imc.data_directory.to_string_lossy()
+            "Data directory {} does not exist, please create it, or change entry in {}.",
+            imc.data_directory.to_string_lossy(),
+            imc.config_file.to_string_lossy()
         );
         std::process::exit(1);
     }
