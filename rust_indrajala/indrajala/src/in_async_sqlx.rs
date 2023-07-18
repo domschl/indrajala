@@ -119,13 +119,13 @@ impl SQLx {
             name: String,
             // Add other fields as needed from the table_info result
         }
-        info!(
-            "Checking if column {} exists in table {}",
-            column_name, table_name
-        );
+        // info!(
+        //     "Checking if column {} exists in table {}",
+        //    column_name, table_name
+        //);
         let schema_query = format!("PRAGMA table_info({})", table_name);
         let columns: Vec<TableInfo> = sqlx::query_as(&schema_query).fetch_all(pool).await?;
-        info!("Columns: {:?}", columns);
+        // info!("Columns: {:?}", columns);
         // Check if the column exists
         let exists = columns.iter().any(|column| column.name == column_name);
         Ok(exists)
@@ -528,6 +528,72 @@ impl AsyncIndraTask for SQLx {
                     }
                     continue;
                 }
+                // Get last value for a given domain
+                if msg.domain.starts_with("$trx/db/req/last") {
+                    let req_domain = msg.data.clone();
+                    // Read the last value (highest jd_start_time) for a given domain into struct IndraEvent:
+                    let pool = pool.clone().unwrap();
+                    let q_res3 = sqlx::query(
+                        r#"
+                                SELECT id, domain, from_id, uuid4, parent_uuid4, seq_no, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end
+                                FROM indra_events
+                                WHERE domain = ?
+                                ORDER BY time_jd_start DESC
+                                LIMIT 1
+                                "#,
+                    )
+                    .bind(req_domain)
+                    .fetch_one(&pool)
+                    .await;
+
+                    rep_msg = IndraEvent {
+                        domain: msg.from_id.clone().replace("$trx/db/req", "$/trx/db/reply"),
+                        from_id: self.config.name.clone(),
+                        uuid4: msg.uuid4.clone(),
+                        parent_uuid4: None,
+                        seq_no: None,
+                        to_scope: "".to_string(),
+                        time_jd_start: IndraEvent::datetime_to_julian(msg.time_jd_start),
+                        data_type: "".to_string(),
+                        data: "".to_string,
+                        auth_hash: Default::default(),
+                        time_jd_end: Some(IndraEvent::datetime_to_julian(
+                            IndraEvent::datetime_to_julian(chrono),
+                        )),
+                    };
+
+                    let (last_type, last_ie): IndraEvent = match q_res3 {
+                        Ok(row) => (
+                            "json/indraevent",
+                            IndraEvent {
+                                domain: row.try_get(1).unwrap(),
+                                from_id: row.try_get(2).unwrap(),
+                                uuid4: row.try_get(3).unwrap(),
+                                parent_uuid4: row.try_get(4).unwrap(),
+                                seq_no: row.try_get(5).unwrap(),
+                                to_scope: row.try_get(6).unwrap(),
+                                time_jd_start: row.try_get(7).unwrap(),
+                                data_type: row.try_get(8).unwrap(),
+                                data: row.try_get(9).unwrap(),
+                                auth_hash: row.try_get(10).unwrap(),
+                                time_jd_end: row.try_get(11).unwrap(),
+                            },
+                        ),
+                        Err(e) => ("error/notfound", IndraEvent::new()),
+                    };
+                    rep_msg.data_type = last_type.to_string();
+                    rep_msg.data = serde_json::to_string(&last_ie).unwrap();
+
+                    info!("Sending last value: {}->{}", rmsg.from_id, rmsg.domain);
+                    if sender.send(rep_msg.clone()).await.is_err() {
+                        error!(
+                            "SQLx: Error sending reply-message to channel {}",
+                            rmsg.domain
+                        );
+                    }
+
+                    continue;
+                }
                 warn!("SQLx: Received unknown command: {:?}", msg.domain);
                 continue;
             } else if msg.domain.starts_with("$event/") {
@@ -564,6 +630,11 @@ impl AsyncIndraTask for SQLx {
 
                     debug!("Inserted {} row(s)", rows_affected);
                 }
+            } else if msg.domain.starts_with("$forecast/") {
+                error!(
+                    "SQLx::sender: Received forecast domain, NOT IMPLEMENTED: {:?}",
+                    msg.domain
+                );
             } else {
                 warn!("SQLx::sender: Received unknown domain: {:?}", msg.domain);
             }

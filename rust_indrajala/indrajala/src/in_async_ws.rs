@@ -281,7 +281,7 @@ async fn handle_message(
             }
             match msg.domain.as_str() {
                 "$cmd/subs" => {
-                    warn!("Received subs command: {:?}", msg);
+                    info!("Received subs command: {:?}", msg);
                     //let mut subs = subs;
                     let new_subs_res: Result<Vec<String>, serde_json::Error> =
                         serde_json::from_str(msg.data.as_str());
@@ -298,7 +298,7 @@ async fn handle_message(
                             subs.push(sub.clone());
                             //}
                         }
-                        warn!("Subscribing to: {:?} -> {:?}", new_subs, subs);
+                        info!("Subscribing to: {:?} -> {:?}", new_subs, subs);
                         info!("Subscriptions updated: {:?}", subs);
                         let mut ie = msg.clone();
                         ie.from_id = format!("{}/{}", name, peer_address);
@@ -334,7 +334,7 @@ async fn handle_message(
                 }
                 _ => {
                     msg.from_id = format!("{}/{}", name, peer_address);
-                    info!("Received message via WS -> Route: {:?}", msg);
+                    info!("Received message via WS -> Route to: {}", msg.domain);
                     sx.send(msg).await.unwrap();
                 }
             }
