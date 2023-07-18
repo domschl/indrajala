@@ -546,25 +546,23 @@ impl AsyncIndraTask for SQLx {
                     .fetch_one(&pool)
                     .await;
 
-                    rep_msg = IndraEvent {
+                    let mut rep_msg = IndraEvent {
                         domain: msg.from_id.clone().replace("$trx/db/req", "$/trx/db/reply"),
                         from_id: self.config.name.clone(),
                         uuid4: msg.uuid4.clone(),
                         parent_uuid4: None,
                         seq_no: None,
                         to_scope: "".to_string(),
-                        time_jd_start: IndraEvent::datetime_to_julian(msg.time_jd_start),
+                        time_jd_start: IndraEvent::datetime_to_julian(Utc::now()),
                         data_type: "".to_string(),
-                        data: "".to_string,
+                        data: "".to_string(),
                         auth_hash: Default::default(),
-                        time_jd_end: Some(IndraEvent::datetime_to_julian(
-                            IndraEvent::datetime_to_julian(chrono),
-                        )),
+                        time_jd_end: Some(IndraEvent::datetime_to_julian(Utc::now())),
                     };
 
-                    let (last_type, last_ie): IndraEvent = match q_res3 {
+                    let (last_type, last_ie) = match q_res3 {
                         Ok(row) => (
-                            "json/indraevent",
+                            "json/indraevent".to_string(),
                             IndraEvent {
                                 domain: row.try_get(1).unwrap(),
                                 from_id: row.try_get(2).unwrap(),
@@ -579,16 +577,19 @@ impl AsyncIndraTask for SQLx {
                                 time_jd_end: row.try_get(11).unwrap(),
                             },
                         ),
-                        Err(e) => ("error/notfound", IndraEvent::new()),
+                        Err(_) => ("error/notfound".to_string(), IndraEvent::new()),
                     };
                     rep_msg.data_type = last_type.to_string();
                     rep_msg.data = serde_json::to_string(&last_ie).unwrap();
 
-                    info!("Sending last value: {}->{}", rmsg.from_id, rmsg.domain);
+                    info!(
+                        "Sending last value: {}->{}",
+                        rep_msg.from_id, rep_msg.domain
+                    );
                     if sender.send(rep_msg.clone()).await.is_err() {
                         error!(
                             "SQLx: Error sending reply-message to channel {}",
-                            rmsg.domain
+                            rep_msg.domain
                         );
                     }
 
