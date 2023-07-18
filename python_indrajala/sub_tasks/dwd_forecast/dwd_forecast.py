@@ -281,19 +281,22 @@ async def get_data(cl, dwd, station=10865):
 
         forecast = {"time": dj, "temperature": tc}
         ie = IndraEvent()
-        ie.domain = f"$event/forecast/{station}/temperature"
+        ie.domain = f"$event/forecast/dwd/{station}/temperature"
         ie.data = json.dumps(forecast)
-        ie.data_type = "json/forecast/temperature"
+        ie.data_type = "vector/forecast/temperature"
         await cl.send_event(ie)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        timer_value = int(sys.argv[1])
+    if len(sys.argv) < 3:
+        print("Usage: dwd_forecast.py <station-id> <cache-directory> [<poll-rate>]")
+        sys.exit(1)
+    station_id = int(sys.argv[1])
+    cache_directory = sys.argv[2]
+    if len(sys.argv) > 3:
+        timer_value = int(sys.argv[3])
     else:
-        timer_value = 900
-    if len(sys.argv) > 2:
-        cache_directory = sys.argv[2]
+        timer_value = 3600
     dwd = DWD(cache_directory=cache_directory)
 
     async def main(timer_value=900):
@@ -307,7 +310,7 @@ if __name__ == "__main__":
             )
         while True:
             await cl.info("Polling DWD weather data")
-            await get_data(cl, dwd)
+            await get_data(cl, dwd, station=station_id)
             await asyncio.sleep(timer_value)
 
     asyncio.run(main(timer_value=timer_value))
