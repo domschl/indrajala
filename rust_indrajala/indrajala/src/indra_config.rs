@@ -9,7 +9,7 @@ pub struct IndraConfig {
     pub mqtt: Option<Vec<MqttConfig>>,
     pub ding_dong: Option<Vec<DingDongConfig>>,
     pub web: Option<Vec<WebConfig>>,
-    pub sqlx: Option<Vec<SQLxConfig>>,
+    pub sqlx: Option<Vec<StorageConfig>>,
     pub ws: Option<Vec<WsConfig>>,
     pub signal: Option<Vec<SignalConfig>>,
     pub tasker: Option<Vec<TaskerConfig>>,
@@ -22,7 +22,7 @@ impl Default for IndraConfig {
             mqtt: Some(vec![MqttConfig::default()]),
             ding_dong: Some(vec![DingDongConfig::default()]),
             web: Some(vec![WebConfig::default()]),
-            sqlx: Some(vec![SQLxConfig::default()]),
+            sqlx: Some(vec![StorageConfig::default()]),
             ws: Some(vec![WsConfig::default()]),
             signal: Some(vec![SignalConfig::default()]),
             tasker: Some(vec![TaskerConfig::default()]),
@@ -161,7 +161,7 @@ pub enum DbSync {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct SQLxConfig {
+pub struct StorageConfig {
     pub name: String,
     pub active: bool,
     pub db_type: DbType,
@@ -169,20 +169,20 @@ pub struct SQLxConfig {
     pub database_url: String,
     pub last_state_file: String,
     pub persistent_domains: Vec<String>,
-    pub volatile_domains: Vec<String>,
+    pub volatile_domains: Vec<(String, i32)>,
 }
 
-impl Default for SQLxConfig {
+impl Default for StorageConfig {
     fn default() -> Self {
-        SQLxConfig {
-            name: "SQLx.1".to_string(),
+        StorageConfig {
+            name: "Storage.1".to_string(),
             active: false,
             db_type: DbType::SQLite,
             db_sync: DbSync::Async,
             database_url: "{{data_directory}}/db/indrajala.db".to_string(),
             last_state_file: "{{data_directory}}/db/last_state.json".to_string(),
-            persistent_domains: vec!["$event/".to_string()],
-            volatile_domains: vec!["$forecast/".to_string()],
+            persistent_domains: vec!["$event/#".to_string()],
+            volatile_domains: vec![("$forecast/#".to_string(), 14)],
         }
     }
 }
