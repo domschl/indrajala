@@ -168,6 +168,8 @@ pub struct SQLxConfig {
     pub db_sync: DbSync,
     pub database_url: String,
     pub last_state_file: String,
+    pub persistent_domains: Vec<String>,
+    pub volatile_domains: Vec<String>,
 }
 
 impl Default for SQLxConfig {
@@ -179,6 +181,8 @@ impl Default for SQLxConfig {
             db_sync: DbSync::Async,
             database_url: "{{data_directory}}/db/indrajala.db".to_string(),
             last_state_file: "{{data_directory}}/db/last_state.json".to_string(),
+            persistent_domains: vec!["$event/".to_string()],
+            volatile_domains: vec!["$forecast/".to_string()],
         }
     }
 }

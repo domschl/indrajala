@@ -46,11 +46,18 @@ impl SQLx {
         (s1, r1) = async_channel::unbounded();
         //let sq_config = config.clone();
         let def_addr = "$trx/db/#".to_string();
-        let subs = vec![
-            "$event/#".to_string(),
-            def_addr,
-            format!("{}/#", config.name),
-        ];
+        let mut subs = vec![def_addr, format!("{}/#", config.name)];
+        // add persistent and volatile domains to subscriptions:
+        for per_dom in config.persistent_domains.iter() {
+            subs.push(format!("{}/#", per_dom));
+        }
+        for vol_dom in config.volatile_domains.iter() {
+            let vol_dom_subs = format!("{}/#", vol_dom);
+            // check if vol_dom_subs is already in subs:
+            if !subs.contains(&vol_dom_subs) {
+                subs.push(vol_dom_subs);
+            }
+        }
 
         task::block_on(async {
             let stnam: String = config.last_state_file.clone();
@@ -304,6 +311,27 @@ impl SQLx {
             return pool;
         }
         pool
+    }
+
+    fn is_persistent(persistent_domains: Vec<String>, domain: String) -> bool {
+        let mut is_persistent = false;
+        for per_dom in persistent_domains.iter() {
+            if domain.starts_with(per_dom) {
+                is_persistent = true;
+                break;
+            }
+        }
+        is_persistent
+    }
+    fn is_volatile(volatile_domains: Vec<String>, domain: String) -> bool {
+        let mut is_volatile = false;
+        for vol_dom in volatile_domains.iter() {
+            if domain.starts_with(vol_dom) {
+                is_volatile = true;
+                break;
+            }
+        }
+        is_volatile
     }
 }
 
@@ -597,7 +625,10 @@ impl AsyncIndraTask for SQLx {
                 }
                 warn!("SQLx: Received unknown command: {:?}", msg.domain);
                 continue;
-            } else if msg.domain.starts_with("$event/") {
+            } else if SQLx::is_persistent(
+                self.config.persistent_domains.clone(),
+                msg.domain.clone(),
+            ) {
                 let mut msg = msg;
                 let domain = msg.domain.clone();
                 let data_str = msg.data.clone();
@@ -631,7 +662,7 @@ impl AsyncIndraTask for SQLx {
 
                     debug!("Inserted {} row(s)", rows_affected);
                 }
-            } else if msg.domain.starts_with("$forecast/") {
+            } else if SQLx::is_volatile(self.config.volatile_domains.clone(), msg.domain.clone()) {
                 error!(
                     "SQLx::sender: Received forecast domain, NOT IMPLEMENTED: {:?}",
                     msg.domain
