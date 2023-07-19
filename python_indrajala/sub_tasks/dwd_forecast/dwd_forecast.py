@@ -11,6 +11,7 @@ from urllib.request import urlopen
 from datetime import timezone
 from io import StringIO, BytesIO
 from zipfile import ZipFile
+import numpy as np
 
 import asyncio
 
@@ -272,18 +273,15 @@ async def get_data(cl, dwd, station=10865):
         dt = df.index.to_pydatetime()
         # convert to julian date:
         dj = [IndraEvent.datetime2julian(d.astimezone(timezone.utc)) for d in dt]
-        # convert df column 'TTT' Kelvin to numpy array and convert to Celsius:
-        tc = df["TTT"].to_numpy() - 273.15
-        # convert numpy to list:
-        tc = tc.tolist()
-        tc = [round(t, 2) for t in tc]
-        # dj = dj.tolist()
+        tc = df["TTT"].to_numpy()
+        # zip dj and tc to list of tuples and ommit nan values for tc:
+        dj_temp = [(d, round(t - 273.15, 2)) for d, t in zip(dj, tc) if not np.isnan(t)]
 
-        forecast = {"time": dj, "temperature": tc}
         ie = IndraEvent()
-        ie.domain = f"$event/forecast/dwd/{station}/temperature"
-        ie.data = json.dumps(forecast)
-        ie.data_type = "vector/forecast/temperature"
+        ie.domain = f"$forecast/dwd/{station}/temperature"
+        ie.data = json.dumps(dj_temp)
+        ie.data_type = "vector/tuple/jd/float"
+        await cl.info(f"Sending event {ie.data}")
         await cl.send_event(ie)
 
 
