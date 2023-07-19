@@ -36,8 +36,8 @@ mod in_async_mqtt;
 use in_async_mqtt::Mqtt;
 mod in_async_web;
 use in_async_web::Web;
-mod in_async_sqlx;
-use in_async_sqlx::SQLx;
+mod indra_storage;
+use indra_storage::Storage;
 mod in_async_ws;
 use in_async_ws::Ws; // {init_websocket_server, Ws};
 mod in_async_signal;
@@ -52,7 +52,7 @@ enum IndraTask {
     Mqtt(Mqtt),
     Web(Web),
     DingDong(DingDong),
-    SQLx(SQLx),
+    Storage(Storage),
     Ws(Ws),
     Signal(Signal),
     Tasker(Tasker),
@@ -112,7 +112,7 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                     name = st.config.clone().name;
                     subs = st.subs.clone();
                 }
-                IndraTask::SQLx(st) => {
+                IndraTask::Storage(st) => {
                     act = st.config.clone().active;
                     acs = st.sender.clone();
                     name = st.config.clone().name;
@@ -187,7 +187,7 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                                 st.subs.append(&mut subs);
                                 debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
-                            IndraTask::SQLx(st) => {
+                            IndraTask::Storage(st) => {
                                 let old_subs = st.subs.clone();
                                 st.subs.append(&mut subs);
                                 debug!("SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
@@ -253,7 +253,7 @@ async fn router(mut tsk: Vec<IndraTask>, receiver: async_channel::Receiver<Indra
                                 }
                                 debug!("UN-SUBS: {}: {:?} -> {:?}", name, old_subs, st.subs)
                             }
-                            IndraTask::SQLx(st) => {
+                            IndraTask::Storage(st) => {
                                 let old_subs = st.subs.clone();
                                 for sub in subs {
                                     let index = st.subs.iter().position(|x| *x == sub);
@@ -457,8 +457,8 @@ fn main() {
     }
     if indra_config.sqlx.is_some() {
         for sq in indra_config.sqlx.clone().unwrap() {
-            let s = SQLx::new(sq.clone());
-            tsk.push(IndraTask::SQLx(s.clone()));
+            let s = Storage::new(sq.clone());
+            tsk.push(IndraTask::Storage(s.clone()));
         }
     }
     if indra_config.ws.is_some() {
@@ -507,7 +507,7 @@ fn main() {
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
-                IndraTask::SQLx(st) => {
+                IndraTask::Storage(st) => {
                     join_handles.push(task::spawn(st.clone().async_sender(sender.clone())));
                     join_handles.push(task::spawn(st.clone().async_receiver(sender.clone())));
                 }
