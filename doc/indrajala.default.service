@@ -4,7 +4,7 @@ After=network.target mosquitto.service
 
 [Service]
 User=indrajala
-ExecStart=<insert_the_path_to_the_release_binary_here>/indrajala <insert_path_to_config_here>/indrajala/indrajala.toml
+ExecStart=<insert_the_path_to_the_release_binary_here>/indrajala
 Restart=always
 
 [Install]
