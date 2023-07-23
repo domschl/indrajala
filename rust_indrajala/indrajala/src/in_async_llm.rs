@@ -17,7 +17,8 @@ use crate::indra_config::LLMConfig;
 use crate::AsyncIndraTask;
 use crate::IndraEvent;
 
-// References: https://github.com/rustformers/llm/blob/main/crates/llm/examples/vicuna-chat.rs
+// Old general References: https://github.com/rustformers/llm/blob/main/crates/llm/examples/vicuna-chat.rs
+// Latest API: https://github.com/rustformers/llm/blob/main/binaries/llm-cli/src/cli_args.rs
 
 #[derive(Clone)]
 pub struct Llm {
@@ -142,17 +143,19 @@ impl Llm {
             prefer_mmap: llm_config.prefer_mmap.unwrap_or(false),
             context_size: llm_config.context_size.unwrap_or(2048),
             use_gpu: llm_config.use_gpu.unwrap_or(false),
+            gpu_layers: llm_config.gpu_layers,
             lora_adapters: llm_config.lora_paths.clone(),
         };
-        let model = llm::load_dynamic(
+        //let model =
+        llm::load_dynamic(
             Some(model_architecture),
             model_path,
             vocabulary_source,
             params, // Default::default(),
             // overrides,
             Llm::load_progress_callback_logger,
-        );
-        model
+        )
+        //model
     }
 
     pub fn send_answer(
@@ -193,7 +196,8 @@ impl Llm {
         let inference_session_config = InferenceSessionConfig {
             memory_k_type: mem_typ,
             memory_v_type: mem_typ,
-            use_gpu: llm_config.use_gpu.unwrap_or(false),
+            n_threads: llm_config.n_threads.unwrap_or_else(|| num_cpus::get() / 2),
+            n_batch: llm_config.n_batch.unwrap_or(8),
         };
         info!("Llm: Starting session.");
         let mut session = model.start_session(inference_session_config);
@@ -208,8 +212,6 @@ impl Llm {
         );
 
         let inference_parameters = InferenceParameters {
-            n_threads: llm_config.n_threads.unwrap_or_else(|| num_cpus::get() / 2),
-            n_batch: llm_config.n_batch.unwrap_or(8),
             sampler: Arc::new(llm::samplers::TopPTopK {
                 top_k: llm_config.top_k.unwrap_or(40),
                 top_p: llm_config.top_p.unwrap_or(0.95),
@@ -225,7 +227,7 @@ impl Llm {
         if session
             .feed_prompt(
                 model.as_ref(),
-                &inference_parameters,
+                //&inference_parameters,
                 format!("{persona}\n{history}").as_str(),
                 &mut Default::default(),
                 llm::feed_prompt_callback(|resp| match resp {

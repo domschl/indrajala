@@ -224,8 +224,8 @@ class IndraClient:
                 ie = await asyncio.wait_for(self.recv_queue.get(), timeout=timeout)
             except TimeoutError:
                 return None
-            except:
-                self.log.error(f"Timeout receive failed!")
+            except Exception as e:
+                self.log.warning(f"Timeout receive failed: {e}")
                 return None
         self.recv_queue.task_done()
         return ie
