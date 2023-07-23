@@ -227,6 +227,7 @@ pub struct LLMConfig {
     pub prefer_mmap: Option<bool>,
     pub context_size: Option<usize>,
     pub use_gpu: Option<bool>,
+    pub gpu_layers: Option<usize>,
     pub lora_paths: Option<Vec<PathBuf>>,
     pub n_threads: Option<usize>,
     pub n_batch: Option<usize>,
@@ -251,6 +252,7 @@ impl Default for LLMConfig {
             prefer_mmap: Some(true),
             context_size: Some(2048),
             use_gpu: Some(false),
+            gpu_layers: None, // None is ALL layers
             lora_paths: None,
             n_threads: None,
             n_batch: None,

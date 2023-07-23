@@ -202,7 +202,8 @@ fn build_ui(app: &Application) {
             let subs: Vec<String> = domain_topic2.clone();
             ie.data = serde_json::to_string(&subs).unwrap();
             let ie_txt = serde_json::to_string(&ie).unwrap();
-            socket.write_message(ie_txt.into()).unwrap();
+            // socket.write_message(ie_txt.into()).unwrap();
+            socket.send(ie_txt.into()).unwrap();
             println!("sent message $cmd/subs");
             let mut ie: IndraEvent = IndraEvent::new();
             ie.domain = "$trx/db/req/uniquedomains".to_string();
@@ -214,10 +215,10 @@ fn build_ui(app: &Application) {
             ie.data_type = "uniquedomainsrequest".to_string();
             ie.data = serde_json::to_string(&hr).unwrap();
             let ie_txt = serde_json::to_string(&ie).unwrap();
-            socket.write_message(ie_txt.into()).unwrap();
+            socket.send(ie_txt.into()).unwrap();
             println!("sent message req/uniquedomains");
             // Loop over the messages from the server
-            while let Ok(msg) = socket.read_message() {
+            while let Ok(msg) = socket.read() {
                 // If the message is text, parse it as a record
                 if let Message::Text(text) = msg {
                     //println!("Received: len={}", text.len());
@@ -285,7 +286,7 @@ fn build_ui(app: &Application) {
                                 };
                                 ie.data = serde_json::to_string(&req).unwrap();
                                 let ie_txt = serde_json::to_string(&ie).unwrap();
-                                socket.write_message(ie_txt.into()).unwrap();
+                                socket.send(ie_txt.into()).unwrap();
                                 println!("sent message request history of {}", domain);
                             } else {
                                 time_series_lock
@@ -396,7 +397,7 @@ fn build_ui(app: &Application) {
                                         };
                                         ie.data = serde_json::to_string(&req).unwrap();
                                         let ie_txt = serde_json::to_string(&ie).unwrap();
-                                        socket.write_message(ie_txt.into()).unwrap();
+                                        socket.send(ie_txt.into()).unwrap();
                                         println!("sent message request history of {}", domain);
                                     }
                                 }
