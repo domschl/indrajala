@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import aioconsole
 
 # Add the parent directory to the path so we can import the client
 import sys
@@ -13,6 +14,57 @@ sys.path.append(path)
 from indra_event import IndraEvent
 from indra_client import IndraClient
 
+# Terminal control codes for formatting
+CLEAR_SCREEN = "\033[2J\033[H"  # Clear screen
+MOVE_CURSOR_UP = "\033[F"  # Move cursor up one line
+ERASE_LINE = "\033[K"  # Erase current line
+
+# Message history lists
+remote_message_history = []
+local_message_history = []
+
+
+async def receive_remote(cl):
+    while True:
+        ie = await cl.recv_event()
+        if ie is None:
+            remote_message = ""
+        else:
+            msg = ie.data
+            remote_message = msg
+        remote_message_history.append(remote_message)
+        if len(remote_message_history) > 10:
+            remote_message_history.pop(
+                0
+            )  # Remove oldest message if history exceeds 10 lines
+        display_output()
+
+
+async def receive_io():
+    while True:
+        local_message = await aioconsole.ainput("Enter your message: ")
+        local_message_history.append(local_message)
+        if len(local_message_history) > 5:
+            local_message_history.pop(
+                0
+            )  # Remove oldest message if history exceeds 5 lines
+
+        display_output()
+
+
+def display_output():
+    print(CLEAR_SCREEN)
+
+    # Display remote message history
+    print("Remote messages:")
+    for message in remote_message_history[-10:]:
+        print(f"{message}")
+
+    # Display local message history
+    print("\nYour messages:")
+    for message in local_message_history[-5:]:
+        print(f"{message}")
+
 
 async def chat():
     cl = IndraClient(config_file="ws_indra.toml", verbose=False)
@@ -23,53 +75,10 @@ async def chat():
     if ws is None:
         logging.error("Could not connect to Indrajala")
         return
-    await cl.subscribe(["CHAT.1/#"])  # XXX $event?!
-    # domain_list_future = await cl.get_unique_domains()
-    # hist_future = await cl.get_history(
-    #     "$event/omu/enviro-master/BME280-1/sensor/humidity", 0, None, 100
-    # )
-    # if hist_future is None:
-    #     logging.error("Could not get history")
-    # if domain_list_future is None:
-    #     logging.error("Could not get domain list")
-    # else:
-    #     hist = await hist_future
-    #     print(hist)
-    while True:
-        timeout = 15
-        print("Input: ", end="")
-        msg = input()
-        if msg == "exit":
-            break
-        ie = IndraEvent()
-        ie.domain = "LLM.1/indra-chat"
-        ie.data_type = "string/chat"
-        ie.data = msg
-        await cl.send_event(ie)
-        while True:
-            ie = await cl.recv_event(timeout=timeout)
-            if ie is None:
-                print()
-                break
-            else:
-                prompt = "### Human:"
-                msg = ie.data
-                for i in range(len(prompt), 1, -1):
-                    if prompt[:i].endswith(" "):
-                        continue
-                    if msg.startswith(prompt[:i]):
-                        msg = msg[i:]
-                        break
-                timeout = 5
-                if msg.endswith("}"):
-                    print(msg[:-1])
-                    break
-                else:
-                    print(
-                        msg,
-                        end="",
-                        flush=True,
-                    )
+    await cl.subscribe(["CHAT.1/#"])
+
+    print(CLEAR_SCREEN)
+    await asyncio.gather(receive_remote(cl), receive_io())
 
 
 logging.basicConfig(level=logging.INFO)
