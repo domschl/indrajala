@@ -455,8 +455,8 @@ fn main() {
             tsk.push(IndraTask::Web(r.clone()));
         }
     }
-    if indra_config.sqlx.is_some() {
-        for sq in indra_config.sqlx.clone().unwrap() {
+    if indra_config.storage.is_some() {
+        for sq in indra_config.storage.clone().unwrap() {
             let s = Storage::new(sq.clone());
             tsk.push(IndraTask::Storage(s.clone()));
         }
