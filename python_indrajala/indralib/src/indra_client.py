@@ -56,8 +56,11 @@ class IndraClient:
             else:
                 self.use_ssl = False
         elif profile is not None:
-            cfg_path = "~/.config/indrajala/server_profiles"
-            cfg_path = os.path.expanduser(cfg_path)
+            if os.path.exists("/var/lib/indrajala/config") is True:
+                cfg_path = "/var/lib/indrajala/config"
+            else:
+                cfg_path = "~/.config/indrajala/server_profiles"
+                cfg_path = os.path.expanduser(cfg_path)
             config_file = os.path.join(cfg_path, profile + ".toml")
             if os.path.exists(config_file) is True:
                 self.initialized = self.get_config(config_file, verbose=self.verbose)
@@ -69,8 +72,11 @@ class IndraClient:
                     )
                 return
         else:
-            cfg_path = "~/.config/indrajala/server_profiles"
-            cfg_path = os.path.expanduser(cfg_path)
+            if os.path.exists("/var/lib/indrajala/config") is True:
+                cfg_path = "/var/lib/indrajala/config"
+            else:
+                cfg_path = "~/.config/indrajala/server_profiles"
+                cfg_path = os.path.expanduser(cfg_path)
             prfs = IndraClient.get_profiles()
             if len(prfs) > 0:
                 self.initialized = self.get_config(
@@ -87,8 +93,11 @@ class IndraClient:
     @staticmethod
     def get_profiles():
         """Get profiles"""
-        cfg_path = "~/.config/indrajala/server_profiles"
-        cfg_path = os.path.expanduser(cfg_path)
+        if os.path.exists("/var/lib/indrajala/config/server_profiles") is True:
+            cfg_path = "/var/lib/indrajala/config/server_profiles"
+        else:
+            cfg_path = "~/.config/indrajala/server_profiles"
+            cfg_path = os.path.expanduser(cfg_path)
         if os.path.exists(cfg_path) is False:
             return []
         profiles = []
