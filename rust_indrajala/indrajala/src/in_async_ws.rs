@@ -4,7 +4,10 @@ use crate::IndraEvent;
 
 //use async_channel;
 use futures::stream::SplitSink;
+use serde::{Deserialize, Serialize};
+use std::io::Write;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::{collections::HashMap, fs::File, io::BufReader, sync::Arc};
 
 use async_std::{
@@ -55,8 +58,9 @@ impl Ws {
         let s1: async_channel::Sender<IndraEvent>;
         let r1: async_channel::Receiver<IndraEvent>;
         (s1, r1) = async_channel::unbounded();
-        let ws_config = config;
+        let ws_config = config.clone();
         let subs = vec![format!("{}/#", ws_config.name)];
+        Ws::check_server_profiles(config);
 
         Ws {
             config: ws_config,
@@ -81,6 +85,95 @@ impl Ws {
         ie.data_type = "vector/string".to_string();
         ie.data = serde_json::to_string(&unsubs).unwrap();
         sender.try_send(ie).unwrap();
+    }
+
+    pub fn check_server_profiles(config: WsConfig) {
+        let config_path =
+            PathBuf::from(shellexpand::tilde("~/.config/indrajala/server_profiles").to_string());
+        // Create path if not existing:
+        if !config_path.exists() {
+            match std::fs::create_dir_all(config_path.as_path()) {
+                Ok(_) => {
+                    info!("Created server_profiles directory: {:?}", config_path);
+                }
+                Err(e) => {
+                    error!("Error creating server_profiles directory: {:?}", e);
+                    return;
+                }
+            }
+        }
+        let hostname = match hostname::get() {
+            Ok(h) => h.into_string().unwrap(),
+            Err(e) => {
+                error!("Error getting hostname: {:?}", e);
+                return;
+            }
+        };
+        let short_hostname = hostname.split('.').next().unwrap();
+        let profile_name = config
+            .profile
+            .replace("{{machine_name}}", short_hostname)
+            .replace("{{name}}", config.name.as_str());
+        let machine_config = config_path.join(format!("{}.toml", profile_name));
+        if !machine_config.exists() {
+            // create machine-specific config:
+            let mut machine_config = match File::create(machine_config.as_path()) {
+                Ok(f) => f,
+                Err(e) => {
+                    error!("Error creating machine-specific config: {:?}", e);
+                    return;
+                }
+            };
+            // [Server]
+            // uri = "wss://localhost:8082"
+            // ssl = true
+            // ca_authority = "~/certs/ca-root.pem"
+            #[derive(Serialize, Deserialize, Debug)]
+            struct ServerProfile {
+                uri: String,
+                ssl: bool,
+                ca_authority: String,
+            }
+            // config.address: "0.0.0.0:8082".to_string(),
+            let port = match config.address.split(':').last() {
+                Some(p) => p,
+                None => {
+                    error!("Error parsing port from address: {:?}", config.address);
+                    return;
+                }
+            };
+
+            let server_profile = match config.ssl {
+                true => {
+                    let ca_auth = config.cert.clone().replace(hostname.as_str(), "ca-root");
+                    // write machine-specific config:
+                    ServerProfile {
+                        uri: format!("wss://{}:{}", short_hostname, port),
+                        ssl: true,
+                        ca_authority: ca_auth,
+                    }
+                }
+                false => {
+                    // write machine-specific config:
+                    ServerProfile {
+                        uri: format!("ws://{}:{}", short_hostname, port),
+                        ssl: false,
+                        ca_authority: "".to_string(),
+                    }
+                }
+            };
+            let toml = toml::to_string(&server_profile).unwrap();
+            machine_config.write_all(toml.as_bytes()).unwrap();
+            warn!(
+                "Created server_profile for clients: {:?}",
+                config_path.to_string_lossy()
+            );
+        } else {
+            info!(
+                "Found machine-specific config: {:?}",
+                machine_config.as_path()
+            );
+        }
     }
 }
 

@@ -25,6 +25,7 @@ class IndraClient:
         config_file=None,
         verbose=False,
         module_name=None,
+        profile="default",
     ):
         self.log = logging.getLogger("IndraClient")
         if module_name is None:
@@ -52,15 +53,49 @@ class IndraClient:
                 self.auth_token = None
             if self.uri.startswith("wss://"):
                 self.use_ssl = True
-        elif uri.startswith("ws://"):
-            self.use_ssl = False
+            else:
+                self.use_ssl = False
+        elif profile is not None:
+            cfg_path = "~/.config/indrajala/server_profiles"
+            cfg_path = os.path.expanduser(cfg_path)
+            config_file = os.path.join(cfg_path, profile + ".toml")
+            if os.path.exists(config_file) is True:
+                self.initialized = self.get_config(config_file, verbose=self.verbose)
+            else:
+                self.initialized = False
+                if verbose is True:
+                    self.log.error(
+                        f"Profile {profile} not found in {cfg_path}, alternatively please provide a valid uri, starting with ws:// or wss://, e.g. wss://localhost:8082, or config_file=..."
+                    )
+                return
         else:
-            self.initialized = False
-            if verbose is True:
-                self.log.error(
-                    "Please provide a valid uri, starting with ws:// or wss://, e.g. wss://localhost:8082"
+            cfg_path = "~/.config/indrajala/server_profiles"
+            cfg_path = os.path.expanduser(cfg_path)
+            prfs = IndraClient.get_profiles()
+            if len(prfs) > 0:
+                self.initialized = self.get_config(
+                    os.path.join(cfg_path, prfs[0] + ".toml"), verbose=self.verbose
                 )
-            return
+            else:
+                self.initialized = False
+                if verbose is True:
+                    self.log.error(
+                        "Please provide a valid uri, starting with ws:// or wss://, e.g. wss://localhost:8082"
+                    )
+                return
+
+    @staticmethod
+    def get_profiles():
+        """Get profiles"""
+        cfg_path = "~/.config/indrajala/server_profiles"
+        cfg_path = os.path.expanduser(cfg_path)
+        if os.path.exists(cfg_path) is False:
+            return []
+        profiles = []
+        for f in os.listdir(cfg_path):
+            if f.endswith(".toml"):
+                profiles.append(f[:-5])
+        return profiles
 
     def get_config(self, config_file, verbose=True):
         """Get config from file"""
@@ -82,13 +117,12 @@ class IndraClient:
             return False
         self.uri = config["uri"]
         if "ca_authority" in config and config["ca_authority"] != "":
-            if os.path.exists(config["ca_authority"]) is False:
+            cert_auth = os.path.expanduser(config["ca_authority"])
+            if os.path.exists(cert_auth) is False:
                 if verbose is True:
-                    self.log.error(
-                        f"CA authority file {config['ca_authority']} not found!"
-                    )
+                    self.log.error(f"CA authority file {cert_auth} not found!")
                 return False
-            self.ca_authority = config["ca_authority"]
+            self.ca_authority = cert_auth
         else:
             self.ca_authority = None
         if "auth_token" in config and config["auth_token"] != "":
