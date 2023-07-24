@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cargo build --release
 sudo mkdir /var/lib/indrajala
 sudo mkdir /var/lib/indrajala/tasks
 sudo cp -v target/release/indrajala /usr/bin
