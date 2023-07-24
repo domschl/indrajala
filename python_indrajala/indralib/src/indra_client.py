@@ -72,8 +72,8 @@ class IndraClient:
                     )
                 return
         else:
-            if os.path.exists("/var/lib/indrajala/config") is True:
-                cfg_path = "/var/lib/indrajala/config"
+            if os.path.exists("/var/lib/indrajala/config/server_profiles") is True:
+                cfg_path = "/var/lib/indrajala/config/server_profiles"
             else:
                 cfg_path = "~/.config/indrajala/server_profiles"
                 cfg_path = os.path.expanduser(cfg_path)
