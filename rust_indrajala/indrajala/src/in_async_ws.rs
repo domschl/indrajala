@@ -88,8 +88,12 @@ impl Ws {
     }
 
     pub fn check_server_profiles(config: WsConfig) {
-        let config_path =
-            PathBuf::from(shellexpand::tilde("~/.config/indrajala/server_profiles").to_string());
+        let config_path = match PathBuf::from("/var/lib/indrajala/config").exists() {
+            true => PathBuf::from("/var/lib/indrajala/config/server_profiles"),
+            false => {
+                PathBuf::from(shellexpand::tilde("~/.config/indrajala/server_profiles").to_string())
+            }
+        };
         // Create path if not existing:
         if !config_path.exists() {
             match std::fs::create_dir_all(config_path.as_path()) {
