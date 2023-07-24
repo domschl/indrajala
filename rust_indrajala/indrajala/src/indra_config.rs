@@ -361,9 +361,23 @@ impl IndraMainConfig {
     pub fn new() -> (IndraMainConfig, PathBuf) {
         let mut config_path: PathBuf = PathBuf::new();
         if OS == "linux" {
-            config_path = PathBuf::from("/var/lib/indrajala/config");
-            if !config_path.exists() {
-                config_path.clear();
+            // Check if path '/var/lib/indrajala' exists:
+            let d_path = PathBuf::from("/var/lib/indrajala");
+            if d_path.exists() {
+                config_path = PathBuf::from("/var/lib/indrajala/config");
+                if !config_path.exists() {
+                    // create directory
+                    match fs::create_dir(&config_path) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            print!(
+                                "Failed to create /var/lib/indrajala/config directory: {}",
+                                e
+                            );
+                            std::process::exit(1);
+                        }
+                    }
+                }
             }
         }
         if config_path.to_string_lossy().as_ref().is_empty() {
