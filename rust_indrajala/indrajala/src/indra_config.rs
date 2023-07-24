@@ -403,8 +403,28 @@ impl IndraMainConfig {
                 ..Default::default()
             };
             let toml_string = toml::to_string(&imc).unwrap();
-            let mut file = File::create(&main_config_file).unwrap();
-            file.write_all(toml_string.as_bytes()).unwrap();
+            let mut file = match File::create(&main_config_file) {
+                Ok(f) => f,
+                Err(e) => {
+                    print!(
+                        "Failed to create main config file {}: {}",
+                        main_config_file.to_string_lossy(),
+                        e
+                    );
+                    std::process::exit(1);
+                }
+            };
+            match file.write_all(toml_string.as_bytes()) {
+                Ok(_) => {}
+                Err(e) => {
+                    print!(
+                        "Failed to write main config file {}: {}",
+                        main_config_file.to_string_lossy(),
+                        e
+                    );
+                    std::process::exit(1);
+                }
+            }
             (imc, tasks_file)
         }
     }
