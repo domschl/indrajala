@@ -361,7 +361,7 @@ impl IndraMainConfig {
     pub fn new() -> (IndraMainConfig, PathBuf) {
         let mut config_path: PathBuf = PathBuf::new();
         if OS == "linux" {
-            config_path = PathBuf::from("/etc/indrajala");
+            config_path = PathBuf::from("/var/lib/indrajala/config");
             if !config_path.exists() {
                 config_path.clear();
             }

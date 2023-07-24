@@ -3,7 +3,8 @@
 Create a system user `indrajala`:
 
 ```bash
-# useradd --system -s /usr/bin/nologin indrajala
+sudo useradd -d /var/lib/indrajala -s /bin/bash indrajala
+sudo -iu indrajala
 ```
 
 /etc/indrajala
