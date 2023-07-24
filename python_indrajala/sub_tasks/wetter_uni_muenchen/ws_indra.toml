@@ -1,3 +1,0 @@
-uri = "wss://localhost:8082"
-ssl = true
-ca_authority = "{{data_directory}}/certs/ca-root.pem"
