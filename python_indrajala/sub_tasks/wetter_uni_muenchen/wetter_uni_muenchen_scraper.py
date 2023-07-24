@@ -25,13 +25,10 @@ from indra_event import IndraEvent
 from indra_client import IndraClient
 
 
-async def indra_connection():
-    # get directory of this file:
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    config_file = os.path.join(dir_path, "ws_indra.toml")
+async def indra_connection(profile=None):
     try:
         cl = IndraClient(
-            config_file=config_file, verbose=True, module_name="wetter_uni_muenchen"
+            profile=profile, verbose=True, module_name="wetter_uni_muenchen"
         )
         await cl.init_connection(verbose=True)
     except:
@@ -139,9 +136,13 @@ if __name__ == "__main__":
         timer_value = int(sys.argv[1])
     else:
         timer_value = 900
+    if len(sys.argv) > 2:
+        profile = sys.argv[2]
+    else:
+        profile = None
 
     async def main(timer_value=900):
-        cl = await indra_connection()
+        cl = await indra_connection(profile=profile)
         if cl is None:
             print("Could not create Indrajala client")
             return

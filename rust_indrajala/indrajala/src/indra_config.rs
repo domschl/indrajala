@@ -125,9 +125,9 @@ impl Default for WebConfig {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct WsConfig {
     pub name: String,
+    pub profile: String,
     pub active: bool,
     pub address: String,
-    pub url: String,
     pub ssl: bool,
     pub cert: String,
     pub key: String,
@@ -137,9 +137,9 @@ impl Default for WsConfig {
     fn default() -> Self {
         WsConfig {
             name: "Ws.1".to_string(),
+            profile: "{{machine_name}}_{{name}}".to_string(),
             active: false,
             address: "0.0.0.0:8082".to_string(),
-            url: "/ws/v1".to_string(),
             ssl: true,
             cert: "{{data_directory}}/certs/{{machine_name}}.pem".to_string(),
             key: "{{data_directory}}/certs/{{machine_name}}-key.pem".to_string(),
@@ -200,6 +200,7 @@ pub enum TaskerIpc {
 pub struct TaskerConfig {
     pub name: String,
     pub active: bool,
+    pub startup_delay_ms: u64,
     pub cmd: String,
     pub args: Vec<String>,
 }
@@ -209,6 +210,7 @@ impl Default for TaskerConfig {
         TaskerConfig {
             name: "Tasker.1".to_string(),
             active: false,
+            startup_delay_ms: 1000,
             cmd: "echo".to_string(),
             args: vec!["Hello World".to_string()],
         }

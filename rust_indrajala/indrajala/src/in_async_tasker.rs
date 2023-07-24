@@ -48,6 +48,11 @@ impl AsyncIndraTask for Tasker {
             debug!("Tasker is not active");
             return;
         }
+        // sleep for config.startup_delay_ms: (give websockets time to establish server and profiles)
+        async_std::task::sleep(std::time::Duration::from_millis(
+            self.config.startup_delay_ms,
+        ))
+        .await;
         let child = Command::new(self.config.cmd.clone())
             .args(self.config.args.clone())
             .stdout(Stdio::piped())
