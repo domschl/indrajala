@@ -659,10 +659,12 @@ impl AsyncIndraTask for Storage {
                 warn!("Storage: Received unknown command: {:?}", msg.domain);
                 continue;
             }
+            let mut dom_found = false;
             if Storage::is_persistent(
                 self.config.persistent_domains.clone(),
                 msg.clone().domain.clone(),
             ) {
+                dom_found = true;
                 let mut msg = msg.clone();
                 let domain = msg.domain.clone();
                 let data_str = msg.data.clone();
@@ -701,11 +703,13 @@ impl AsyncIndraTask for Storage {
                 self.config.volatile_domains.clone(),
                 msg.clone().domain.clone(),
             ) {
+                dom_found = true;
                 error!(
                     "Storage::sender: Received forecast domain, NOT IMPLEMENTED: {:?}",
                     msg.clone().domain
                 );
-            } else {
+            }
+            if !dom_found {
                 warn!(
                     "Storage::sender: Received unknown domain: {:?}",
                     msg.clone().domain
