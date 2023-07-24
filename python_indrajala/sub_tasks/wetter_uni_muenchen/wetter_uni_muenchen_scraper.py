@@ -20,7 +20,7 @@ except:
     path = os.path.expanduser(path)
 print(path)
 sys.path.append(path)
-sys.path.append("/var/lib/indrajala/tasks/indrajala/src")
+sys.path.append("/var/lib/indrajala/tasks/indralib/src")
 
 from indra_event import IndraEvent
 from indra_client import IndraClient
