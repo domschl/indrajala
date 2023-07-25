@@ -4,6 +4,7 @@ from datetime import datetime
 import zoneinfo
 import json
 import asyncio
+import logging
 
 import pandas as pd
 import bs4
@@ -24,21 +25,6 @@ sys.path.append("/var/lib/indrajala/tasks/indralib/src")
 
 from indra_event import IndraEvent
 from indra_client import IndraClient
-
-
-async def indra_connection(profile=None):
-    try:
-        cl = IndraClient(
-            profile=profile, verbose=True, module_name="wetter_uni_muenchen"
-        )
-        await cl.init_connection(verbose=True)
-    except:
-        print("Could not create Indrajala client")
-        raise
-    await cl.info(
-        "Weather client Meteorologisches Institut, München Theresienstr. 37, started."
-    )
-    return cl
 
 
 async def get_data(cl):
@@ -75,7 +61,7 @@ async def get_data(cl):
         if df2[0][0][5] == "Relative Feuchte":
             data["humidity"] = df2[0][1][5].split(" ")[0]
         else:
-            print("Invalid format for table 0, relative feuchte")
+            cl.error("Invalid format for table 0, relative feuchte")
         if df2[0][0][6] == "Windgeschwindigkeit":
             data["wind_speed"] = df2[0][2][6].split(" ")[0]
         else:
@@ -128,8 +114,9 @@ async def get_data(cl):
         try:
             await cl.send_event(ie)
         except Exception as e:
-            print(f"Failed to send event: {e}")
+            print(f"Failed to send event: {e}", file=sys.stderr)
             return
+        cl.info(f"Sent event {ie.domain} {ie.data_type} {ie.data}")
 
 
 if __name__ == "__main__":
@@ -142,10 +129,25 @@ if __name__ == "__main__":
     else:
         profile = None
 
+    module_name = "wetter_uni_muenchen"
+    log_handler = logging.StreamHandler(sys.stderr)
+    log_formatter = logging.Formatter(
+        "[%(asctime)s]  %(levelname)s [%(module)s::WetterMuc] %(message)s"
+    )
+    log_handler.setFormatter(log_formatter)
+    log = logging.getLogger(module_name)
+    log.addHandler(log_handler)
+
     async def main(timer_value=900):
-        cl = await indra_connection(profile=profile)
-        if cl is None:
-            print("Could not create Indrajala client")
+        cl = IndraClient(
+            profile=profile,
+            verbose=True,
+            log_handler=log_handler,
+            module_name=module_name,
+        )
+        ws = await cl.init_connection(verbose=True)
+        if ws is None:
+            log.error("Could not create Indrajala client")
             return
         else:
             await cl.info(

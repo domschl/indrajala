@@ -26,8 +26,11 @@ class IndraClient:
         verbose=False,
         module_name=None,
         profile="default",
+        log_handler=None,
     ):
         self.log = logging.getLogger("IndraClient")
+        if log_handler is not None:
+            self.log.addHandler(log_handler)
         if module_name is None:
             self.module_name = "IndraClient (python)"
         else:
@@ -91,7 +94,7 @@ class IndraClient:
                 return
 
     @staticmethod
-    def get_profiles():
+    def get_profiles(prefer_ssl=None):
         """Get profiles"""
         if os.path.exists("/var/lib/indrajala/config/server_profiles") is True:
             cfg_path = "/var/lib/indrajala/config/server_profiles"
@@ -103,7 +106,16 @@ class IndraClient:
         profiles = []
         for f in os.listdir(cfg_path):
             if f.endswith(".toml"):
-                profiles.append(f[:-5])
+                if prefer_ssl is None:
+                    profiles.append(f[:-5])
+                else:
+                    with open(os.path.join(cfg_path, f), "rb") as f:
+                        config = toml.load(f)
+                    if "uri" in config:
+                        if prefer_ssl is True and config["uri"].startswith("wss://"):
+                            profiles.append(f[:-5])
+                        elif prefer_ssl is False and config["uri"].startswith("ws://"):
+                            profiles.append(f[:-5])
         return profiles
 
     def get_config(self, config_file, verbose=True):
@@ -152,7 +164,7 @@ class IndraClient:
             self.websocket = None
             if verbose is True:
                 self.log.error(
-                    "Indrajala connection data not initialized, please provide at least an uri!"
+                    "Indrajala init_connection(): connection data not initialized!"
                 )
             return None
         if self.websocket is not None:
@@ -219,9 +231,7 @@ class IndraClient:
     async def send_event(self, event):
         """Send event"""
         if self.initialized is False:
-            self.log.error(
-                "Indrajala connection data not initialized, please provide at least an uri!"
-            )
+            self.log.error("Indrajala send_event(): connection data not initialized!")
             return False
         if self.websocket is None:
             self.log.error(
@@ -247,9 +257,7 @@ class IndraClient:
     async def recv_event(self, timeout=None):
         """Receive event"""
         if self.initialized is False:
-            self.log.error(
-                "Indrajala connection data not initialized, please provide at least an uri!"
-            )
+            self.log.error("Indrajala recv_event(): connection data not initialized!")
             return None
         if self.websocket is None:
             self.log.error(
@@ -277,7 +285,7 @@ class IndraClient:
         """Close connection"""
         if self.initialized is False:
             self.log.error(
-                "Indrajala connection data not initialized, please provide at least an uri!"
+                "Indrajala close_connection(): connection data not initialized!"
             )
             return False
         if self.websocket is None:
@@ -296,9 +304,7 @@ class IndraClient:
     async def subscribe(self, domains):
         """Subscribe to domain"""
         if self.initialized is False:
-            self.log.error(
-                "Indrajala connection data not initialized, please provide at least an uri!"
-            )
+            self.log.error("Indrajala subscribe(): connection data not initialized!")
             return False
         if self.websocket is None:
             self.log.error(
@@ -322,9 +328,7 @@ class IndraClient:
     async def unsubscribe(self, domains):
         """Unsubscribe from domain"""
         if self.initialized is False:
-            self.log.error(
-                "Indrajala connection data not initialized, please provide at least an uri!"
-            )
+            self.log.error("Indrajala unsubscribe(): connection data not initialized!")
             return False
         if self.websocket is None:
             self.log.error(
