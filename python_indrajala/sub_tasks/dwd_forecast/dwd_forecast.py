@@ -31,18 +31,6 @@ sys.path.append("/var/lib/indrajala/tasks/indralib/src")
 from indra_event import IndraEvent
 from indra_client import IndraClient
 
-
-async def indra_connection(profile=None):
-    try:
-        cl = IndraClient(profile=profile, verbose=True, module_name="dwd_wetter")
-        await cl.init_connection(verbose=True)
-    except:
-        print("Could not create Indrajala client for DWD weather data")
-        raise
-    await cl.info("DWD Weather client started.")
-    return cl
-
-
 # Doc on fields:
 # https://opendata.dwd.de/weather/lib/MetElementDefinition.xml
 
@@ -282,11 +270,21 @@ async def get_data(cl, dwd, station=10865):
 
 
 if __name__ == "__main__":
+    module_name = "dwd_forecast"
+    log_handler = logging.StreamHandler(sys.stderr)
+    log_formatter = logging.Formatter(
+        "[%(asctime)s]  %(levelname)s [%(module)s::DWD_Forecast] %(message)s"
+    )
+    log_handler.setFormatter(log_formatter)
+    log = logging.getLogger(module_name)
+    log.addHandler(log_handler)
+
     if len(sys.argv) < 3:
-        print(
-            "Usage: dwd_forecast.py <station-id> <cache-directory> [<poll-rate>] [profile]"
+        log.error(
+            "Missing parameter for dwd_forecast.py, usage: dwd_forecast.py <station-id> <cache-directory> [<poll-rate>] [profile]",
         )
         sys.exit(1)
+
     station_id = int(sys.argv[1])
     cache_directory = sys.argv[2]
     if len(sys.argv) > 3:
@@ -297,12 +295,19 @@ if __name__ == "__main__":
         profile = sys.argv[4]
     else:
         profile = None
+
     dwd = DWD(cache_directory=cache_directory)
 
     async def main(timer_value=900):
-        cl = await indra_connection(profile=profile)
-        if cl is None:
-            print("Could not create Indrajala client for dwd data")
+        cl = IndraClient(
+            profile=profile,
+            verbose=True,
+            log_handler=log_handler,
+            module_name=module_name,
+        )
+        ws = await cl.init_connection(verbose=True)
+        if ws is None:
+            log.error("Could not create Indrajala client for dwd data")
             return
         else:
             await cl.info(
