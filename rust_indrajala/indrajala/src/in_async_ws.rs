@@ -115,10 +115,11 @@ impl Ws {
         };
         let short_hostname = hostname.split('.').next().unwrap();
 
+        // macos 14 beta 4 completely borked hostnames. They became random UUIDs.
         // info!(
-            "Short hostname: {:?}, hostname: {:?}",
-            short_hostname, hostname
-        );
+        //    "Short hostname: {:?}, hostname: {:?}",
+        //    short_hostname, hostname
+        //);
 
         let profile_name = config
             .profile
