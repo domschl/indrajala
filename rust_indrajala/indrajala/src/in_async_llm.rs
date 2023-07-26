@@ -99,11 +99,11 @@ impl Llm {
         };
     }
 
-    #[allow(clippy::needless_pass_by_ref_mut)]
+    //#[allow(clippy::needless_pass_by_ref_mut)]   # macos clippy bug
     pub fn inference_callback(
         self,
         stop_sequence: String,
-        buf: &mut String, // This triggers a wrong needless mut warning.
+        buf: &mut String, // This triggers a wrong needless mut warning, seemingly only on macos.
         router_sender: async_channel::Sender<IndraEvent>,
     ) -> impl FnMut(llm::InferenceResponse) -> Result<llm::InferenceFeedback, Infallible> + '_ {
         move |resp| match resp {

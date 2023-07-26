@@ -6,6 +6,7 @@ use indra_event::{
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use sqlx::Row;
+use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -26,6 +27,19 @@ pub struct LastState {
     pub last_seq_no: i64,
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct VolatileStorage {
+    pub store: HashMap<String, Vec<(IndraEvent, i64)>>,
+}
+
+impl VolatileStorage {
+    pub fn new() -> Self {
+        VolatileStorage {
+            store: HashMap::new(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Storage {
     pub config: StorageConfig,
@@ -35,6 +49,7 @@ pub struct Storage {
     pub pool: Option<SqlitePool>,
     pub last_state: LastState,
     pub r_sender: Option<async_channel::Sender<IndraEvent>>,
+    pub vol_store: VolatileStorage,
 }
 
 impl Storage {
@@ -87,6 +102,7 @@ impl Storage {
                 pool,
                 last_state,
                 r_sender: Default::default(),
+                vol_store: VolatileStorage::new(),
             }
         })
     }
@@ -362,6 +378,18 @@ impl Storage {
             }
         }
         is_volatile
+    }
+
+    fn volatile_max_age(volatile_domains: Vec<(String, i32)>, domain: String) -> i64 {
+        let mut max_age: i64 = 0;
+        for vol_dom_dur in volatile_domains.iter() {
+            let vol_dom = vol_dom_dur.0.clone();
+            if IndraEvent::mqcmp(domain.as_str(), vol_dom.as_str()) {
+                max_age = vol_dom_dur.1 as i64;
+                break;
+            }
+        }
+        max_age * 86400 * 1000
     }
 }
 
@@ -704,10 +732,40 @@ impl AsyncIndraTask for Storage {
                 msg.clone().domain.clone(),
             ) {
                 dom_found = true;
-                error!(
-                    "Storage::sender: Received forecast domain, NOT IMPLEMENTED: {:?}",
-                    msg.clone().domain
+                let msg = msg.clone();
+                let domain = msg.domain.clone();
+                let max_age = Storage::volatile_max_age(
+                    self.config.volatile_domains.clone(),
+                    msg.clone().domain.clone(),
                 );
+                let ut = Utc::now().timestamp_millis();
+                // check if domain is in vol_store:
+                if !self.vol_store.store.contains_key(&domain) {
+                    // create new entry:
+                    self.vol_store.store.insert(domain.clone(), Vec::new());
+                }
+                // append msg to vol_store:
+                self.vol_store
+                    .store
+                    .get_mut(&domain)
+                    .unwrap()
+                    .push((msg.clone(), ut));
+                // remove all entires older than max_age (ms, converted from days in config)):
+                let mut i = 0;
+                while i < self.vol_store.store[&domain].len() {
+                    let (_, ut2) = self.vol_store.store[&domain][i];
+                    if ut - ut2 > max_age {
+                        self.vol_store.store.get_mut(&domain).unwrap().remove(i);
+                    } else {
+                        i += 1;
+                    }
+                }
+                // sort vol_store.store[domain] by time_jd_start:
+                self.vol_store
+                    .store
+                    .get_mut(&domain)
+                    .unwrap()
+                    .sort_by(|a, b| a.0.time_jd_start.partial_cmp(&b.0.time_jd_start).unwrap());
             }
             if !dom_found {
                 warn!(

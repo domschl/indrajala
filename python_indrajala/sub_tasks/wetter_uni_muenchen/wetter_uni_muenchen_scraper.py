@@ -116,7 +116,7 @@ async def get_data(cl):
         except Exception as e:
             print(f"Failed to send event: {e}", file=sys.stderr)
             return
-        cl.info(f"Sent event {ie.domain} {ie.data_type} {ie.data}")
+        await cl.info(f"Sent event {ie.domain} {ie.data_type} {ie.data}")
 
 
 if __name__ == "__main__":
