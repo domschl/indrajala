@@ -103,8 +103,7 @@ impl Llm {
     pub fn inference_callback(
         self,
         stop_sequence: String,
-
-        buf: &mut String,
+        buf: &mut String, // This triggers a wrong needless mut warning.
         router_sender: async_channel::Sender<IndraEvent>,
     ) -> impl FnMut(llm::InferenceResponse) -> Result<llm::InferenceFeedback, Infallible> + '_ {
         move |resp| match resp {
