@@ -38,6 +38,17 @@ impl VolatileStorage {
             store: HashMap::new(),
         }
     }
+    pub fn get_last(self, domain: &str) -> Option<IndraEvent> {
+        let mut last_ie: Option<IndraEvent> = None;
+        // check if domain is in store:
+        if self.store.contains_key(domain) {
+            // get last element of vector (it's already ordered by time):
+            let vec = self.store.get(domain).unwrap();
+            let last_idx = vec.len() - 1;
+            last_ie = Some(vec[last_idx].0.clone());
+        }
+        last_ie
+    }
 }
 
 #[derive(Clone)]
@@ -587,13 +598,21 @@ impl AsyncIndraTask for Storage {
                     };
                     //    .bind(req.domain.unwrap_or("%".to_string()).to_string())
                     //    .bind(req.data_type.unwrap_or("%".to_string()).to_string())
-                    let rr4: Vec<String> = rr3
+                    let mut rr4: Vec<String> = rr3
                         .fetch_all(&pool)
                         .await
                         .unwrap()
                         .iter()
                         .map(|rowi| rowi.try_get(0).unwrap())
                         .collect();
+
+                    // add domain names from vol_store:
+                    for (vol_dom, _dur) in self.config.volatile_domains.iter() {
+                        if !rr4.contains(vol_dom) {
+                            rr4.push(vol_dom.clone());
+                        }
+                    }
+
                     let ut_end = Utc::now();
                     let rmsg = IndraEvent {
                         domain: msg.from_id.clone().replace("$trx/db/req", "$/trx/db/reply"),
@@ -619,10 +638,54 @@ impl AsyncIndraTask for Storage {
                 }
                 // Get last value for a given domain
                 if msg.domain.starts_with("$trx/db/req/last") {
-                    let req_domain = msg.data.clone();
-                    // Read the last value (highest jd_start_time) for a given domain into struct IndraEvent:
-                    let pool = pool.clone().unwrap();
-                    let q_res3 = sqlx::query(
+                    if Storage::is_volatile(
+                        self.config.volatile_domains.clone(),
+                        msg.domain.clone(),
+                    ) {
+                        // get last element of msg.domain from vol_store:
+                        let req_domain = msg.data.clone();
+                        let mut rep_msg = IndraEvent {
+                            domain: msg.from_id.clone().replace("$trx/db/req", "$/trx/db/reply"),
+                            from_id: self.config.name.clone(),
+                            uuid4: msg.uuid4.clone(),
+                            parent_uuid4: None,
+                            seq_no: None,
+                            to_scope: "".to_string(),
+                            time_jd_start: IndraEvent::datetime_to_julian(Utc::now()),
+                            data_type: "".to_string(),
+                            data: "".to_string(),
+                            auth_hash: Default::default(),
+                            time_jd_end: Some(IndraEvent::datetime_to_julian(Utc::now())),
+                        };
+                        // XXX that clone() is serioulsy ugly, but I don't know how to do it better:
+                        let last_ie = self.vol_store.clone().get_last(req_domain.as_str());
+                        if last_ie.is_some() {
+                            rep_msg.data_type = last_ie.clone().unwrap().data_type;
+                            rep_msg.data = last_ie.clone().unwrap().data;
+                        } else {
+                            rep_msg.data_type = "error/notfound".to_string();
+                            rep_msg.data = "error/notfound".to_string();
+                        }
+                        info!(
+                            "Sending last value: {}->{}",
+                            rep_msg.from_id, rep_msg.domain
+                        );
+                        if sender.send(rep_msg.clone()).await.is_err() {
+                            error!(
+                                "Storage: Error sending reply-message to channel {}",
+                                rep_msg.domain
+                            );
+                        }
+                        continue;
+                    }
+                    if Storage::is_persistent(
+                        self.config.persistent_domains.clone(),
+                        msg.domain.clone(),
+                    ) {
+                        let req_domain = msg.data.clone();
+                        // Read the last value (highest jd_start_time) for a given domain into struct IndraEvent:
+                        let pool = pool.clone().unwrap();
+                        let q_res3 = sqlx::query(
                         r#"
                                 SELECT id, domain, from_id, uuid4, parent_uuid4, seq_no, to_scope, time_jd_start, data_type, data, auth_hash, time_jd_end
                                 FROM indra_events
@@ -635,53 +698,53 @@ impl AsyncIndraTask for Storage {
                     .fetch_one(&pool)
                     .await;
 
-                    let mut rep_msg = IndraEvent {
-                        domain: msg.from_id.clone().replace("$trx/db/req", "$/trx/db/reply"),
-                        from_id: self.config.name.clone(),
-                        uuid4: msg.uuid4.clone(),
-                        parent_uuid4: None,
-                        seq_no: None,
-                        to_scope: "".to_string(),
-                        time_jd_start: IndraEvent::datetime_to_julian(Utc::now()),
-                        data_type: "".to_string(),
-                        data: "".to_string(),
-                        auth_hash: Default::default(),
-                        time_jd_end: Some(IndraEvent::datetime_to_julian(Utc::now())),
-                    };
+                        let mut rep_msg = IndraEvent {
+                            domain: msg.from_id.clone().replace("$trx/db/req", "$/trx/db/reply"),
+                            from_id: self.config.name.clone(),
+                            uuid4: msg.uuid4.clone(),
+                            parent_uuid4: None,
+                            seq_no: None,
+                            to_scope: "".to_string(),
+                            time_jd_start: IndraEvent::datetime_to_julian(Utc::now()),
+                            data_type: "".to_string(),
+                            data: "".to_string(),
+                            auth_hash: Default::default(),
+                            time_jd_end: Some(IndraEvent::datetime_to_julian(Utc::now())),
+                        };
 
-                    let (last_type, last_ie) = match q_res3 {
-                        Ok(row) => (
-                            "json/indraevent".to_string(),
-                            IndraEvent {
-                                domain: row.try_get(1).unwrap(),
-                                from_id: row.try_get(2).unwrap(),
-                                uuid4: row.try_get(3).unwrap(),
-                                parent_uuid4: row.try_get(4).unwrap(),
-                                seq_no: row.try_get(5).unwrap(),
-                                to_scope: row.try_get(6).unwrap(),
-                                time_jd_start: row.try_get(7).unwrap(),
-                                data_type: row.try_get(8).unwrap(),
-                                data: row.try_get(9).unwrap(),
-                                auth_hash: row.try_get(10).unwrap(),
-                                time_jd_end: row.try_get(11).unwrap(),
-                            },
-                        ),
-                        Err(_) => ("error/notfound".to_string(), IndraEvent::new()),
-                    };
-                    rep_msg.data_type = last_type.to_string();
-                    rep_msg.data = serde_json::to_string(&last_ie).unwrap();
+                        let (last_type, last_ie) = match q_res3 {
+                            Ok(row) => (
+                                "json/indraevent".to_string(),
+                                IndraEvent {
+                                    domain: row.try_get(1).unwrap(),
+                                    from_id: row.try_get(2).unwrap(),
+                                    uuid4: row.try_get(3).unwrap(),
+                                    parent_uuid4: row.try_get(4).unwrap(),
+                                    seq_no: row.try_get(5).unwrap(),
+                                    to_scope: row.try_get(6).unwrap(),
+                                    time_jd_start: row.try_get(7).unwrap(),
+                                    data_type: row.try_get(8).unwrap(),
+                                    data: row.try_get(9).unwrap(),
+                                    auth_hash: row.try_get(10).unwrap(),
+                                    time_jd_end: row.try_get(11).unwrap(),
+                                },
+                            ),
+                            Err(_) => ("error/notfound".to_string(), IndraEvent::new()),
+                        };
+                        rep_msg.data_type = last_type.to_string();
+                        rep_msg.data = serde_json::to_string(&last_ie).unwrap();
 
-                    info!(
-                        "Sending last value: {}->{}",
-                        rep_msg.from_id, rep_msg.domain
-                    );
-                    if sender.send(rep_msg.clone()).await.is_err() {
-                        error!(
-                            "Storage: Error sending reply-message to channel {}",
-                            rep_msg.domain
+                        info!(
+                            "Sending last value: {}->{}",
+                            rep_msg.from_id, rep_msg.domain
                         );
+                        if sender.send(rep_msg.clone()).await.is_err() {
+                            error!(
+                                "Storage: Error sending reply-message to channel {}",
+                                rep_msg.domain
+                            );
+                        }
                     }
-
                     continue;
                 }
                 warn!("Storage: Received unknown command: {:?}", msg.domain);
