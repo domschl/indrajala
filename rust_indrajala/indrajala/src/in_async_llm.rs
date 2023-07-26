@@ -99,7 +99,8 @@ impl Llm {
         };
     }
 
-    //#[allow(clippy::needless_pass_by_ref_mut)]   # macos clippy bug
+    // macos clippy bug
+    #[allow(clippy::needless_pass_by_ref_mut)]
     pub fn inference_callback(
         self,
         stop_sequence: String,
