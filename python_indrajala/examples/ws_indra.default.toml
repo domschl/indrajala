@@ -1,3 +1,0 @@
-url = "wss://localhost:8082"
-ssl = true
-ca_authority = ""
