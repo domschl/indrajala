@@ -5,8 +5,6 @@ import time
 import json
 import pandas as pd
 import xml.etree.cElementTree as et
-import zipfile
-import datetime
 from urllib.request import urlopen
 from datetime import timezone
 from io import StringIO, BytesIO
@@ -36,8 +34,10 @@ from indra_client import IndraClient
 
 
 class DWD:
-    def __init__(self, cache_directory=None):
+    def __init__(self, cache_directory=None, log_handler=None):
         self.log = logging.getLogger("DWD")
+        if log_handler is not None:
+            self.log.addHandler(log_handler)
         if cache_directory is None:
             self.cachedir = self._get_default_cachedir()
             if self.cachedir is None:
@@ -296,7 +296,7 @@ if __name__ == "__main__":
     else:
         profile = None
 
-    dwd = DWD(cache_directory=cache_directory)
+    dwd = DWD(cache_directory=cache_directory, log_handler=log_handler)
 
     async def main(timer_value=900):
         cl = IndraClient(
