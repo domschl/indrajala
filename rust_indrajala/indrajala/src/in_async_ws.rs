@@ -114,6 +114,12 @@ impl Ws {
             }
         };
         let short_hostname = hostname.split('.').next().unwrap();
+
+        // info!(
+            "Short hostname: {:?}, hostname: {:?}",
+            short_hostname, hostname
+        );
+
         let profile_name = config
             .profile
             .replace("{{machine_name}}", short_hostname)
@@ -149,7 +155,7 @@ impl Ws {
 
             let server_profile = match config.ssl {
                 true => {
-                    let ca_auth = config.cert.clone().replace(hostname.as_str(), "ca-root");
+                    let ca_auth = config.cert.clone().replace(short_hostname, "ca-root");
                     // write machine-specific config:
                     ServerProfile {
                         uri: format!("wss://{}:{}", short_hostname, port),

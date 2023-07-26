@@ -11,8 +11,8 @@ path = os.path.join(
 )
 print(path)
 sys.path.append(path)
-from indra_event import IndraEvent
-from indra_client import IndraClient
+from indra_event import IndraEvent  # type: ignore
+from indra_client import IndraClient  # type: ignore
 
 # Terminal control codes for formatting
 CLEAR_SCREEN = "\033[2J\033[H"  # Clear screen
@@ -67,7 +67,7 @@ def display_output():
 
 
 async def chat():
-    cl = IndraClient(config_file="ws_indra.toml", verbose=False)
+    cl = IndraClient(verbose=True, profile="default")
     if cl is None:
         logging.error("Could not create Indrajala client")
         return

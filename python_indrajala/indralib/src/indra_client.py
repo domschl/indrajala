@@ -41,6 +41,8 @@ class IndraClient:
         self.recv_queue = asyncio.Queue()
         self.recv_task = None
         self.initialized = False
+        if profile.lower() in ["default", "none"]:
+            profile = None
         if config_file is not None and config_file != "":
             self.initialized = self.get_config(config_file, verbose=self.verbose)
         elif uri is not None and uri != "":
@@ -81,6 +83,9 @@ class IndraClient:
                 cfg_path = "~/.config/indrajala/server_profiles"
                 cfg_path = os.path.expanduser(cfg_path)
             prfs = IndraClient.get_profiles()
+
+            print(f"Profiles: {prfs}")
+
             if len(prfs) > 0:
                 self.initialized = self.get_config(
                     os.path.join(cfg_path, prfs[0] + ".toml"), verbose=self.verbose
@@ -88,9 +93,7 @@ class IndraClient:
             else:
                 self.initialized = False
                 if verbose is True:
-                    self.log.error(
-                        "Please provide a valid uri, starting with ws:// or wss://, e.g. wss://localhost:8082"
-                    )
+                    self.log.error(f"No valid profiles found in {cfg_path}")
                 return
 
     @staticmethod
@@ -109,13 +112,20 @@ class IndraClient:
                 if prefer_ssl is None:
                     profiles.append(f[:-5])
                 else:
-                    with open(os.path.join(cfg_path, f), "rb") as f:
-                        config = toml.load(f)
-                    if "uri" in config:
-                        if prefer_ssl is True and config["uri"].startswith("wss://"):
-                            profiles.append(f[:-5])
-                        elif prefer_ssl is False and config["uri"].startswith("ws://"):
-                            profiles.append(f[:-5])
+                    try:
+                        with open(os.path.join(cfg_path, f), "rb") as f:
+                            config = toml.load(f)
+                        if "uri" in config:
+                            if prefer_ssl is True and config["uri"].startswith(
+                                "wss://"
+                            ):
+                                profiles.append(f[:-5])
+                            elif prefer_ssl is False and config["uri"].startswith(
+                                "ws://"
+                            ):
+                                profiles.append(f[:-5])
+                    except Exception as e:
+                        pass
         return profiles
 
     def get_config(self, config_file, verbose=True):
@@ -154,6 +164,10 @@ class IndraClient:
             self.use_ssl = True
         else:
             self.use_ssl = False
+        if verbose is True:
+            self.log.info(
+                f"Initialized IndraClient with uri={self.uri}, ca_authority={self.ca_authority}, auth_token={self.auth_token}"
+            )
         self.initialized = True
         return True
 
