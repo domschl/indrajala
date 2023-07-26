@@ -99,9 +99,11 @@ impl Llm {
         };
     }
 
+    #[allow(clippy::needless_pass_by_ref_mut)]
     pub fn inference_callback(
         self,
         stop_sequence: String,
+
         buf: &mut String,
         router_sender: async_channel::Sender<IndraEvent>,
     ) -> impl FnMut(llm::InferenceResponse) -> Result<llm::InferenceFeedback, Infallible> + '_ {

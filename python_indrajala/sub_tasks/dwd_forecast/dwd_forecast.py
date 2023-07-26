@@ -26,8 +26,8 @@ print(path)
 sys.path.append(path)
 sys.path.append("/var/lib/indrajala/tasks/indralib/src")
 
-from indra_event import IndraEvent
-from indra_client import IndraClient
+from indra_event import IndraEvent  # type: ignore
+from indra_client import IndraClient  # type: ignore
 
 # Doc on fields:
 # https://opendata.dwd.de/weather/lib/MetElementDefinition.xml
