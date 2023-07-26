@@ -32,7 +32,21 @@ async def receive_remote(cl):
         else:
             msg = ie.data
             remote_message = msg
-        remote_message_history.append(remote_message)
+            if remote_message[-1] == "}":
+                remote_message = remote_message[:-1]
+                nl = True
+            else:
+                nl = False
+        if len(remote_message_history) == 0:
+            remote_message_history.append(remote_message)
+        elif len(remote_message_history[-1] + remote_message) < 80:
+            remote_message_history[-1] += remote_message
+            if nl:
+                remote_message_history.append("")
+        else:
+            remote_message_history.append(remote_message)
+            if nl:
+                remote_message_history.append("")
         if len(remote_message_history) > 10:
             remote_message_history.pop(
                 0
@@ -40,7 +54,7 @@ async def receive_remote(cl):
         display_output()
 
 
-async def receive_io():
+async def receive_io(cl):
     while True:
         local_message = await aioconsole.ainput("Enter your message: ")
         local_message_history.append(local_message)
@@ -48,7 +62,11 @@ async def receive_io():
             local_message_history.pop(
                 0
             )  # Remove oldest message if history exceeds 5 lines
-
+        ie = IndraEvent()
+        ie.data = local_message
+        ie.data_type = "String"
+        ie.domain = "LLM.1/CHAT.1"
+        await cl.send_event(ie)
         display_output()
 
 
@@ -78,7 +96,7 @@ async def chat():
     await cl.subscribe(["CHAT.1/#"])
 
     print(CLEAR_SCREEN)
-    await asyncio.gather(receive_remote(cl), receive_io())
+    await asyncio.gather(receive_remote(cl), receive_io(cl))
 
 
 logging.basicConfig(level=logging.INFO)

@@ -41,7 +41,7 @@ class IndraClient:
         self.recv_queue = asyncio.Queue()
         self.recv_task = None
         self.initialized = False
-        if profile is not None and profile.lower in ["default", "none"]:
+        if profile is not None and profile.lower() in ["default", "none"]:
             profile = None
         if config_file is not None and config_file != "":
             self.initialized = self.get_config(config_file, verbose=self.verbose)
