@@ -38,7 +38,7 @@ impl VolatileStorage {
             store: HashMap::new(),
         }
     }
-    pub fn get_last(self, domain: &str) -> Option<IndraEvent> {
+    pub fn get_last(&self, domain: &str) -> Option<IndraEvent> {
         let mut last_ie: Option<IndraEvent> = None;
         // check if domain is in store:
         if self.store.contains_key(domain) {
@@ -658,7 +658,8 @@ impl AsyncIndraTask for Storage {
                             time_jd_end: Some(IndraEvent::datetime_to_julian(Utc::now())),
                         };
                         // XXX that clone() is serioulsy ugly, but I don't know how to do it better:
-                        let last_ie = self.vol_store.clone().get_last(req_domain.as_str());
+                        // let last_ie = self.vol_store.clone().get_last(req_domain.as_str());
+                        let last_ie = self.vol_store.get_last(req_domain.as_str());
                         if last_ie.is_some() {
                             rep_msg.data_type = last_ie.clone().unwrap().data_type;
                             rep_msg.data = last_ie.clone().unwrap().data;
