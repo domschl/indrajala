@@ -189,13 +189,14 @@ class IndraDownloader:
 
     def indra_import(self, time, column):
         self.log.info(f"Indra import: {time}, {column} NOT IMPLEMENTED YET")
-        pass
+        return self.tf_data
 
     def transform_df(self, df, transform, left, right):
+        # XXX this is unsafe code.
         try:
-            eval(transform)
+            exec(transform)
         except Exception as e:
-            self.log.error(f"Failed to apply transform: {e}")
+            self.log.error(f"Failed to apply transform {transform}: {e}")
             print(df.head(5))
             return None
         return df
