@@ -657,8 +657,6 @@ impl AsyncIndraTask for Storage {
                             auth_hash: Default::default(),
                             time_jd_end: Some(IndraEvent::datetime_to_julian(Utc::now())),
                         };
-                        // XXX that clone() is serioulsy ugly, but I don't know how to do it better:
-                        // let last_ie = self.vol_store.clone().get_last(req_domain.as_str());
                         let last_ie = self.vol_store.get_last(req_domain.as_str());
                         if last_ie.is_some() {
                             rep_msg.data_type = last_ie.clone().unwrap().data_type;
