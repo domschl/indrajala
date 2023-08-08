@@ -31,7 +31,7 @@ async def receive_remote(cl):
             remote_message = ""
         else:
             msg = ie.data
-            remote_message = msg
+            remote_message = msg.replace("###", "")
             if remote_message[-1] == "}":
                 remote_message = remote_message[:-1]
                 nl = True
