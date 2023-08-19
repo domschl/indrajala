@@ -7,10 +7,12 @@ from zoneinfo import ZoneInfo
 
 # XXX dev only
 import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 
-from indralib.indra_event import IndraEvent
+path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "indralib/src"
+)
+sys.path.append(path)
+from indra_event import IndraEvent  # type: ignore
 
 
 class EventProcessor:
