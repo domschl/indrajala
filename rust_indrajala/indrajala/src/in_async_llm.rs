@@ -206,8 +206,8 @@ impl Llm {
         info!("Llm: Starting session.");
         let mut session = model.start_session(inference_session_config);
 
-        let character_name = "### Assistant";
-        let user_name = "### Human";
+        let character_name = "Assistant";
+        let user_name = "Human";
         let persona = "A chat between a human and an assistant.";
         let history = format!(
             "{character_name}: Hello - How may I help you today?\n\
