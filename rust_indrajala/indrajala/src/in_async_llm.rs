@@ -148,6 +148,7 @@ impl Llm {
             gpu_layers: llm_config.gpu_layers,
             lora_adapters: llm_config.lora_paths.clone(),
             rope_overrides: None, // XXX TODO: llm_config.rope_overrides,
+            ..Default::default()
         };
         //let model =
         llm::load_dynamic(
