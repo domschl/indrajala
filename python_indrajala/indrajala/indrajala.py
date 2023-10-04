@@ -11,6 +11,7 @@ import asyncio
 import importlib
 import json
 import time
+
 try:
     import tomllib
 except ModuleNotFoundError:  # Python 3.10 and older:
@@ -18,11 +19,15 @@ except ModuleNotFoundError:  # Python 3.10 and older:
 
 # XXX dev only
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 
-from indralib.indra_event import IndraEvent
+path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "indralib/src"
+)
+sys.path.append(path)
+from indra_event import IndraEvent  # type: ignore
 
 INDRAJALA_VERSION = "0.1.0"
+
 
 async def main_runner(main_logger, modules):
     loop = asyncio.get_running_loop()
@@ -41,9 +46,7 @@ async def main_runner(main_logger, modules):
         m_op = getattr(modules[module], "server_task", None)
         if callable(m_op) is True:
             tasks.append(
-                asyncio.create_task(
-                    modules[module].server_task(), name=module
-                )
+                asyncio.create_task(modules[module].server_task(), name=module)
             )
             main_logger.debug(
                 f"Task {module} has separate server_task(), started module-specific background server"
@@ -59,7 +62,7 @@ async def main_runner(main_logger, modules):
     if len(active_tasks) == 0:
         main_logger.error("No active tasks, exiting!")
         terminate_main_runner = True
-    
+
     while terminate_main_runner is False:
         t0 = time.time()
         finished_tasks, active_tasks = await asyncio.wait(
@@ -73,8 +76,8 @@ async def main_runner(main_logger, modules):
             ie = task.result()
 
             origin_module = ie.from_id
-            if '/' in origin_module:
-                origin_module = origin_module.split('/')[0]
+            if "/" in origin_module:
+                origin_module = origin_module.split("/")[0]
 
             if modules[origin_module].isActive() is True:
                 if len(active_tasks) == 0:
@@ -105,7 +108,9 @@ async def main_runner(main_logger, modules):
                 else:
                     mod_found = True
             if mod_found is False:
-                main_logger.error(f"Task {origin_module} not found, {origin_module} did not set from_id correctly")
+                main_logger.error(
+                    f"Task {origin_module} not found, {origin_module} did not set from_id correctly"
+                )
             if ie.domain.startswith("$cmd"):
                 if ie.domain == "$cmd/quit":
                     main_logger.info("QUIT message received, terminating...")
@@ -189,7 +194,9 @@ def load_modules(main_logger, toml_data, args):
                             continue
                         try:
                             if ev_proc.isActive() is False:
-                                main_logger.error(f"Failed to initialize module {module}")
+                                main_logger.error(
+                                    f"Failed to initialize module {module}"
+                                )
                                 continue
                         except Exception as e:
                             main_logger.error(
@@ -286,13 +293,10 @@ def read_config_arguments():
     main_logger = logging.getLogger("IndraMain")
     main_logger.setLevel(main_loglevel)
 
-    main_logger.info(
-        "----------------------------------------------------------"
-    )
+    main_logger.info("----------------------------------------------------------")
     main_logger.info(f"   Starting Indrajala server {INDRAJALA_VERSION}")
 
     return main_logger, toml_data, args
-
 
 
 main_logger, toml_data, args = read_config_arguments()
