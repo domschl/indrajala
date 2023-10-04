@@ -11,7 +11,7 @@ use log::{debug, error, info, warn};
 //use rand;
 use std::convert::Infallible;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+//use std::sync::Arc;
 
 use crate::indra_config::LLMConfig;
 use crate::AsyncIndraTask;
@@ -100,7 +100,7 @@ impl Llm {
     }
 
     // macos clippy bug
-    #[allow(clippy::needless_pass_by_ref_mut)]
+    // #[allow(clippy::needless_pass_by_ref_mut)]
     pub fn inference_callback(
         self,
         stop_sequence: String,
@@ -147,6 +147,8 @@ impl Llm {
             use_gpu: llm_config.use_gpu.unwrap_or(false),
             gpu_layers: llm_config.gpu_layers,
             lora_adapters: llm_config.lora_paths.clone(),
+            rope_overrides: None, // XXX TODO: llm_config.rope_overrides,
+            ..Default::default()
         };
         //let model =
         llm::load_dynamic(
@@ -204,8 +206,8 @@ impl Llm {
         info!("Llm: Starting session.");
         let mut session = model.start_session(inference_session_config);
 
-        let character_name = "### Assistant";
-        let user_name = "### Human";
+        let character_name = "Assistant";
+        let user_name = "Human";
         let persona = "A chat between a human and an assistant.";
         let history = format!(
             "{character_name}: Hello - How may I help you today?\n\
@@ -214,6 +216,7 @@ impl Llm {
         );
 
         let inference_parameters = InferenceParameters {
+            /* XXX ToDo new API port!
             sampler: Arc::new(llm::samplers::TopPTopK {
                 top_k: llm_config.top_k.unwrap_or(40),
                 top_p: llm_config.top_p.unwrap_or(0.95),
@@ -222,6 +225,8 @@ impl Llm {
                 bias_tokens: llm::TokenBias::new(vec![]),
                 repetition_penalty_last_n: llm_config.repetition_penalty_last_n.unwrap_or(64),
             }),
+            */
+            ..Default::default()
         };
         //llm::InferenceParameters::default();
 

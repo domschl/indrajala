@@ -12,10 +12,12 @@ from zoneinfo import ZoneInfo
 
 # XXX dev only
 import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 
-from indralib.indra_event import IndraEvent
+path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "indralib/src"
+)
+sys.path.append(path)
+from indra_event import IndraEvent  # type: ignore
 
 
 class EventProcessor:
@@ -44,10 +46,16 @@ class EventProcessor:
         self.sessions = []
         self.session_id = 0
         if self.use_ssl is True:
-            cf = config_data["ssl_certfile"].replace(
-                "{configdir}", str(config_dir)).replace("{hostname}", hostname)
-            kf = config_data["ssl_keyfile"].replace(
-                "{configdir}", str(config_dir)).replace("{hostname}", hostname)
+            cf = (
+                config_data["ssl_certfile"]
+                .replace("{configdir}", str(config_dir))
+                .replace("{hostname}", hostname)
+            )
+            kf = (
+                config_data["ssl_keyfile"]
+                .replace("{configdir}", str(config_dir))
+                .replace("{hostname}", hostname)
+            )
             if os.path.exists(cf) is False:
                 self.log.error(f"certfile {cf} does not exist!")
                 return
@@ -100,7 +108,9 @@ class EventProcessor:
             "path": path,
             "websocket": websocket,
             "time": time.time(),
-            "subs": [f"{self.name}/{websocket.remote_address[0]}:{websocket.remote_address[1]}/#"]
+            "subs": [
+                f"{self.name}/{websocket.remote_address[0]}:{websocket.remote_address[1]}/#"
+            ],
         }
         self.sessions.append(session)
         self.session_id += 1
@@ -129,15 +139,21 @@ class EventProcessor:
 
     async def get_request(self, websocket, path):
         session = self._create_session(websocket, path)
-        self.log.info(f"WS-recv: New session {session['id']} from {websocket.remote_address}")
+        self.log.info(
+            f"WS-recv: New session {session['id']} from {websocket.remote_address}"
+        )
         try:
             async for msg in websocket:
                 self.log.info(f"WS-recv: {msg}")
                 self.req_queue.put_nowait((msg, session["id"]))
         except Exception as e:
-            self.log.warning(f"WS-recv: Session {session['id']} from {websocket.remote_address} failed: {e}")
+            self.log.warning(
+                f"WS-recv: Session {session['id']} from {websocket.remote_address} failed: {e}"
+            )
         await self._close_session(session["id"])
-        self.log.info(f"WS-recv: Session {session['id']} from {websocket.remote_address} closed")
+        self.log.info(
+            f"WS-recv: Session {session['id']} from {websocket.remote_address} closed"
+        )
 
     async def get(self):
         if self.active is False:
@@ -163,7 +179,7 @@ class EventProcessor:
             return ie
         remote_address = session["websocket"].remote_address
         ie.from_id = f"{self.name}/{remote_address[0]}:{remote_address[1]}"
-        if ie.domain == '$cmd/subs':
+        if ie.domain == "$cmd/subs":
             session_id = req[1]
             session = self._session_by_id(session_id)
             if session is None:
@@ -173,10 +189,10 @@ class EventProcessor:
                 if new_subs is None:
                     new_subs = []
                 for new_sub in new_subs:
-                    if new_sub not in session['subs']:
-                        session['subs'].append(new_sub)
+                    if new_sub not in session["subs"]:
+                        session["subs"].append(new_sub)
                 self.log.info(f"WS-recv: Session {session_id} subscribed to {new_subs}")
-            return ie            
+            return ie
         return ie
 
     async def put(self, ie: IndraEvent):
