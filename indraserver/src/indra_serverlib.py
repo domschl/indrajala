@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import os
+import json
 
 try:
     import tomllib
@@ -15,7 +16,7 @@ sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
 
 
-class ProcLog:
+class IndraServerLib:
     def __init__(self, loglevel, que, name):
         self.loglevels=['none', 'error', 'warning', 'info', 'debug']
         if loglevel in self.loglevels:
@@ -25,6 +26,7 @@ class ProcLog:
         self.ev=IndraEvent()
         self.ev.data_type="string"
         self.ev.from_id=name;
+        self.name=name
         self.que=que
 
     def _send_log(self, level, msg):
@@ -47,3 +49,43 @@ class ProcLog:
     def debug(self, msg):
         if self.loglevel>3:
             self._send_log("debug", msg);
+
+    def subscribe(self, domains):
+        """Subscribe to domain"""
+        if domains is None or domains == "":
+            self.log.error("Please provide a valid domain(s)!")
+            return False
+        ie = IndraEvent()
+        ie.domain = "$cmd/subs"
+        ie.from_id = self.name
+        ie.data_type = "vector/string"
+        if isinstance(domains, list) is True:
+            ie.data = json.dumps(domains)
+        else:
+            ie.data = json.dumps([domains])
+        self.que.put(ie)
+        return True
+
+    def unsubscribe(self, domains):
+        """Unsubscribe from domain"""
+        if self.initialized is False:
+            self.log.error("Indrajala unsubscribe(): connection data not initialized!")
+            return False
+        if self.websocket is None:
+            self.log.error(
+                "Websocket not initialized, please call init_connection() first!"
+            )
+            return False
+        if domains is None or domains == "":
+            self.log.error("Please provide a valid domain(s)!")
+            return False
+        ie = IndraEvent()
+        ie.domain = "$cmd/unsubs"
+        ie.from_id = self.name
+        ie.data_type = "vector/string"
+        if isinstance(domains, list) is True:
+            ie.data = json.dumps(domains)
+        else:
+            ie.data = json.dumps([domains])
+        self.que.put(ie)
+        return True
