@@ -53,7 +53,8 @@ def main_runner(main_logger, modules):
         else:
             main_logger.error(f"Cannot start process for {module}, entry-point 'indra_process' not found!")
     while True:
-        print(event_queue.get())
+        ev=event_queue.get()
+        print(f"{ev.domain} - {ev.data}")
     p.join()
 
 
