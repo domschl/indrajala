@@ -41,7 +41,7 @@ def main_runner(main_logger, modules):
         else:
             main_logger.warning(f"Module {module} not in subs")
 
-    tasks = []
+    processes = []
     event_queue = mp.Queue()
     for module in modules:
         m_op = getattr(modules[module]["import"], "indra_process", None)
@@ -49,10 +49,12 @@ def main_runner(main_logger, modules):
             main_logger.debug(f"adding task from {module}")
             p = mp.Process(target=modules[module]["import"].indra_process, args=(event_queue, modules[module]["send_queue"], modules[module]["config_data"] ))
             p.start()
+            processes.append(p)
             main_logger.info(f"Module {module} started")
         else:
             main_logger.error(f"Cannot start process for {module}, entry-point 'indra_process' not found!")
-    while True:
+    bActive = True
+    while bActive:
         ev=event_queue.get()
         if ev.domain.startswith("$log"):
             lvl=ev.domain.split("/")[-1];
@@ -65,10 +67,19 @@ def main_runner(main_logger, modules):
                 main_logger.info(msg)
             elif lvl=="debug":
                 main_logger.debug(msg)
+        elif ev.domain == "$sys/quit":
+            bActive = False
+            for module in modules:
+                modules[module]["send_queue"].put(ev)
         else:
             main_logger.error(f"Not implemented event: {ev.domain}")
-    p.join()
 
+    main_logger.info("Waiting for all sub processes to terminate")
+    # Wait for all processes to stop
+    for p in processes:
+        p.join()
+    main_logger.info("All sub processes terminated")
+    exit(0)
 
 def load_modules(main_logger, toml_data, args):
     modules = {}

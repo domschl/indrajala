@@ -21,7 +21,13 @@ from indra_serverlib import ProcLog
 def indra_process(event_queue, send_queue, config_data):
     # print(config_data)
     log = ProcLog(config_data["loglevel"], event_queue, config_data['name'])
-    while True:
+    for i in range(5):
         time.sleep(1.0)
         log.info("Hello!")
-        
+    ev = IndraEvent()
+    ev.domain = "$sys/quit"
+    event_queue.put(ev)
+    ev = send_queue.get()
+    if ev.domain=="$sys/quit":
+        log.info(f"Terminating {config_data['name']}")
+        exit(0)
