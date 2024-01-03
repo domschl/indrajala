@@ -27,7 +27,7 @@ from indra_event import IndraEvent  # type: ignore
 
 INDRAJALA_VERSION = "0.1.0"
 
-
+        
 def main_runner(main_logger, modules):
     # mp.set_start_method('spawn')
     subs = {}
@@ -47,10 +47,9 @@ def main_runner(main_logger, modules):
         m_op = getattr(modules[module]["import"], "indra_process", None)
         if callable(m_op) is True:
             main_logger.debug(f"adding task from {module}")
-            p = mp.Process(target=modules[module]["import"].indra_process, args=(event_queue, modules[module]["send_queue"], main_logger))
+            p = mp.Process(target=modules[module]["import"].indra_process, args=(event_queue, modules[module]["send_queue"], modules[module]["config_data"] ))
             p.start()
             main_logger.info(f"Module {module} started")
-            # tasks.append(asyncio.create_task(modules[module].get(), name=module))
         else:
             main_logger.error(f"Cannot start process for {module}, entry-point 'indra_process' not found!")
     while True:
@@ -115,6 +114,7 @@ def load_modules(main_logger, toml_data, args):
                         modules[sub_mod["name"]] = {}
                         modules[sub_mod["name"]]["import"]=m
                         modules[sub_mod["name"]]["send_queue"]=mp.Queue()
+                        modules[sub_mod["name"]]["config_data"]=sub_mod
                         main_logger.info(f"Import {module} success.")
                     else:
                         main_logger.info(f"Module [{module}] is not active.")
