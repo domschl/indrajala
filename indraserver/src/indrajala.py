@@ -7,7 +7,6 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 import argparse
 import pathlib
-import asyncio
 import importlib
 import json
 import time
