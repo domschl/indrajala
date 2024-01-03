@@ -16,39 +16,34 @@ from indra_event import IndraEvent  # type: ignore
 
 
 class ProcLog:
-    def __init__(self, loglevel, que):
+    def __init__(self, loglevel, que, name):
         self.loglevels=['none', 'error', 'warning', 'info', 'debug']
         if loglevel in self.loglevels:
             self.loglevel = self.loglevels.index(loglevel)
         else:
             self.loglevel = self.loglevels.index('info')
         self.ev=IndraEvent()
+        self.ev.data_type="string"
+        self.ev.from_id=name;
         self.que=que
 
+    def _send_log(self, level, msg):
+            self.ev.domain="$log/" + level
+            self.ev.data=msg
+            self.que.put(self.ev)
+        
     def error(self, msg):
         if self.loglevel>0:
-            self.ev.domain="$sys/log/error"
-            self.ev.data=msg
-            self.ev.data_type="string"
-            self.que.put(self.ev)
+            self._send_log("error", msg);
     
     def warning(self, msg):
         if self.loglevel>1:
-            self.ev.domain="$sys/log/warning"
-            self.ev.data=msg
-            self.ev.data_type="string"
-            self.que.put(self.ev)
+            self._send_log("warning", msg);
     
     def info(self, msg):
         if self.loglevel>2:
-            self.ev.domain="$sys/log/info"
-            self.ev.data=msg
-            self.ev.data_type="string"
-            self.que.put(self.ev)
+            self._send_log("info", msg);
     
     def debug(self, msg):
         if self.loglevel>3:
-            self.ev.domain="$sys/log/error"
-            self.ev.data=msg
-            self.ev.data_type="string"
-            self.que.put(self.ev)
+            self._send_log("debug", msg);
