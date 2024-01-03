@@ -16,11 +16,11 @@ path = os.path.join(
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
 
-from indra_serverlib import ProcLog
+from indra_serverlib import IndraServerLib
     
 def indra_process(event_queue, send_queue, config_data):
     # print(config_data)
-    log = ProcLog(config_data["loglevel"], event_queue, config_data['name'])
+    log = IndraServerLib(config_data["loglevel"], event_queue, config_data['name'])
     for i in range(5):
         time.sleep(1.0)
         log.info("Hello!")

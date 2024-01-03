@@ -34,12 +34,10 @@ def main_runner(main_logger, modules):
 
     for module in modules:
         default_subs = ["$cmd/quit", f"{module}/#"]
-        if module in subs:
-            for sub in default_subs:
-                if sub not in subs[module]:
-                    subs[module].append(sub)
-        else:
-            main_logger.warning(f"Module {module} not in subs")
+        subs[module]=[]
+        for sub in default_subs:
+            if sub not in subs[module]:
+                subs[module].append(sub)
 
     processes = []
     event_queue = mp.Queue()
@@ -53,6 +51,8 @@ def main_runner(main_logger, modules):
             main_logger.info(f"Module {module} started")
         else:
             main_logger.error(f"Cannot start process for {module}, entry-point 'indra_process' not found!")
+
+    # Main event loop
     bActive = True
     while bActive:
         ev=event_queue.get()
