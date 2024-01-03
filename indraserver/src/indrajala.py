@@ -54,7 +54,19 @@ def main_runner(main_logger, modules):
             main_logger.error(f"Cannot start process for {module}, entry-point 'indra_process' not found!")
     while True:
         ev=event_queue.get()
-        print(f"{ev.domain} - {ev.data}")
+        if ev.domain.startswith("$log"):
+            lvl=ev.domain.split("/")[-1];
+            msg=f"{ev.from_id} - {ev.data}"
+            if lvl=="error":
+                main_logger.error(msg)
+            elif lvl=="warning":
+                main_logger.warning(msg)
+            elif lvl=="info":
+                main_logger.info(msg)
+            elif lvl=="debug":
+                main_logger.debug(msg)
+        else:
+            main_logger.error(f"Not implemented event: {ev.domain}")
     p.join()
 
 

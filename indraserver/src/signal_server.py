@@ -20,7 +20,7 @@ from indra_serverlib import ProcLog
     
 def indra_process(event_queue, send_queue, config_data):
     # print(config_data)
-    log = ProcLog(config_data["loglevel"], event_queue)
+    log = ProcLog(config_data["loglevel"], event_queue, config_data['name'])
     while True:
         time.sleep(1.0)
         log.info("Hello!")
