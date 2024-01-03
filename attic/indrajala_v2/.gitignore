@@ -12,3 +12,7 @@ certs/
 db/
 models/
 data/
+\#*#
+.#*
+*~
+

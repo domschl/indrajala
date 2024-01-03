@@ -1,0 +1,53 @@
+[package]
+name = "indrajala"
+rust-version = "1.71"
+version = "0.1.0"
+edition = "2021"
+default-run = "indrajala"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sqlx = { version = "0.7", features = [
+    "runtime-async-std-rustls",
+    "sqlite",
+    "macros",
+] }
+reqwest = "*"
+# native-tls = "*"
+# async-tls = "*"             # { version = "*", features = ["server"]}
+async-tls = { git = "https://github.com/async-rs/async-tls", branch = "master" }
+async-tungstenite = "*"                                                          # { version = "*", features = ["async-tls", "async-std-runtime"] }
+futures = "*"
+signal-hook = "*"
+signal-hook-async-std = "*"
+log = "*"
+# env_logger = "*"
+flexi_logger = { version = "*", features = ["async", "colors"] }
+num_cpus = "*"
+
+# llm = "0.1.1"
+llm = { git = "https://github.com/rustformers/llm", branch = "main" }
+# llm = { git = "https://github.com/rustformers/llm", branch = "main", features = [
+#     "metal",
+# ] }
+async-trait = "*"                                           # it stable tool-chain is used!
+indra_event = { path = "../../rust_indrajala/indra_event" }
+async-std = "*"
+uuid = { version = "*", features = ["v4"] }
+paho-mqtt = "*"
+toml = "*"
+rand = "0.8"
+async-channel = "*"
+async-mutex = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+chrono = { version = "*", features = ["std", "clock"] }
+chrono-tz = "*"
+tide = "*"
+rustls = "*"                                                # "0.20"                                             # Blocked because of stalled development at async-tls.
+rustls-pemfile = "*"
+tide-rustls = "*"
+dirs = "*"
+hostname = "*"
+shellexpand = "*"
