@@ -8,6 +8,7 @@ from logging.handlers import TimedRotatingFileHandler
 import argparse
 import pathlib
 import importlib
+import multiprocessing as mp
 import json
 import time
 
@@ -18,11 +19,9 @@ except ModuleNotFoundError:  # Python 3.10 and older:
 
 # XXX dev only
 import sys
-
 path = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "indralib/src"
 )
-print(path)
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
 
@@ -30,22 +29,33 @@ INDRAJALA_VERSION = "0.1.0"
 
 
 def main_runner(main_logger, modules):
+    # mp.set_start_method('spawn')
     subs = {}
 
     for module in modules:
         default_subs = ["$cmd/quit", f"{module}/#"]
-        for sub in default_subs:
-            if sub not in subs[module]:
-                subs[module].append(sub)
+        if module in subs:
+            for sub in default_subs:
+                if sub not in subs[module]:
+                    subs[module].append(sub)
+        else:
+            main_logger.warning(f"Module {module} not in subs")
 
     tasks = []
+    event_queue = mp.Queue()
     for module in modules:
-        m_op = getattr(modules[module], "server_task", None)
+        m_op = getattr(modules[module]["import"], "indra_process", None)
         if callable(m_op) is True:
-            pass
-        main_logger.debug(f"adding task from {module}")
-        tasks.append(asyncio.create_task(modules[module].get(), name=module))
-
+            main_logger.debug(f"adding task from {module}")
+            p = mp.Process(target=modules[module]["import"].indra_process, args=(event_queue, modules[module]["send_queue"], main_logger))
+            p.start()
+            main_logger.info(f"Module {module} started")
+            # tasks.append(asyncio.create_task(modules[module].get(), name=module))
+        else:
+            main_logger.error(f"Cannot start process for {module}, entry-point 'indra_process' not found!")
+    while True:
+        print(event_queue.get())
+    p.join()
 
 
 def load_modules(main_logger, toml_data, args):
@@ -99,36 +109,12 @@ def load_modules(main_logger, toml_data, args):
                     if sub_mod["active"] is True:
 
                         obj_name = sub_mod["name"]
-                        ind = rfind(obj_name, '.')
+                        ind = obj_name.rfind('.')
                         if ind != -1:
                             obj_name = obj_name[:ind]
-                        try:
-                            ev_proc = m.EventProcessor(toml_data["indrajala"], sub_mod)
-                        except Exception as e:
-                            main_logger.error(
-                                f"Failed to import EventProcessor from module {module}: {e}"
-                            )
-                            continue
-                        try:
-                            if ev_proc.isActive() is False:
-                                main_logger.error(
-                                    f"Failed to initialize module {module}"
-                                )
-                                continue
-                        except Exception as e:
-                            main_logger.error(
-                                f"Failed to detect activity-state of module {module}: {e}"
-                            )
-                            continue
-                        methods = ["get", "put"]
-                        for method in methods:
-                            m_op = getattr(ev_proc, method, None)
-                            if callable(m_op) is False:
-                                main_logger.error(
-                                    f"Failed to import EventProcessor from module {module} has no {method} function"
-                                )
-                                continue
-                        modules[sub_mod["name"]] = ev_proc
+                        modules[sub_mod["name"]] = {}
+                        modules[sub_mod["name"]]["import"]=m
+                        modules[sub_mod["name"]]["send_queue"]=mp.Queue()
                         main_logger.info(f"Import {module} success.")
                     else:
                         main_logger.info(f"Module [{module}] is not active.")
@@ -166,9 +152,9 @@ def read_config_arguments():
         print(f"Couldn't read {toml_file}, {e}")
         exit(0)
     if args.kill_daemon is True:
-        toml_data["in_signal_server"]["kill_daemon"] = True
+        toml_data["signal_server"]["kill_daemon"] = True
     else:
-        toml_data["in_signal_server"]["kill_daemon"] = False
+        toml_data["signal_server"]["kill_daemon"] = False
     toml_data["indrajala"]["config_dir"] = str(config_dir)
 
     loglevel_console = (
