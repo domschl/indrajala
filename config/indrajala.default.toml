@@ -1,8 +1,12 @@
 [indrajala]
 logdir = "log"
 max_loglevel_logfile = "debug"
-modules = []
+loglevel = "debug"
+modules = ["signal_server"]
 
 
-[in_signal_server]
+[signal_server]
+active = true
+name = "signal_server"
+loglevel = "debug"
 kill_daemon = false
