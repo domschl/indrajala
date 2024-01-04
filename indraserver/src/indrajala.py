@@ -83,7 +83,6 @@ def main_runner(main_logger, event_queue, modules):
         else:
             main_logger.error(f"Not implemented event: {ev.domain}")
 
-    print("Exit main loop")
     main_logger.info("Waiting for all sub processes to terminate")
     # Wait for all processes to stop
     for module in modules:
@@ -143,7 +142,6 @@ def load_modules(main_logger, toml_data, args):
                         name = sub_mod["name"]
                         main_logger.info(f"Module {module} has no name, using {name}")
                     if sub_mod["active"] is True:
-
                         obj_name = sub_mod["name"]
                         ind = obj_name.rfind('.')
                         if ind != -1:
@@ -153,7 +151,7 @@ def load_modules(main_logger, toml_data, args):
                         modules[sub_mod["name"]]["send_queue"]=send_queue
                         modules[sub_mod["name"]]["config_data"]=sub_mod
                         modules[sub_mod["name"]]["iproc"]=m.IndraProcess(event_queue, send_queue, sub_mod) 
-                        main_logger.info(f"Import {module} success.")
+                        main_logger.info(f"Instantiation of {module} success.")
                     else:
                         main_logger.info(f"Module [{module}] is not active.")
     return (event_queue, modules)

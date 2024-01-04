@@ -1,6 +1,8 @@
 import multiprocessing as mp
 import os
 import json
+import threading
+import time
 
 try:
     import tomllib
@@ -14,6 +16,7 @@ path = os.path.join(
 )
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
+
 
 class IndraServerLib:
     def __init__(self, name, que, loglevel):
@@ -80,3 +83,59 @@ class IndraServerLib:
             ie.data = json.dumps([domains])
         self.que.put(ie)
         return True
+
+    
+class IndraProcessCore:
+    def __init__(self, event_queue, send_queue, config_data):
+        self.name = config_data['name']
+        self.isl = IndraServerLib(self.name, event_queue, config_data["loglevel"])
+        self.bActive = True
+        self.send_queue = send_queue
+        self.event_queue = event_queue
+        self.config_data = config_data
+        self.isl.info(f"IndraProcess {self.name} instantiated")
+
+    def launcher(self):
+        self.sender = threading.Thread(target = self.send_worker, name=self.name+"_send_worker", args=[])
+        self.receiver = threading.Thread(target = self.receive_worker, name=self.name+"_receive_worker", args=[])
+        self.sender.start()
+        self.receiver.start()
+        self.isl.info(f"Launcher of {self.name} started")
+        while (self.bActive):
+            time.sleep(0.1)
+        self.isl.info(f"Launcher of {self.name} terminating...")
+
+    def send_worker(self):
+        self.isl.info(f"{self.name} started send_worker")
+        while self.bActive is True:
+            start = time.time()
+            self.inbound()
+            if time.time()-start < 0.01:
+                time.sleep(0.1)        
+        self.isl.info(f"{self.name} terminating send_worker")
+        return
+
+    def inbound(self):
+        ''' This function is overriden by the implementation: it acquires an object'''
+        self.isl.error(f"Process {self.name} doesn't override inbound function!")
+        time.sleep(1)
+        return None
+        
+    def receive_worker(self):
+        self.isl.info(f"{self.name} started receive_worker")
+        while self.bActive is True:
+            ev = self.send_queue.get()
+            self.isl.info(f"Received: {ev.domain}")
+            if ev.domain=="$sys/quit":
+                self.isl.info(f"{self.name} terminating receive_worker")
+                self.bActive=False
+                self.sender.join(timeout=2)
+                self.isl.info(f"Terminating process {self.name}")
+                exit(0)
+            else:
+                self.outbound(ev)
+
+    def outbound(self, ev: IndraEvent):
+        ''' THis function receives an IndraEvent object that is to be transmitted outbound '''
+        self.isl.error(f"Process {self.name} doesn't override outbound function!")
+
