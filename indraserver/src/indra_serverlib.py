@@ -56,7 +56,7 @@ class IndraServerLog:
 
     
 class IndraProcessCore:
-    def __init__(self, event_queue, send_queue, config_data):
+    def __init__(self, event_queue, send_queue, config_data, signal_handler=True):
         self.name = config_data['name']
         self.log = IndraServerLog(self.name, event_queue, config_data["loglevel"])
         self.bActive = True
@@ -99,6 +99,7 @@ class IndraProcessCore:
             
     def send_worker(self):
         self.log.info(f"{self.name} started send_worker")
+        self.inbound_init()
         while self.bActive is True:
             start = time.time()
             ev = self.inbound()
@@ -110,6 +111,10 @@ class IndraProcessCore:
         self.log.info(f"{self.name} terminating send_worker")
         return
 
+    def inbound_init(self):
+        """ This function can optionally be overriden for init-purposes """
+        pass
+    
     def inbound(self):
         """ This function is overriden by the implementation: it acquires an object"""
         self.log.error(f"Process {self.name} doesn't override inbound function!")
@@ -118,6 +123,7 @@ class IndraProcessCore:
         
     def receive_worker(self):
         self.log.info(f"{self.name} started receive_worker")
+        self.outbound_init()
         while self.bActive is True:
             ev = self.send_queue.get()
             self.log.info(f"Received: {ev.domain}")
@@ -130,6 +136,10 @@ class IndraProcessCore:
             else:
                 self.outbound(ev)
 
+    def outbound_init(self):
+        """ This function can optionally be overriden for init-purposes """
+        pass
+    
     def outbound(self, ev: IndraEvent):
         """ THis function receives an IndraEvent object that is to be transmitted outbound """
         self.log.error(f"Process {self.name} doesn't override outbound function!")

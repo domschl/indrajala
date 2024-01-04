@@ -23,8 +23,8 @@ class IndraProcess(IndraProcessCore):
     def __init__(self, event_queue, send_queue, config_data):
         super().__init__(event_queue, send_queue, config_data)
         self.n=0
-        self.subscribe("pingpong/#")
-        self.set_throttle(1)
+        self.subscribe(["pingpong/#", "mqtt/#"])
+        self.set_throttle(1)  # Max 1 message per sec to inbound
 
     def inbound(self):
         self.n = self.n + 1
