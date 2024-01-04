@@ -24,7 +24,6 @@ from indra_serverlib import IndraProcessCore
 class IndraProcess(IndraProcessCore):
     def __init__(self, event_queue, send_queue, config_data):
         super().__init__(event_queue, send_queue, config_data, False)
-        # self.subscribe("pingpong/#")
         self.set_throttle(1)
         
         self.mqtt_server = config_data['mqtt_server']
@@ -50,6 +49,7 @@ class IndraProcess(IndraProcessCore):
         self.mq_rcv_client.on_connect = self.on_connect
         self.mq_rcv_client.on_message = self.on_message
         self.mq_rcv_client.connect(self.mqtt_server, self.mqtt_port, self.mqtt_keepalive)
+        return True
 
     def inbound(self):
         # self.mq_client.loop_forever()

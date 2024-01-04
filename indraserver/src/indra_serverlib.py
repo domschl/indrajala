@@ -68,6 +68,9 @@ class IndraProcessCore:
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
 
+        for sub in config_data['subscriptions']:
+            self.subscribe(sub)
+            
         self.log.info(f"IndraProcess {self.name} instantiated")
 
     def launcher(self):
@@ -99,21 +102,21 @@ class IndraProcessCore:
             
     def send_worker(self):
         self.log.info(f"{self.name} started send_worker")
-        self.inbound_init()
-        while self.bActive is True:
-            start = time.time()
-            ev = self.inbound()
-            if ev is not None:
-                self.event_queue.put(ev)
-                if self.throttle > 0:
-                    if time.time()-start < self.throttle:
-                        time.sleep(self.throttle)        
+        if self.inbound_init() is True:
+            while self.bActive is True:
+                start = time.time()
+                ev = self.inbound()
+                if ev is not None:
+                    self.event_queue.put(ev)
+                    if self.throttle > 0:
+                        if time.time()-start < self.throttle:
+                            time.sleep(self.throttle)        
         self.log.info(f"{self.name} terminating send_worker")
         return
 
     def inbound_init(self):
-        """ This function can optionally be overriden for init-purposes """
-        pass
+        """ This function can optionally be overriden for init-purposes, needs to return True to start inbound() """
+        return True
     
     def inbound(self):
         """ This function is overriden by the implementation: it acquires an object"""
@@ -123,22 +126,24 @@ class IndraProcessCore:
         
     def receive_worker(self):
         self.log.info(f"{self.name} started receive_worker")
-        self.outbound_init()
-        while self.bActive is True:
-            ev = self.send_queue.get()
-            self.log.info(f"Received: {ev.domain}")
-            if ev.domain=="$cmd/quit":
-                self.log.info(f"{self.name} terminating receive_worker")
-                self.bActive=False
-                self.sender.join(timeout=2)
-                self.log.info(f"Terminating process {self.name}")
-                exit(0)
-            else:
-                self.outbound(ev)
+        if self.outbound_init() is True:
+            while self.bActive is True:
+                ev = self.send_queue.get()
+                self.log.info(f"Received: {ev.domain}")
+                if ev.domain=="$cmd/quit":
+                    self.log.info(f"{self.name} terminating receive_worker")
+                    self.bActive=False
+                    self.sender.join(timeout=2)
+                    self.log.info(f"Terminating process {self.name}")
+                    exit(0)
+                else:
+                    self.outbound(ev)
+        self.log.info(f"{self.name} receive_worker")
+        return
 
     def outbound_init(self):
-        """ This function can optionally be overriden for init-purposes """
-        pass
+        """ This function can optionally be overriden for init-purposes, needs to return true to start output() """
+        return True
     
     def outbound(self, ev: IndraEvent):
         """ THis function receives an IndraEvent object that is to be transmitted outbound """
