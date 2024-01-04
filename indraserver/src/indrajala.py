@@ -28,7 +28,7 @@ from indra_event import IndraEvent  # type: ignore
 INDRAJALA_VERSION = "0.1.0"
 
         
-def main_runner(main_logger, modules):
+def main_runner(main_logger, event_queue, modules):
     # mp.set_start_method('spawn')
     subs = {}
 
@@ -39,22 +39,29 @@ def main_runner(main_logger, modules):
             if sub not in subs[module]:
                 subs[module].append(sub)
 
-    processes = []
-    event_queue = mp.Queue()
     for module in modules:
-        m_op = getattr(modules[module]["import"], "indra_process", None)
+        m_op = getattr(modules[module]["iproc"], "launcher", None)
         if callable(m_op) is True:
             main_logger.debug(f"adding task from {module}")
-            p = mp.Process(target=modules[module]["import"].indra_process, args=(event_queue, modules[module]["send_queue"], modules[module]["config_data"] ))
+            p = mp.Process(target=modules[module]["iproc"].launcher, args=[])
             p.start()
-            processes.append(p)
+            modules[module]["process"] = p
             main_logger.info(f"Module {module} started")
         else:
             main_logger.error(f"Cannot start process for {module}, entry-point 'indra_process' not found!")
 
     # Main event loop
     bActive = True
+    stop_timer = None
     while bActive:
+        ev=None
+        while stop_timer is not None and event_queue.empty():
+            if time.time() > stop_timer:
+                bActive = False
+                break
+            time.sleep(0.1)
+        if bActive is False:
+            break
         ev=event_queue.get()
         if ev.domain.startswith("$log"):
             lvl=ev.domain.split("/")[-1];
@@ -68,21 +75,27 @@ def main_runner(main_logger, modules):
             elif lvl=="debug":
                 main_logger.debug(msg)
         elif ev.domain == "$sys/quit":
-            bActive = False
+            # bActive = False
+            stop_timer = time.time() + 0.5
             for module in modules:
+                main_logger.info(f"Sending termination cmd to {modules[module]['config_data']['name']}... ")
                 modules[module]["send_queue"].put(ev)
         else:
             main_logger.error(f"Not implemented event: {ev.domain}")
 
+    print("Exit main loop")
     main_logger.info("Waiting for all sub processes to terminate")
     # Wait for all processes to stop
-    for p in processes:
-        p.join()
+    for module in modules:
+        main_logger.info(f"Waiting for termination of {modules[module]['config_data']['name']}... ")
+        modules[module]['process'].join()
+        main_logger.info(f"{modules[module]['config_data']['name']} OK.")
     main_logger.info("All sub processes terminated")
     exit(0)
 
 def load_modules(main_logger, toml_data, args):
     modules = {}
+    event_queue = mp.Queue()
     if "indrajala" not in toml_data:
         main_logger.error(
             f"The toml_file {args.toml_file} needs to contain a section [indrajala], cannot continue with invalid configuration."
@@ -136,14 +149,14 @@ def load_modules(main_logger, toml_data, args):
                         if ind != -1:
                             obj_name = obj_name[:ind]
                         modules[sub_mod["name"]] = {}
-                        modules[sub_mod["name"]]["import"]=m
-                        modules[sub_mod["name"]]["send_queue"]=mp.Queue()
+                        send_queue = mp.Queue()
+                        modules[sub_mod["name"]]["send_queue"]=send_queue
                         modules[sub_mod["name"]]["config_data"]=sub_mod
+                        modules[sub_mod["name"]]["iproc"]=m.IndraProcess(event_queue, send_queue, sub_mod) 
                         main_logger.info(f"Import {module} success.")
                     else:
                         main_logger.info(f"Module [{module}] is not active.")
-    main_logger.info(f"Loaded modules: {modules}")
-    return modules
+    return (event_queue, modules)
 
 
 def read_config_arguments():
@@ -228,10 +241,10 @@ def read_config_arguments():
 
 main_logger, toml_data, args = read_config_arguments()
 main_logger.info(f"indrajala: starting version {INDRAJALA_VERSION}")
-modules = load_modules(main_logger, toml_data, args)
+event_queue, modules = load_modules(main_logger, toml_data, args)
 
 terminate_main_runner = False
 try:
-    main_runner(main_logger, modules)
+    main_runner(main_logger, event_queue, modules)
 except KeyboardInterrupt:
     terminate_main_runner = True
