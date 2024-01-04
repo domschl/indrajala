@@ -3,6 +3,7 @@ import os
 import json
 import threading
 import time
+import signal
 
 try:
     import tomllib
@@ -63,6 +64,10 @@ class IndraProcessCore:
         self.event_queue = event_queue
         self.config_data = config_data
         self.throttle = 0
+
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+
         self.log.info(f"IndraProcess {self.name} instantiated")
 
     def launcher(self):
@@ -71,13 +76,22 @@ class IndraProcessCore:
         self.sender.start()
         self.receiver.start()
         self.log.info(f"Launcher of {self.name} started")
-        while (self.bActive):
-            time.sleep(0.1)
+        try:
+            while (self.bActive):
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            pass
         self.log.info(f"Launcher of {self.name} terminating...")
 
     def is_active(self):
         """ Check if module is active """
         return self.bActive
+
+    def close_daemon(self):
+        pass
+    
+    def signal_handler(self, sig, frame):
+        sys.exit(0)
 
     def set_throttle(self, throttle):
         """ set a minimum pause between messages received from outside """
@@ -88,10 +102,11 @@ class IndraProcessCore:
         while self.bActive is True:
             start = time.time()
             ev = self.inbound()
-            self.event_queue.put(ev)
-            if self.throttle > 0:
-                if time.time()-start < self.throttle:
-                    time.sleep(self.throttle)        
+            if ev is not None:
+                self.event_queue.put(ev)
+                if self.throttle > 0:
+                    if time.time()-start < self.throttle:
+                        time.sleep(self.throttle)        
         self.log.info(f"{self.name} terminating send_worker")
         return
 
