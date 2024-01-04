@@ -29,7 +29,6 @@ INDRAJALA_VERSION = "0.1.0"
 
         
 def main_runner(main_logger, event_queue, modules):
-    # mp.set_start_method('spawn')
     subs = {}
 
     for module in modules:
@@ -237,12 +236,14 @@ def read_config_arguments():
     return main_logger, toml_data, args
 
 
-main_logger, toml_data, args = read_config_arguments()
-main_logger.info(f"indrajala: starting version {INDRAJALA_VERSION}")
-event_queue, modules = load_modules(main_logger, toml_data, args)
+if __name__ == '__main__':
+    mp.set_start_method('spawn')
+    main_logger, toml_data, args = read_config_arguments()
+    main_logger.info(f"indrajala: starting version {INDRAJALA_VERSION}")
+    event_queue, modules = load_modules(main_logger, toml_data, args)
 
-terminate_main_runner = False
-try:
-    main_runner(main_logger, event_queue, modules)
-except KeyboardInterrupt:
-    terminate_main_runner = True
+    terminate_main_runner = False
+    try:
+        main_runner(main_logger, event_queue, modules)
+    except KeyboardInterrupt:
+        terminate_main_runner = True
