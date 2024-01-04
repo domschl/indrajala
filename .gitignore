@@ -1,6 +1,7 @@
 *~
 \#*\#
 .\#*
-log
+log/
 indrajala.toml
 __pycache__/
+db/
