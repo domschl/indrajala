@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import queue
 import os
 import json
 import threading
@@ -74,8 +75,8 @@ class IndraProcessCore:
         self.log.info(f"IndraProcess {self.name} instantiated")
 
     def launcher(self):
-        self.sender = threading.Thread(target = self.send_worker, name=self.name+"_send_worker", args=[])
-        self.receiver = threading.Thread(target = self.receive_worker, name=self.name+"_receive_worker", args=[])
+        self.sender = threading.Thread(target = self.send_worker, name=self.name+"_send_worker", args=[], daemon=True)
+        self.receiver = threading.Thread(target = self.receive_worker, name=self.name+"_receive_worker", args=[], daemon=True)
         self.sender.start()
         self.receiver.start()
         self.log.info(f"Launcher of {self.name} started")
@@ -84,6 +85,11 @@ class IndraProcessCore:
                 time.sleep(0.1)
         except KeyboardInterrupt:
             pass
+        # time.sleep(10)
+        self.log.info(f"Launcher of {self.name} signaled")
+        # self.bActive=False
+        self.receiver.join()
+        self.sender.join()
         self.log.info(f"Launcher of {self.name} terminating...")
 
     def is_active(self):
@@ -128,27 +134,34 @@ class IndraProcessCore:
         self.log.info(f"{self.name} started receive_worker")
         if self.outbound_init() is True:
             while self.bActive is True:
-                ev = self.send_queue.get()
-                self.log.info(f"Received: {ev.domain}")
-                if ev.domain=="$cmd/quit":
-                    self.log.info(f"{self.name} terminating receive_worker")
-                    self.bActive=False
-                    self.sender.join(timeout=2)
-                    self.log.info(f"Terminating process {self.name}")
-                    exit(0)
-                else:
-                    self.outbound(ev)
-        self.log.info(f"{self.name} receive_worker")
+                try:
+                    ev = self.send_queue.get(timeout=0.1)
+                except queue.Empty:
+                    ev = None
+                if ev is not None:
+                    self.log.info(f"Received: {ev.domain}")
+                    if ev.domain=="$cmd/quit":
+                        self.shutdown()
+                        self.log.info(f"{self.name} terminating receive_worker...")
+                        self.bActive=False
+                        self.log.info(f"Terminating process {self.name}")
+                        exit(0)
+                    else:
+                        self.outbound(ev)
+        self.log.info(f"{self.name} termination of receive_worker")
         return
 
     def outbound_init(self):
-        """ This function can optionally be overriden for init-purposes, needs to return true to start output() """
+        """ This function can optionally be overriden for init-purposes, needs to return True to start outbound() """
         return True
     
     def outbound(self, ev: IndraEvent):
-        """ THis function receives an IndraEvent object that is to be transmitted outbound """
+        """ This function receives an IndraEvent object that is to be transmitted outbound """
         self.log.error(f"Process {self.name} doesn't override outbound function!")
 
+    def shutdown(self):
+        """ This function is called just before shutdown """
+        pass
 
     def subscribe(self, domains):
         """Subscribe to domain"""
