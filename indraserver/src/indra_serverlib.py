@@ -87,8 +87,8 @@ class IndraProcessCore:
         """ Check if module is active """
         return self.bActive
 
-    def close_daemon(self):
-        pass
+    # def close_daemon(self):
+    #     pass
     
     def signal_handler(self, sig, frame):
         sys.exit(0)
