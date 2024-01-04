@@ -62,6 +62,11 @@ def main_runner(main_logger, event_queue, modules):
         if bActive is False:
             break
         ev=event_queue.get()
+
+        origin_module = ev.from_id
+        if "/" in origin_module:
+            origin_module = origin_module.split("/")[0]
+
         if ev.domain.startswith("$log"):
             lvl=ev.domain.split("/")[-1];
             msg=f"{ev.from_id} - {ev.data}"
@@ -73,14 +78,43 @@ def main_runner(main_logger, event_queue, modules):
                 main_logger.info(msg)
             elif lvl=="debug":
                 main_logger.debug(msg)
-        elif ev.domain == "$sys/quit":
-            # bActive = False
-            stop_timer = time.time() + 0.5
-            for module in modules:
-                main_logger.info(f"Sending termination cmd to {modules[module]['config_data']['name']}... ")
-                modules[module]["send_queue"].put(ev)
+        elif ev.domain.startswith("$cmd"):
+            if ev.domain == "$cmd/quit":
+                stop_timer = time.time() + 0.5
+                for module in modules:
+                    main_logger.info(f"Sending termination cmd to {modules[module]['config_data']['name']}... ")
+                    modules[module]["send_queue"].put(ev)
+            elif ev.domain == "$cmd/subs":
+                sub_list = json.loads(ev.data)
+                if isinstance(sub_list, list) is True:
+                    for sub in sub_list:
+                        # if sub not in subs[origin_module]:  # XXX different sessions can sub to the same thing, alternative would be reference counting...
+                        subs[origin_module].append(sub)
+                        main_logger.info(f"Subscribing to {sub}")
+            elif ev.domain == "$cmd/unsub":
+                sub_list = json.loads(ev.data)
+                if isinstance(sub_list, list) is True:
+                    for sub in sub_list:
+                        if sub in subs[origin_module]:
+                            subs[origin_module].remove(sub)
+                            main_logger.info(f"Unsubscribing from {sub}")
+
+            else:
+                main_logger.error(f"Unknown command {ev.domain} received from {ev.from_id}, ignored.")
         else:
-            main_logger.error(f"Not implemented event: {ev.domain}")
+            mod_found = False
+            for module in modules:
+                if module != origin_module:
+                    for sub in subs[module]:
+                        if IndraEvent.mqcmp(ev.domain, sub) is True:
+                            main_logger.info(f"ROUTE {ev.domain} to {module}")
+                            modules[module]["send_queue"].put(ev)
+                else:
+                    mod_found = True
+            if mod_found is False:
+                main_logger.error(
+                    f"Task {origin_module} not found, {origin_module} did not set from_id correctly"
+                )
 
     main_logger.info("Waiting for all sub processes to terminate")
     # Wait for all processes to stop
