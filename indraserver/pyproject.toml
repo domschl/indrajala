@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "indralib"
+name = "indraserver"
 version = "0.0.1"
 authors = [{ name = "Dominik Schlösser", email = "dsc@dosc.net" }]
 description = "Websocket client for the Indrajala system"
@@ -13,6 +13,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+]
+dependencies = [
+    "paho-mqtt"
 ]
 
 [project.urls]
