@@ -212,7 +212,22 @@ def read_config_arguments():
     except Exception as e:
         print(f"Couldn't read {toml_file}, {e}")
         exit(0)
-    toml_data["indrajala"]["config_dir"] = str(config_dir)
+
+    try:
+        data_directory = toml_data["indrajala"]["data_directory"]
+    except:
+        data_directory = str(config_dir)
+
+    try:
+        with open(toml_file, "r") as f:
+            cfg = f.read()
+        cfg = cfg.replace("{{data_directory}}", data_directory)
+        toml_data = tomllib.loads(cfg)
+    except Exception as e:
+        print(f"Replace wildcards and re-read of {toml_file} failed: {e}")
+        exit(0)
+        
+    toml_data["indrajala"]["config_directory"] = str(config_dir)
 
     loglevel_console = (
         toml_data["indrajala"].get("max_loglevel_console", "info").upper()
