@@ -271,10 +271,14 @@ def read_config_arguments():
     return main_logger, toml_data, args
 
 def signal_handler(sig, frame):
-    print("MAIN_SIGNAL_HANDLER")
+    # print("MAIN_SIGNAL_HANDLER")
+    main_logger.info("- - - - Termination sequence started - - - - - - -")
     ev = IndraEvent()
     ev.domain = "$cmd/quit"
     event_queue.put(ev)
+
+def close_daemon():
+    pass
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')
@@ -290,4 +294,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("KEYBOARD-INTERRUPT")
         pass
-
