@@ -15,40 +15,39 @@ path = os.path.join(
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
 
-
 class IndraServerLib:
-    def __init__(self, loglevel, que, name):
+    def __init__(self, name, que, loglevel):
         self.loglevels=['none', 'error', 'warning', 'info', 'debug']
         if loglevel in self.loglevels:
             self.loglevel = self.loglevels.index(loglevel)
         else:
             self.loglevel = self.loglevels.index('info')
-        self.ev=IndraEvent()
-        self.ev.data_type="string"
-        self.ev.from_id=name;
         self.name=name
         self.que=que
 
     def _send_log(self, level, msg):
-            self.ev.domain="$log/" + level
-            self.ev.data=msg
-            self.que.put(self.ev)
+        self.ev=IndraEvent()
+        self.ev.data_type="string"
+        self.ev.from_id=self.name
+        self.ev.domain="$log/" + level
+        self.ev.data=msg
+        self.que.put(self.ev)
         
     def error(self, msg):
         if self.loglevel>0:
-            self._send_log("error", msg);
+            self._send_log("error", msg)
     
     def warning(self, msg):
         if self.loglevel>1:
-            self._send_log("warning", msg);
+            self._send_log("warning", msg)
     
     def info(self, msg):
         if self.loglevel>2:
-            self._send_log("info", msg);
+            self._send_log("info", msg)
     
     def debug(self, msg):
         if self.loglevel>3:
-            self._send_log("debug", msg);
+            self._send_log("debug", msg)
 
     def subscribe(self, domains):
         """Subscribe to domain"""
@@ -68,14 +67,6 @@ class IndraServerLib:
 
     def unsubscribe(self, domains):
         """Unsubscribe from domain"""
-        if self.initialized is False:
-            self.log.error("Indrajala unsubscribe(): connection data not initialized!")
-            return False
-        if self.websocket is None:
-            self.log.error(
-                "Websocket not initialized, please call init_connection() first!"
-            )
-            return False
         if domains is None or domains == "":
             self.log.error("Please provide a valid domain(s)!")
             return False

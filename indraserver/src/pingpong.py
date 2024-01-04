@@ -43,12 +43,12 @@ class IndraProcess:
         self.isl.info(f"{self.name} started send_worker")
         for i in range(3):
             if self.bActive is False:
-                return;
+                return
             self.isl.info(f"Hello {i}!")
             time.sleep(1)
-        self.send_quit()
+        # self.send_quit()
         while self.bActive is True:
-            time.sleep(0.1)        
+            time.sleep(0.1)
         self.isl.info(f"{self.name} terminating send_worker")
         return
     
