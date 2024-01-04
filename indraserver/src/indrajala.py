@@ -99,7 +99,6 @@ def main_runner(main_logger, event_queue, modules):
                         if sub in subs[origin_module]:
                             subs[origin_module].remove(sub)
                             main_logger.info(f"Unsubscribing from {sub}")
-
             else:
                 main_logger.error(f"Unknown command {ev.domain} received from {ev.from_id}, ignored.")
         else:
@@ -142,7 +141,7 @@ def load_modules(main_logger, toml_data, args):
     for module in toml_data["indrajala"]["modules"]:
         if module not in toml_data:
             main_logger.warning(
-                f"In toml_file {args.toml_file}, no configuration section [{module}] found, skipping this module"
+                f"In toml_file, no configuration section [{module}] found, skipping this module"
             )
         else:
             sub_mods = []
@@ -202,13 +201,6 @@ def read_config_arguments():
         default="config",
         help="path to config_dir that contains indrajala.toml and other config files.",
     )
-    parser.add_argument(
-        "-k",
-        action="store_true",
-        dest="kill_daemon",
-        help="Kill existing instance and terminate.",
-    )
-
     args = parser.parse_args()
 
     config_dir = args.config_dir
@@ -220,10 +212,6 @@ def read_config_arguments():
     except Exception as e:
         print(f"Couldn't read {toml_file}, {e}")
         exit(0)
-    if args.kill_daemon is True:
-        toml_data["signal_server"]["kill_daemon"] = True
-    else:
-        toml_data["signal_server"]["kill_daemon"] = False
     toml_data["indrajala"]["config_dir"] = str(config_dir)
 
     loglevel_console = (
