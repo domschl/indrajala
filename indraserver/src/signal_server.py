@@ -26,10 +26,7 @@ class IndraProcess(IndraProcessCore):
 
     def inbound(self):
         time.sleep(5)
-        ev = IndraEvent()
-        ev.domain = "$cmd/quit"
-        ev.from_id = self.name
-        return ev
-        
+        return None
+    
     def outbound(self, ev:IndraEvent):
         self.log.info(f"Don't know what to do with: {ev.domain}")

@@ -11,6 +11,7 @@ import importlib
 import multiprocessing as mp
 import json
 import time
+import signal
 
 try:
     import tomllib
@@ -50,16 +51,16 @@ def main_runner(main_logger, event_queue, modules):
             main_logger.error(f"Cannot start process for {module}, entry-point 'indra_process' not found!")
 
     # Main event loop
-    bActive = True
+    terminate_main_runner = False
     stop_timer = None
-    while bActive:
+    while terminate_main_runner is False:
         ev=None
         while stop_timer is not None and event_queue.empty():
             if time.time() > stop_timer:
-                bActive = False
+                terminate_main_runner = True
                 break
             time.sleep(0.1)
-        if bActive is False:
+        if terminate_main_runner is True:
             break
         ev=event_queue.get()
 
@@ -269,6 +270,11 @@ def read_config_arguments():
 
     return main_logger, toml_data, args
 
+def signal_handler(sig, frame):
+    print("MAIN_SIGNAL_HANDLER")
+    ev = IndraEvent()
+    ev.domain = "$cmd/quit"
+    event_queue.put(ev)
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')
@@ -276,8 +282,12 @@ if __name__ == '__main__':
     main_logger.info(f"indrajala: starting version {INDRAJALA_VERSION}")
     event_queue, modules = load_modules(main_logger, toml_data, args)
 
-    terminate_main_runner = False
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     try:
         main_runner(main_logger, event_queue, modules)
     except KeyboardInterrupt:
-        terminate_main_runner = True
+        print("KEYBOARD-INTERRUPT")
+        pass
+
