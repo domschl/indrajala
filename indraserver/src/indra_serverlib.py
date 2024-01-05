@@ -59,6 +59,16 @@ class IndraServerLog:
     
 class IndraProcessCore:
     def __init__(self, event_queue, send_queue, config_data, signal_handler=True, mode="dual"):
+        """ Super-class that is used to instantiate the IndraProcess object
+
+        There are three different modes, an IndraProcess can be implemented: 'single', 'dual' and
+        'async'.
+        In 'single' mode the instance needs to implement outbound() and optionally outbound_init()
+        and shutdown() [Example: indra_db].
+        In 'dual' mode, an additional thread is started for handling inbound() events. [pingpong]
+        In 'async' mode, an async runtime is started and the instance needs to implent async_init(),
+        async_outbound() and async_shutdown() [Example: async_http]
+        """
         self.name = config_data['name']
         self.log = IndraServerLog(self.name, event_queue, config_data["loglevel"])
         self.bActive = True
