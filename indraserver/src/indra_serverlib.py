@@ -132,22 +132,25 @@ class IndraProcessCore:
         
     def receive_worker(self):
         self.log.info(f"{self.name} started receive_worker")
-        if self.outbound_init() is True:
-            while self.bActive is True:
-                try:
-                    ev = self.send_queue.get(timeout=0.1)
-                except queue.Empty:
-                    ev = None
-                if ev is not None:
-                    self.log.info(f"Received: {ev.domain}")
-                    if ev.domain=="$cmd/quit":
-                        self.shutdown()
-                        self.log.info(f"{self.name} terminating receive_worker...")
-                        self.bActive=False
-                        self.log.info(f"Terminating process {self.name}")
-                        exit(0)
-                    else:
+        outbound_active = self.outbound_init()
+        while self.bActive is True:
+            try:
+                ev = self.send_queue.get(timeout=0.1)
+            except queue.Empty:
+                ev = None
+            if ev is not None:
+                self.log.info(f"Received: {ev.domain}")
+                if ev.domain=="$cmd/quit":
+                    self.shutdown()
+                    self.log.info(f"{self.name} terminating receive_worker...")
+                    self.bActive=False
+                    self.log.info(f"Terminating process {self.name}")
+                    exit(0)
+                else:
+                    if outbound_active is True:
                         self.outbound(ev)
+                    else:
+                        self.log.warning(f"Ignoring cmd, inactive: {ev.domain} from {ev.from_id}")
         self.log.info(f"{self.name} termination of receive_worker")
         return
 
