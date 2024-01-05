@@ -5,3 +5,5 @@ log/
 indrajala.toml
 __pycache__/
 db/
+config/Web
+config/certs

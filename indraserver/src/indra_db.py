@@ -15,17 +15,17 @@ from indra_serverlib import IndraProcessCore
 
 class IndraProcess(IndraProcessCore):
     def __init__(self, event_queue, send_queue, config_data):
-        super().__init__(event_queue, send_queue, config_data)
+        super().__init__(event_queue, send_queue, config_data, mode='single')
         self.set_throttle(1)  # Max 1 message per sec to inbound
         self.database = os.path.expanduser(config_data["database"])
         self.database_directory = os.path.dirname(self.database)
 
-    def inbound_init(self):
-        return True
+    # def inbound_init(self):
+    #     return True
 
-    def inbound(self):
-        time.sleep(1)
-        return None
+    # def inbound(self):
+    #     time.sleep(1)
+    #     return None
 
     def _db_pragma(self, param, value):
         """ Execute a pragma command and verify result """
@@ -44,6 +44,7 @@ class IndraProcess(IndraProcessCore):
         return ret
 
     def _get_last_seq_no(self):
+        """ Get highest seq_no from either json-backup or database """
         last_state_file = os.path.join(self.database_directory, "last_state.json")
         self.last_state = None
         if os.path.exists(last_state_file):
@@ -67,13 +68,15 @@ class IndraProcess(IndraProcessCore):
         return self.last_state['last_seq_no']
 
     def _write_last_seq_no(self):
+        """ Write a backup of the last used seq_no to json file """
         seq_no = self._get_last_seq_no()
         last_state_file = os.path.join(self.database_directory, "last_state.json")
         with open(last_state_file, "w") as f:
             json.dump(self.last_state, f)
         return seq_no
 
-    def _write_event(self, ev):
+    def _write_event(self, ev: IndraEvent):
+        """ Write an IndraEvent to the database """
         self.last_state['last_seq_no'] = self.last_state['last_seq_no'] + 1
         ev.seq_no = self.last_state['last_seq_no']
         cmd = """INSERT INTO indra_events (
