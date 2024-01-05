@@ -27,9 +27,9 @@ class IndraProcess(IndraProcessCore):
         self.ws_clients = []
         self.tls = False
         if self.config_data['tls'] is True:
-            if os.path.exists(self.prefs['private_key']) is False:
+            if os.path.exists(self.config_data['private_key']) is False:
                 self.log.error(f"Private key file {self.config_data['private_key']} does not exist")
-            elif os.path.exists(self.prefs['public_key']) is False:
+            elif os.path.exists(self.config_data['public_key']) is False:
                 self.log.error(f"Public key file {self.config_data['public_key']} does not exist")
             else:
                 self.private_key = self.config_data['private_key']
@@ -80,12 +80,12 @@ class IndraProcess(IndraProcessCore):
             self.log.info(f"New ws client {ws}! (clients: {len(self.ws_clients)})")
         else:
             self.thread_log.info(f"Client already registered! (clients: {len(self.ws_clients)})")
-
-        try:
-            await ws.send_str("hello")
-        except Exception as e:
-            self.log.warning("Sending to WebSocket client {} failed with {}".format(ws, e))
-            return
+        index = self.ws_clients.index(ws)
+        # try:
+        #     await ws.send_str("hello")
+        # except Exception as e:
+        #     self.log.warning("Sending to WebSocket client {} failed with {}".format(ws, e))
+        #     return
 
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
@@ -93,7 +93,11 @@ class IndraProcess(IndraProcessCore):
                 self.log.info("Client ws_dispatch: ws:{} msg:{}".format(ws, msg.data))
                 try:
                     self.log.info(f"Received: {msg.data}")
-                    # self.appque.put(json.loads(msg.data))
+                    # ev = IndraEvent()
+                    ev = IndraEvent.from_json(msg.data)
+                    ev.from_id = f"async_http/ws/{index}"
+                    self.log.info(f"Received (upd.): {ev.to_json()}")
+                    self.send_queue.put(ev)
                 except Exception as e:
                     self.log.warning(f"WebClient sent invalid JSON: {msg.data}: {e}")
             elif msg.type == aiohttp.WSMsgType.ERROR:
@@ -108,7 +112,11 @@ class IndraProcess(IndraProcessCore):
         return ws
     
     async def async_outbound(self, ev: IndraEvent):
-        pass
+        self.log.info(f"WS outbound: {ev.domain} from {ev.from_id}")
+        for ws in self.ws_clients:
+            self.log.info(f"Sending to ws-client: {ws}")
+            await ws.send_str(ev.to_json())
 
     async def async_shutdown(self):
         pass
+    

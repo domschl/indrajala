@@ -214,8 +214,8 @@ def read_config_arguments():
         exit(0)
 
     try:
-        data_directory = toml_data["indrajala"]["data_directory"]
-    except:
+        data_directory = os.path.expanduser(toml_data["indrajala"]["data_directory"])
+    except Exception as _:
         data_directory = str(config_dir)
 
     try:
