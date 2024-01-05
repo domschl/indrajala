@@ -1,7 +1,7 @@
 [indrajala]
 logdir = "log"
 max_loglevel_logfile = "debug"
-modules = ["pingpong", "indra_mqtt", "indra_db"]
+modules = ["pingpong", "indra_mqtt", "indra_db, async_http"]
 data_directory = "~/.config/indrajala"
 
 [[pingpong]]
@@ -38,3 +38,16 @@ name = "indra_db.1"
 loglevel = "debug"
 subscriptions = ["mqtt/#"]
 database = "{{data_directory}}/db/indrajala.db"
+
+
+[[async_http]]
+active = true
+name = "async_http.1"
+loglevel = "debug"
+subscriptions = []
+port = 8080
+bind_addresses = ["localhost"]
+tls = true
+private_key = "{{data_directory}}/config/certs/my-key.pem"
+public_key = "{{data_directory}}/config/certs/my-cert.pem"
+web_root = "{{data_directory}}/config/Web"
