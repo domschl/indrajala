@@ -1,28 +1,40 @@
 [indrajala]
 logdir = "log"
 max_loglevel_logfile = "debug"
-modules = ["pingpong", "indra_mqtt"]
+modules = ["pingpong", "indra_mqtt", "indra_db"]
+data_directory = "~/.config/indrajala"
 
 [[pingpong]]
-active = true
+active = false
 name = "pingpong.1"
 loglevel = "debug"
+subscriptions = ["pingpong/#"]
 
 [[pingpong]]
-active = true
+active = false
 name = "pingpong.2"
 loglevel = "debug"
+subscriptions = ["pingpong/#"]
 
 [[pingpong]]
-active = true
+active = false
 name = "pingpong.3"
 loglevel = "debug"
+subscriptions = ["pingpong/#"]
 
 [[indra_mqtt]]
 active = true
 name = "indra_mqtt.1"
 loglevel = "debug"
-mqtt_server = "my_mqtt_server"
+subscriptions = ["mqtt/#"]
+mqtt_server = "my-mqtt-server"
 mqtt_port = 1883
 mqtt_keepalive = 60
-mqtt_subscriptions = ["#"]
+mqtt_subscriptions = ["something/#"]
+
+[[indra_db]]
+active = true
+name = "indra_db.1"
+loglevel = "debug"
+subscriptions = ["mqtt/#"]
+database = "{{data_directory}}/db/indrajala.db"
