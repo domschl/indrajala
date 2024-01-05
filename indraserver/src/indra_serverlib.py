@@ -5,6 +5,7 @@ import json
 import threading
 import time
 import signal
+import asyncio
 
 try:
     import tomllib
@@ -57,7 +58,7 @@ class IndraServerLog:
 
     
 class IndraProcessCore:
-    def __init__(self, event_queue, send_queue, config_data, signal_handler=True):
+    def __init__(self, event_queue, send_queue, config_data, signal_handler=True, mode="dual"):
         self.name = config_data['name']
         self.log = IndraServerLog(self.name, event_queue, config_data["loglevel"])
         self.bActive = True
@@ -66,6 +67,11 @@ class IndraProcessCore:
         self.config_data = config_data
         self.throttle = 0
 
+        if mode not in ['single', 'dual', 'async']:
+            self.log.error(f"Invalid mode={mode}, valid are 'single', 'dual', 'async', setting 'dual'")
+            mode = 'dual'
+        self.mode = mode
+        
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
 
@@ -75,30 +81,34 @@ class IndraProcessCore:
         self.log.info(f"IndraProcess {self.name} instantiated")
 
     def launcher(self):
-        self.sender = threading.Thread(target = self.send_worker, name=self.name+"_send_worker", args=[], daemon=True)
-        self.receiver = threading.Thread(target = self.receive_worker, name=self.name+"_receive_worker", args=[], daemon=True)
-        self.sender.start()
-        self.receiver.start()
+        if self.mode == 'dual':
+            self.sender = threading.Thread(target = self.send_worker, name=self.name+"_send_worker", args=[], daemon=True)
+            self.sender.start()
+        if self.mode == 'async':
+            self.async_rt = threading.Thread(target = self.async_rt_worker, name=self.name+"_async_rt_worker", args=[], daemon=True)
+            self.async_rt.start()
+        else:
+            self.receiver = threading.Thread(target = self.receive_worker, name=self.name+"_receive_worker", args=[], daemon=True)        
+            self.receiver.start()
         self.log.info(f"Launcher of {self.name} started")
         try:
             while (self.bActive):
                 time.sleep(0.1)
         except KeyboardInterrupt:
             pass
-        # time.sleep(10)
         self.log.info(f"Launcher of {self.name} signaled")
-        # self.bActive=False
-        self.receiver.join()
-        self.sender.join()
+        if self.mode == 'dual':
+            self.sender.join()
+        if self.mode == 'async':
+            self.async_rt.join()
+        else:
+            self.receiver.join()            
         self.log.info(f"Launcher of {self.name} terminating...")
 
     def is_active(self):
         """ Check if module is active """
         return self.bActive
 
-    # def close_daemon(self):
-    #     pass
-    
     def signal_handler(self, sig, frame):
         sys.exit(0)
 
@@ -107,6 +117,7 @@ class IndraProcessCore:
         self.throttle = throttle
             
     def send_worker(self):
+        """ send_worker (inbound) is active only in 'dual' mode """
         self.log.info(f"{self.name} started send_worker")
         if self.inbound_init() is True:
             while self.bActive is True:
@@ -121,11 +132,11 @@ class IndraProcessCore:
         return
 
     def inbound_init(self):
-        """ This function can optionally be overriden for init-purposes, needs to return True to start inbound() """
+        """ This function can optionally be overriden for init-purposes, needs to return True to start inbound(), active in 'dual' mode only """
         return True
     
     def inbound(self):
-        """ This function is overriden by the implementation: it acquires an object"""
+        """ This function is overriden by the implementation: it acquires an object, active in 'dual' mode only"""
         self.log.error(f"Process {self.name} doesn't override inbound function!")
         time.sleep(1)
         return None
@@ -162,6 +173,33 @@ class IndraProcessCore:
         """ This function receives an IndraEvent object that is to be transmitted outbound """
         self.log.error(f"Process {self.name} doesn't override outbound function!")
 
+    def async_rt_worker(self):
+        asyncio.run(self.in_out_bound())
+
+    async def in_out_bound(self):
+        bActive = True
+        self.log.info("Async handler started")
+        await self.async_init()
+        while bActive:
+            if self.send_queue.empty() is False:
+                ev = self.send_queue.get()
+                if ev.domain == "$cmd/quit":
+                    await self.async_shutdown()
+                    self.log.info("Terminating async handler")
+                    return
+                else:
+                    await self.async_outbound(ev)
+            else:
+                await asyncio.sleep(0.05)
+
+    async def async_shutdown(self):
+        """ This function is called in async mode just before shutdown """
+        pass
+
+    async def async_outbound(self):
+        """ This function receives an IndraEvent object in async mode that is to be transmitted outbound """
+        self.log.error(f"Process {self.name} doesn't override async_outbound function!")
+    
     def shutdown(self):
         """ This function is called just before shutdown """
         pass

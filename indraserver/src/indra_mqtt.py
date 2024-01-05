@@ -1,13 +1,3 @@
-# import logging
-# import os
-import time
-# import signal
-# import atexit
-# from datetime import datetime
-# from zoneinfo import ZoneInfo
-# import multiprocessing as mp
-# import threading
-
 import paho.mqtt.client as mq
 
 # XXX dev only
