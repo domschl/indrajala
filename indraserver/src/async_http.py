@@ -43,11 +43,11 @@ class IndraProcess(IndraProcessCore):
                 self.public_key = self.config_data["public_key"]
                 self.tls = True
         self.app = web.Application(debug=True)
-        self.app.add_routes([web.get("/", self.web_root_handler)])
-        if self.tls is True:
-            self.app.add_routes([web.get("/wss", self.websocket_handler)])
-        else:
-            self.app.add_routes([web.get("/ws", self.websocket_handler)])
+        self.app.add_routes([web.get('/', self.web_root_handler)])
+        # if self.tls is True:
+        #     self.app.add_routes([web.get('/wss', self.websocket_handler)])
+        # else:
+        self.app.add_routes([web.get('/ws', self.websocket_handler)])
         if self.tls is True:
             self.ssl_context = ssl.SSLContext()  # = TLS
             try:
