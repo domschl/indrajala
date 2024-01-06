@@ -63,6 +63,7 @@ def main_runner(main_logger, event_queue, modules):
     high_water = 10
     unprocessed_items = 0
     last_stat_output = time.time()
+    overview_mode = False
     while terminate_main_runner is False:
         if time.time() - stat_timer > 1.0:
             unprocessed_items = event_queue.qsize()
@@ -142,9 +143,15 @@ def main_runner(main_logger, event_queue, modules):
                                 msg_sec =0.0
                             last_msg = time.time()
                             if msg_sec < 10.0:
+                                if overview_mode is True:
+                                    main_logger.info("Switching back to single-message ROUTE infos, due to reduced message volume")
+                                    overview_mode = False
                                 last_stat_output = time.time()
                                 main_logger.info(f"ROUTE {ev.domain} to {module}, {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
                             else:
+                                if overview_mode is False:
+                                    overview_mode=True
+                                    main_logger.info("Switching to ROUTE summary mode for routing, message volume > 10msg/sec")
                                 main_logger.debug(f"ROUTE {ev.domain} to {module}, {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
                                 if time.time() - last_stat_output > 1.0:
                                     main_logger.info(f"ROUTE summary {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
