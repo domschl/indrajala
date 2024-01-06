@@ -26,20 +26,27 @@ class IndraProcess(IndraProcessCore):
         self.last_commit = 0
         self.commit_delay_sec = config_data['commit_delay_sec']
         self.bUncommitted = False
-        self.timer_thread = None
+        self.commit_timer_thread = None
+
+
+    def start_commit_timer(self):
         if self.commit_delay_sec > 0.0:
-            self.commit_watchdog()
+            self.commit_timer_thread = threading.Thread(
+                target=self.commit_watchdog,
+                name=self.name + "_commit_watchdog",
+                args=[],
+                daemon=True,
+            )
+            self.commit_timer_thread.start()
 
     def commit_watchdog(self):
-        if self.bActive:
+        print("Exec thread start")
+        while self.bActive and self.commit_delay_sec > 0.0:
+            time.sleep(self.commit_delay_sec)
             ev=IndraEvent()
-            ev.domain='$self/timer'
+            ev.domain="$self/timer"
             self.send_queue.put(ev)
-            self.timer_thread = threading.Timer(self.commit_delay_sec, self.commit_watchdog).start()
-            # self.timer_thread.daemon = True
-            # self.timer_thread.start()
-        else:
-            self.log.info("Timer terminated")
+        self.log.info("Timer thread terminated")
 
     # def inbound_init(self):
     #     return True
@@ -115,6 +122,8 @@ class IndraProcess(IndraProcessCore):
                 self.conn.commit()
                 self.bUncommitted = False
             else:
+                if self.commit_timer_thread is None:
+                    self.start_commit_timer()
                 self.bUncommitted = True
             self.last_commit = time.time()
         except sqlite3.Error as e:
@@ -224,10 +233,12 @@ class IndraProcess(IndraProcessCore):
         self.log.info(f"Closing database, last seq_no={seq_no}")
         self.conn.commit()
         self.conn.close()
-        if self.timer_thread is not None:
-            self.log.info("Joining timer:")
-            self.timer_thread.join()
-            self.log.info("Timer joined")
+        if self.commit_timer_thread is not None:
+            self.commit_delay_sec = 0
+            self.commit_timer_thread.join()
+            self.log.info("Shutdown DB with commit-timer complete")
+        else:
+            self.log.info("Shutdown DB complete")
 
     def outbound(self, ev: IndraEvent):
         if ev.domain.startswith("$self/timer") is True:
