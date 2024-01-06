@@ -150,14 +150,29 @@ class IndraProcessCore:
         """send_worker (inbound) is active only in 'dual' mode"""
         self.log.debug(f"{self.name} started send_worker")
         if self.inbound_init() is True:
+            dt_corr= time.time()
+            start = time.time()
             while self.bActive is True:
+                dt_corr = time.time()-start
                 start = time.time()
-                ev = self.inbound()
+                ev = self.inbound()                
                 if ev is not None:
                     self.event_queue.put(ev)
                     if self.throttle > 0:
-                        if time.time() - start < self.throttle:
-                            time.sleep(self.throttle)
+                        dt = time.time() - start
+                        if dt < self.throttle:
+                            delay = self.throttle - dt
+                            if delay < 0.001:
+                                corr = dt_corr-self.throttle
+                                if corr>0:
+                                    if corr > delay:
+                                        time.sleep(0.0000001)
+                                    else:
+                                        time.sleep(delay-corr)
+                                else:
+                                    time.sleep(delay)
+                            else:
+                                time.sleep(delay)
         self.log.debug(f"{self.name} terminating send_worker")
         return
 
