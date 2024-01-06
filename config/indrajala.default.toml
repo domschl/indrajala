@@ -42,7 +42,7 @@ name = "indra_db.1"
 loglevel = "debug"
 subscriptions = ["mqtt/#"]
 database = "{{data_directory}}/db/indrajala.db"
-
+commit_delay_sec = 0.0
 
 [[async_http]]
 active = true
