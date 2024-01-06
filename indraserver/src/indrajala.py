@@ -135,7 +135,7 @@ def main_runner(main_logger, event_queue, modules):
                             dt=time.time()-last_msg
                             if dt_mean==0:
                                 dt_mean = dt
-                            avger = 10.0
+                            avger = 100.0
                             dt_mean = ((avger-1.0)*dt_mean +dt)/avger
                             if dt_mean>0.0:
                                 msg_sec = 1.0/dt_mean
@@ -156,10 +156,16 @@ def main_runner(main_logger, event_queue, modules):
                                 if time.time() - last_stat_output > 1.0:
                                     main_logger.info(f"ROUTE summary {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
                                     last_stat_output = time.time()
+                                    ev_stat=IndraEvent()
+                                    ev_stat.domain = '$sys/stat/msgpersec'
+                                    ev_stat.data_type = 'Float'
+                                    ev_stat.from_id = 'indrajala'
+                                    ev_stat.data = str(msg_sec)
+                                    event_queue.put(ev_stat)
                             modules[module]["send_queue"].put(ev)
                 else:
                     mod_found = True
-            if mod_found is False:
+            if mod_found is False and ev.from_id != 'indrajala':
                 main_logger.error(
                     f"Task {origin_module} not found, {origin_module} did not set from_id correctly"
                 )
