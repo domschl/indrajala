@@ -14,8 +14,10 @@ except ModuleNotFoundError:  # Python 3.10 and older:
 
 # XXX dev only
 import sys
+
 path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "indralib/src"
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "indralib/src",
 )
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
@@ -23,43 +25,44 @@ from indra_event import IndraEvent  # type: ignore
 
 class IndraServerLog:
     def __init__(self, name, event_queue, loglevel):
-        self.loglevels=['none', 'error', 'warning', 'info', 'debug']
+        self.loglevels = ["none", "error", "warning", "info", "debug"]
         if loglevel in self.loglevels:
             self.loglevel = self.loglevels.index(loglevel)
         else:
-            self.loglevel = self.loglevels.index('info')
-        self.name=name
-        self.event_queue=event_queue
+            self.loglevel = self.loglevels.index("info")
+        self.name = name
+        self.event_queue = event_queue
 
     def _send_log(self, level, msg):
-        self.ev=IndraEvent()
-        self.ev.data_type="string"
-        self.ev.from_id=self.name
-        self.ev.domain="$log/" + level
-        self.ev.data=msg
+        self.ev = IndraEvent()
+        self.ev.data_type = "string"
+        self.ev.from_id = self.name
+        self.ev.domain = "$log/" + level
+        self.ev.data = msg
         self.event_queue.put(self.ev)
-        
+
     def error(self, msg):
-        if self.loglevel>0:
+        if self.loglevel > 0:
             self._send_log("error", msg)
-    
+
     def warning(self, msg):
-        if self.loglevel>1:
+        if self.loglevel > 1:
             self._send_log("warning", msg)
-    
+
     def info(self, msg):
-        if self.loglevel>2:
+        if self.loglevel > 2:
             self._send_log("info", msg)
-    
+
     def debug(self, msg):
-        if self.loglevel>3:
+        if self.loglevel > 3:
             self._send_log("debug", msg)
 
 
-    
 class IndraProcessCore:
-    def __init__(self, event_queue, send_queue, config_data, signal_handler=True, mode="dual"):
-        """ Super-class that is used to instantiate the IndraProcess object
+    def __init__(
+        self, event_queue, send_queue, config_data, signal_handler=True, mode="dual"
+    ):
+        """Super-class that is used to instantiate the IndraProcess object
 
         There are three different modes, an IndraProcess can be implemented: 'single', 'dual' and
         'async'.
@@ -69,7 +72,7 @@ class IndraProcessCore:
         In 'async' mode, an async runtime is started and the instance needs to implent async_init(),
         async_outbound() and async_shutdown() [Example: async_http]
         """
-        self.name = config_data['name']
+        self.name = config_data["name"]
         self.log = IndraServerLog(self.name, event_queue, config_data["loglevel"])
         self.bActive = True
         self.send_queue = send_queue
@@ -77,57 +80,74 @@ class IndraProcessCore:
         self.config_data = config_data
         self.throttle = 0
 
-        if mode not in ['single', 'dual', 'async']:
-            self.log.error(f"Invalid mode={mode}, valid are 'single', 'dual', 'async', setting 'dual'")
-            mode = 'dual'
+        if mode not in ["single", "dual", "async"]:
+            self.log.error(
+                f"Invalid mode={mode}, valid are 'single', 'dual', 'async', setting 'dual'"
+            )
+            mode = "dual"
         self.mode = mode
-        
+
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
 
-        for sub in config_data['subscriptions']:
+        for sub in config_data["subscriptions"]:
             self.subscribe(sub)
-            
+
         self.log.info(f"IndraProcess {self.name} instantiated")
 
     def launcher(self):
-        if self.mode == 'dual':
-            self.sender = threading.Thread(target = self.send_worker, name=self.name+"_send_worker", args=[], daemon=True)
+        if self.mode == "dual":
+            self.sender = threading.Thread(
+                target=self.send_worker,
+                name=self.name + "_send_worker",
+                args=[],
+                daemon=True,
+            )
             self.sender.start()
-        if self.mode == 'async':
-            self.async_rt = threading.Thread(target = self.async_rt_worker, name=self.name+"_async_rt_worker", args=[], daemon=True)
+        if self.mode == "async":
+            self.async_rt = threading.Thread(
+                target=self.async_rt_worker,
+                name=self.name + "_async_rt_worker",
+                args=[],
+                daemon=True,
+            )
             self.async_rt.start()
         else:
-            self.receiver = threading.Thread(target = self.receive_worker, name=self.name+"_receive_worker", args=[], daemon=True)        
+            self.receiver = threading.Thread(
+                target=self.receive_worker,
+                name=self.name + "_receive_worker",
+                args=[],
+                daemon=True,
+            )
             self.receiver.start()
         self.log.info(f"Launcher of {self.name} started")
         try:
-            while (self.bActive):
+            while self.bActive:
                 time.sleep(0.1)
         except KeyboardInterrupt:
             pass
         self.log.info(f"Launcher of {self.name} signaled")
-        if self.mode == 'dual':
+        if self.mode == "dual":
             self.sender.join()
-        if self.mode == 'async':
+        if self.mode == "async":
             self.async_rt.join()
         else:
-            self.receiver.join()            
+            self.receiver.join()
         self.log.info(f"Launcher of {self.name} terminating...")
 
     def is_active(self):
-        """ Check if module is active """
+        """Check if module is active"""
         return self.bActive
 
     def signal_handler(self, sig, frame):
         sys.exit(0)
 
     def set_throttle(self, throttle):
-        """ set a minimum pause between messages received from outside """
+        """set a minimum pause between messages received from outside"""
         self.throttle = throttle
-            
+
     def send_worker(self):
-        """ send_worker (inbound) is active only in 'dual' mode """
+        """send_worker (inbound) is active only in 'dual' mode"""
         self.log.info(f"{self.name} started send_worker")
         if self.inbound_init() is True:
             while self.bActive is True:
@@ -136,21 +156,21 @@ class IndraProcessCore:
                 if ev is not None:
                     self.event_queue.put(ev)
                     if self.throttle > 0:
-                        if time.time()-start < self.throttle:
-                            time.sleep(self.throttle)        
+                        if time.time() - start < self.throttle:
+                            time.sleep(self.throttle)
         self.log.info(f"{self.name} terminating send_worker")
         return
 
     def inbound_init(self):
-        """ This function can optionally be overriden for init-purposes, needs to return True to start inbound(), active in 'dual' mode only """
+        """This function can optionally be overriden for init-purposes, needs to return True to start inbound(), active in 'dual' mode only"""
         return True
-    
+
     def inbound(self):
-        """ This function is overriden by the implementation: it acquires an object, active in 'dual' mode only"""
+        """This function is overriden by the implementation: it acquires an object, active in 'dual' mode only"""
         self.log.error(f"Process {self.name} doesn't override inbound function!")
         time.sleep(1)
         return None
-        
+
     def receive_worker(self):
         self.log.info(f"{self.name} started receive_worker")
         outbound_active = self.outbound_init()
@@ -161,26 +181,28 @@ class IndraProcessCore:
                 ev = None
             if ev is not None:
                 self.log.info(f"Received: {ev.domain}")
-                if ev.domain=="$cmd/quit":
+                if ev.domain == "$cmd/quit":
                     self.shutdown()
                     self.log.info(f"{self.name} terminating receive_worker...")
-                    self.bActive=False
+                    self.bActive = False
                     self.log.info(f"Terminating process {self.name}")
                     exit(0)
                 else:
                     if outbound_active is True:
                         self.outbound(ev)
                     else:
-                        self.log.warning(f"Ignoring cmd, inactive: {ev.domain} from {ev.from_id}")
+                        self.log.warning(
+                            f"Ignoring cmd, inactive: {ev.domain} from {ev.from_id}"
+                        )
         self.log.info(f"{self.name} termination of receive_worker")
         return
 
     def outbound_init(self):
-        """ This function can optionally be overriden for init-purposes, needs to return True to start outbound() """
+        """This function can optionally be overriden for init-purposes, needs to return True to start outbound()"""
         return True
-    
+
     def outbound(self, ev: IndraEvent):
-        """ This function receives an IndraEvent object that is to be transmitted outbound """
+        """This function receives an IndraEvent object that is to be transmitted outbound"""
         self.log.error(f"Process {self.name} doesn't override outbound function!")
 
     def async_rt_worker(self):
@@ -203,15 +225,15 @@ class IndraProcessCore:
                 await asyncio.sleep(0.05)
 
     async def async_shutdown(self):
-        """ This function is called in async mode just before shutdown """
+        """This function is called in async mode just before shutdown"""
         pass
 
     async def async_outbound(self):
-        """ This function receives an IndraEvent object in async mode that is to be transmitted outbound """
+        """This function receives an IndraEvent object in async mode that is to be transmitted outbound"""
         self.log.error(f"Process {self.name} doesn't override async_outbound function!")
-    
+
     def shutdown(self):
-        """ This function is called just before shutdown """
+        """This function is called just before shutdown"""
         pass
 
     def subscribe(self, domains):
