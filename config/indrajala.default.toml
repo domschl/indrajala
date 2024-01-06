@@ -1,6 +1,7 @@
 [indrajala]
 logdir = "log"
 max_loglevel_logfile = "debug"
+loglevel = "info"
 modules = ["pingpong", "indra_mqtt", "indra_db", "async_http"]
 data_directory = "~/.config/indrajala"
 
@@ -9,18 +10,21 @@ active = false
 name = "pingpong.1"
 loglevel = "debug"
 subscriptions = ["pingpong/#"]
+ping_frequency_hz = 1
 
 [[pingpong]]
 active = false
 name = "pingpong.2"
 loglevel = "debug"
 subscriptions = ["pingpong/#"]
+ping_frequency_hz = 1
 
 [[pingpong]]
 active = false
 name = "pingpong.3"
 loglevel = "debug"
 subscriptions = ["pingpong/#"]
+ping_frequency_hz = 1
 
 [[indra_mqtt]]
 active = false

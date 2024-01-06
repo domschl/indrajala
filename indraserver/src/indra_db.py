@@ -203,7 +203,7 @@ class IndraProcess(IndraProcessCore):
     def outbound(self, ev: IndraEvent):
         if ev.domain.startswith("$trx"):
             self.log.warning(f"$trx request not yet implemented: {ev.domain}")
-        elif ev.domain.startswith("mqtt"):
+        elif ev.domain.startswith("mqtt") or ev.domain.startswith("pingpong"):
             self._write_event(ev)
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")

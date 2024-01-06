@@ -48,7 +48,7 @@ def main_runner(main_logger, event_queue, modules):
             p = mp.Process(target=modules[module]["iproc"].launcher, args=[])
             p.start()
             modules[module]["process"] = p
-            main_logger.info(f"Module {module} started")
+            main_logger.debug(f"Module {module} started")
         else:
             main_logger.error(
                 f"Cannot start process for {module}, entry-point 'indra_process' not found!"
@@ -87,7 +87,7 @@ def main_runner(main_logger, event_queue, modules):
             if ev.domain == "$cmd/quit":
                 stop_timer = time.time() + 0.5
                 for module in modules:
-                    main_logger.info(
+                    main_logger.debug(
                         f"Sending termination cmd to {modules[module]['config_data']['name']}... "
                     )
                     modules[module]["send_queue"].put(ev)
@@ -97,14 +97,14 @@ def main_runner(main_logger, event_queue, modules):
                     for sub in sub_list:
                         # if sub not in subs[origin_module]:  # XXX different sessions can sub to the same thing, alternative would be reference counting...
                         subs[origin_module].append(sub)
-                        main_logger.info(f"Subscribing to {sub}")
+                        main_logger.debug(f"Subscribing to {sub} by {origin_module}")
             elif ev.domain == "$cmd/unsub":
                 sub_list = json.loads(ev.data)
                 if isinstance(sub_list, list) is True:
                     for sub in sub_list:
                         if sub in subs[origin_module]:
                             subs[origin_module].remove(sub)
-                            main_logger.info(f"Unsubscribing from {sub}")
+                            main_logger.debug(f"Unsubscribing from {sub} by {origin_module}")
             else:
                 main_logger.error(
                     f"Unknown command {ev.domain} received from {ev.from_id}, ignored."
@@ -124,14 +124,14 @@ def main_runner(main_logger, event_queue, modules):
                     f"Task {origin_module} not found, {origin_module} did not set from_id correctly"
                 )
 
-    main_logger.info("Waiting for all sub processes to terminate")
+    main_logger.debug("Waiting for all sub processes to terminate")
     # Wait for all processes to stop
     for module in modules:
-        main_logger.info(
+        main_logger.debug(
             f"Waiting for termination of {modules[module]['config_data']['name']}... "
         )
         modules[module]["process"].join()
-        main_logger.info(f"{modules[module]['config_data']['name']} OK.")
+        main_logger.debug(f"{modules[module]['config_data']['name']} OK.")
     main_logger.info("All sub processes terminated")
     exit(0)
 
@@ -162,7 +162,7 @@ def load_modules(main_logger, toml_data, args):
                 single_instance = False
             else:
                 sub_mods = [toml_data[module]]
-            main_logger.info(f"Activating module [{module}]")
+            main_logger.debug(f"Activating module [{module}]")
             try:
                 main_logger.debug(f"Importing {module}...")
                 m = importlib.import_module(module)
@@ -184,7 +184,7 @@ def load_modules(main_logger, toml_data, args):
                             toml_data[module][index]["name"] = f"{module}.{index}"
                             sub_mod["name"] = f"{module}.{index}"
                         name = sub_mod["name"]
-                        main_logger.info(f"Module {module} has no name, using {name}")
+                        main_logger.debug(f"Module {module} has no name, using {name}")
                     if sub_mod["active"] is True:
                         obj_name = sub_mod["name"]
                         ind = obj_name.rfind(".")
@@ -197,9 +197,9 @@ def load_modules(main_logger, toml_data, args):
                         modules[sub_mod["name"]]["iproc"] = m.IndraProcess(
                             event_queue, send_queue, sub_mod
                         )
-                        main_logger.info(f"Instantiation of {sub_mod['name']} success.")
+                        main_logger.debug(f"Instantiation of {sub_mod['name']} success.")
                     else:
-                        main_logger.info(f"Module instance {sub_mod['name']} is not active.")
+                        main_logger.debug(f"Module instance {sub_mod['name']} is not active.")
     return (event_queue, modules)
 
 
@@ -302,7 +302,7 @@ def close_daemon():
 if __name__ == "__main__":
     mp.set_start_method("spawn")
     main_logger, toml_data, args = read_config_arguments()
-    main_logger.info(f"indrajala: starting version {INDRAJALA_VERSION}")
+    main_logger.debug(f"indrajala: starting version {INDRAJALA_VERSION}")
     event_queue, modules = load_modules(main_logger, toml_data, args)
 
     signal.signal(signal.SIGINT, signal_handler)

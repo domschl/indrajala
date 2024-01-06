@@ -30,7 +30,7 @@ class IndraProcess(IndraProcessCore):
             self.mq_rcv_client.subscribe((sub, 0))
 
     def on_message(self, client, userdata, msg):
-        self.log.info(f"MQTT message received: {msg.topic}, {msg.payload}")
+        self.log.debug(f"MQTT message received: {msg.topic}, {msg.payload}")
         ev = IndraEvent()
         ev.domain = "mqtt/" + msg.topic
         ev.from_id = self.name
@@ -52,4 +52,4 @@ class IndraProcess(IndraProcessCore):
         return None
 
     def outbound(self, ev: IndraEvent):
-        self.log.info(f"Got a PingPong: {ev.domain}, sent by {ev.from_id}")
+        self.log.debug(f"Got a PingPong: {ev.domain}, sent by {ev.from_id}")
