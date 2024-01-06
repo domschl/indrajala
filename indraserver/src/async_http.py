@@ -60,21 +60,24 @@ class IndraProcess(IndraProcessCore):
     async def async_web_agent(self):
         runner = web.AppRunner(self.app)
         await runner.setup()
-        self.log.info("Starting web runner")
+        self.log.debug("Starting web runner")
         if self.tls is True:
-            self.log.info(f"TLS active, bind={self.bind_addresses}, port={self.port}")
+            self.log.debug(f"TLS active, bind={self.bind_addresses}, port={self.port}")
             # print(f"Webclient at: https://localhost:{self.port}")
             site = web.TCPSite(
                 runner, self.bind_addresses, self.port, ssl_context=self.ssl_context
             )
         else:
-            self.log.info(
+            self.log.debug(
                 f"TLS NOT active, bind={self.bind_addresses}, port={self.port}"
             )
             site = web.TCPSite(runner, self.bind_addresses, self.port)
             # print(f"Webclient at: http://localhost:{self.port}")
         await site.start()
-        self.log.info("Web server active")
+        if self.tls is True:
+            self.log.info(f"Web+Websockets active (TLS), bind={self.bind_addresses}, port={self.port}")
+        else
+            self.log.info(f"Web+Websockets active (no TLS), bind={self.bind_addresses}, port={self.port}")
         while self.bActive:
             await asyncio.sleep(0.1)
         self.log.info("Web server stopped")
@@ -88,9 +91,9 @@ class IndraProcess(IndraProcessCore):
 
         if ws not in self.ws_clients:
             self.ws_clients.append(ws)
-            self.log.info(f"New ws client {ws}! (clients: {len(self.ws_clients)})")
+            self.log.debug(f"New ws client {ws}! (clients: {len(self.ws_clients)})")
         else:
-            self.thread_log.info(
+            self.thread_log.debug(
                 f"Client already registered! (clients: {len(self.ws_clients)})"
             )
         index = self.ws_clients.index(ws)
@@ -103,13 +106,13 @@ class IndraProcess(IndraProcessCore):
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
                 # if msg.data is not None:
-                self.log.info("Client ws_dispatch: ws:{} msg:{}".format(ws, msg.data))
+                self.log.debug("Client ws_dispatch: ws:{} msg:{}".format(ws, msg.data))
                 try:
-                    self.log.info(f"Received: {msg.data}")
+                    self.log.debug(f"Received: {msg.data}")
                     # ev = IndraEvent()
                     ev = IndraEvent.from_json(msg.data)
                     ev.from_id = f"async_http/ws/{index}"
-                    self.log.info(f"Received (upd.): {ev.to_json()}")
+                    self.log.debug(f"Received (upd.): {ev.to_json()}")
                     self.send_queue.put(ev)
                 except Exception as e:
                     self.log.warning(f"WebClient sent invalid JSON: {msg.data}: {e}")
@@ -127,9 +130,9 @@ class IndraProcess(IndraProcessCore):
         return ws
 
     async def async_outbound(self, ev: IndraEvent):
-        self.log.info(f"WS outbound: {ev.domain} from {ev.from_id}")
+        self.log.debug(f"WS outbound: {ev.domain} from {ev.from_id}")
         for ws in self.ws_clients:
-            self.log.info(f"Sending to ws-client: {ws}")
+            self.log.debug(f"Sending to ws-client: {ws}")
             await ws.send_str(ev.to_json())
 
     async def async_shutdown(self):

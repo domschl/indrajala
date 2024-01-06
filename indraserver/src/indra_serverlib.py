@@ -120,13 +120,13 @@ class IndraProcessCore:
                 daemon=True,
             )
             self.receiver.start()
-        self.log.info(f"Launcher of {self.name} started")
+        self.log.debug(f"Launcher of {self.name} started")
         try:
             while self.bActive:
                 time.sleep(0.1)
         except KeyboardInterrupt:
             pass
-        self.log.info(f"Launcher of {self.name} signaled")
+        self.log.debug(f"Launcher of {self.name} signaled")
         if self.mode == "dual":
             self.sender.join()
         if self.mode == "async":
@@ -148,7 +148,7 @@ class IndraProcessCore:
 
     def send_worker(self):
         """send_worker (inbound) is active only in 'dual' mode"""
-        self.log.info(f"{self.name} started send_worker")
+        self.log.debug(f"{self.name} started send_worker")
         if self.inbound_init() is True:
             while self.bActive is True:
                 start = time.time()
@@ -158,7 +158,7 @@ class IndraProcessCore:
                     if self.throttle > 0:
                         if time.time() - start < self.throttle:
                             time.sleep(self.throttle)
-        self.log.info(f"{self.name} terminating send_worker")
+        self.log.debug(f"{self.name} terminating send_worker")
         return
 
     def inbound_init(self):
@@ -172,7 +172,7 @@ class IndraProcessCore:
         return None
 
     def receive_worker(self):
-        self.log.info(f"{self.name} started receive_worker")
+        self.log.debug(f"{self.name} started receive_worker")
         outbound_active = self.outbound_init()
         while self.bActive is True:
             try:
@@ -180,10 +180,10 @@ class IndraProcessCore:
             except queue.Empty:
                 ev = None
             if ev is not None:
-                self.log.info(f"Received: {ev.domain}")
+                self.log.debug(f"Received: {ev.domain}")
                 if ev.domain == "$cmd/quit":
                     self.shutdown()
-                    self.log.info(f"{self.name} terminating receive_worker...")
+                    self.log.debug(f"{self.name} terminating receive_worker...")
                     self.bActive = False
                     self.log.info(f"Terminating process {self.name}")
                     exit(0)
@@ -194,7 +194,7 @@ class IndraProcessCore:
                         self.log.warning(
                             f"Ignoring cmd, inactive: {ev.domain} from {ev.from_id}"
                         )
-        self.log.info(f"{self.name} termination of receive_worker")
+        self.log.debug(f"{self.name} termination of receive_worker")
         return
 
     def outbound_init(self):

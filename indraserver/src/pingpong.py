@@ -16,7 +16,7 @@ class IndraProcess(IndraProcessCore):
     def __init__(self, event_queue, send_queue, config_data):
         super().__init__(event_queue, send_queue, config_data)
         self.n = 0
-        self.set_throttle(1)  # Max 1 message per sec to inbound
+        self.set_throttle(1.0/config_data['ping_frequency_hz'])  # Max 1 message per sec to inbound
 
     def inbound(self):
         self.n = self.n + 1
