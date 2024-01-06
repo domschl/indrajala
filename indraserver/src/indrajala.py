@@ -197,9 +197,9 @@ def load_modules(main_logger, toml_data, args):
                         modules[sub_mod["name"]]["iproc"] = m.IndraProcess(
                             event_queue, send_queue, sub_mod
                         )
-                        main_logger.info(f"Instantiation of {module} success.")
+                        main_logger.info(f"Instantiation of {sub_mod['name']} success.")
                     else:
-                        main_logger.info(f"Module [{module}] is not active.")
+                        main_logger.info(f"Module instance {sub_mod['name']} is not active.")
     return (event_queue, modules)
 
 
