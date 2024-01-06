@@ -1,6 +1,7 @@
 import sqlite3
 import time
 import json
+import threading
 
 # XXX dev only
 import sys
@@ -22,6 +23,23 @@ class IndraProcess(IndraProcessCore):
         self.set_throttle(1)  # Max 1 message per sec to inbound
         self.database = os.path.expanduser(config_data["database"])
         self.database_directory = os.path.dirname(self.database)
+        self.last_commit = 0
+        self.commit_delay_sec = config_data['commit_delay_sec']
+        self.bUncommitted = False
+        self.timer_thread = None
+        if self.commit_delay_sec > 0.0:
+            self.commit_watchdog()
+
+    def commit_watchdog(self):
+        if self.bActive:
+            ev=IndraEvent()
+            ev.domain='$self/timer'
+            self.send_queue.put(ev)
+            self.timer_thread = threading.Timer(self.commit_delay_sec, self.commit_watchdog).start()
+            # self.timer_thread.daemon = True
+            # self.timer_thread.start()
+        else:
+            self.log.info("Timer terminated")
 
     # def inbound_init(self):
     #     return True
@@ -93,6 +111,12 @@ class IndraProcess(IndraProcessCore):
               """
         try:
             self.cur.execute(cmd, vars(ev))
+            if time.time() - self.last_commit > self.commit_delay_sec:
+                self.conn.commit()
+                self.bUncommitted = False
+            else:
+                self.bUncommitted = True
+            self.last_commit = time.time()
         except sqlite3.Error as e:
             self.log.error(f"Failed to write event-record: {e}")
             return False
@@ -198,10 +222,20 @@ class IndraProcess(IndraProcessCore):
     def shutdown(self):
         seq_no = self._write_last_seq_no()
         self.log.info(f"Closing database, last seq_no={seq_no}")
+        self.conn.commit()
         self.conn.close()
+        if self.timer_thread is not None:
+            self.log.info("Joining timer:")
+            self.timer_thread.join()
+            self.log.info("Timer joined")
 
     def outbound(self, ev: IndraEvent):
-        if ev.domain.startswith("$trx"):
+        if ev.domain.startswith("$self/timer") is True:
+            if self.bUncommitted is True:
+                self.conn.commit()
+                self.bUncommitted = False
+                self.log.debug("Timer commit")
+        elif ev.domain.startswith("$trx"):
             self.log.warning(f"$trx request not yet implemented: {ev.domain}")
         elif ev.domain.startswith("mqtt") or ev.domain.startswith("pingpong"):
             self._write_event(ev)

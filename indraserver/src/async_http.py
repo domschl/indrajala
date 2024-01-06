@@ -76,7 +76,7 @@ class IndraProcess(IndraProcessCore):
         await site.start()
         if self.tls is True:
             self.log.info(f"Web+Websockets active (TLS), bind={self.bind_addresses}, port={self.port}")
-        else
+        else:
             self.log.info(f"Web+Websockets active (no TLS), bind={self.bind_addresses}, port={self.port}")
         while self.bActive:
             await asyncio.sleep(0.1)

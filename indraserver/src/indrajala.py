@@ -57,7 +57,23 @@ def main_runner(main_logger, event_queue, modules):
     # Main event loop
     terminate_main_runner = False
     stop_timer = None
+    last_msg = time.time()
+    dt_mean = 0
+    stat_timer = time.time()
+    high_water = 10
+    unprocessed_items = 0
+    last_stat_output = time.time()
     while terminate_main_runner is False:
+        if time.time() - stat_timer > 1.0:
+            unprocessed_items = event_queue.qsize()
+            if unprocessed_items > high_water:
+                main_logger.warning(f"Main event loop overloaded: queue entries: {unprocessed_items}/{high_water}")
+            for module in modules:
+                qs = modules[module]['send_queue'].qsize()
+                unprocessed_items = unprocessed_items + qs
+                if qs > high_water:
+                    main_logger.warning(f"Module {module} overloaded: queue entries: {qs}/{high_water}")
+            stat_timer = time.time()
         ev = None
         while stop_timer is not None and event_queue.empty():
             if time.time() > stop_timer:
@@ -115,7 +131,24 @@ def main_runner(main_logger, event_queue, modules):
                 if module != origin_module:
                     for sub in subs[module]:
                         if IndraEvent.mqcmp(ev.domain, sub) is True:
-                            main_logger.info(f"ROUTE {ev.domain} to {module}")
+                            dt=time.time()-last_msg
+                            if dt_mean==0:
+                                dt_mean = dt
+                            avger = 10.0
+                            dt_mean = ((avger-1.0)*dt_mean +dt)/avger
+                            if dt_mean>0.0:
+                                msg_sec = 1.0/dt_mean
+                            else:
+                                msg_sec =0.0
+                            last_msg = time.time()
+                            if msg_sec < 10.0:
+                                last_stat_output = time.time()
+                                main_logger.info(f"ROUTE {ev.domain} to {module}, {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
+                            else:
+                                main_logger.debug(f"ROUTE {ev.domain} to {module}, {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
+                                if time.time() - last_stat_output > 1.0:
+                                    main_logger.info(f"ROUTE summary {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
+                                    last_stat_output = time.time()
                             modules[module]["send_queue"].put(ev)
                 else:
                     mod_found = True

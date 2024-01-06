@@ -20,11 +20,11 @@ class IndraProcess(IndraProcessCore):
 
     def inbound(self):
         self.n = self.n + 1
-        self.log.info(f"Padam! {self.n}")
+        self.log.debug(f"Padam! {self.n}")
         ev = IndraEvent()
         ev.from_id = self.name
         ev.domain = f"pingpong/{self.name}/{self.n}"
         return ev
 
     def outbound(self, ev: IndraEvent):
-        self.log.info(f"Got a PingPong: {ev.domain}, sent by {ev.from_id}")
+        self.log.debug(f"Got a PingPong: {ev.domain}, sent by {ev.from_id}")
