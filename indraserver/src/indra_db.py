@@ -40,7 +40,6 @@ class IndraProcess(IndraProcessCore):
             self.commit_timer_thread.start()
 
     def commit_watchdog(self):
-        print("Exec thread start")
         while self.bActive and self.commit_delay_sec > 0.0:
             time.sleep(self.commit_delay_sec)
             ev=IndraEvent()

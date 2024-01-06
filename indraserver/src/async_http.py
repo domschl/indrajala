@@ -131,9 +131,11 @@ class IndraProcess(IndraProcessCore):
 
     async def async_outbound(self, ev: IndraEvent):
         self.log.debug(f"WS outbound: {ev.domain} from {ev.from_id}")
+        # XXX routing!
         for ws in self.ws_clients:
             self.log.debug(f"Sending to ws-client: {ws}")
             await ws.send_str(ev.to_json())
 
     async def async_shutdown(self):
+        # XXX Cleanup!
         pass
