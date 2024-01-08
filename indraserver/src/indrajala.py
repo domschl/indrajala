@@ -147,12 +147,12 @@ def main_runner(main_logger, event_queue, modules):
                                     main_logger.info("Switching back to single-message ROUTE infos, due to reduced message volume")
                                     overview_mode = False
                                 last_stat_output = time.time()
-                                main_logger.info(f"ROUTE {ev.domain} to {module}, {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
+                                main_logger.info(f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}")
                             else:
                                 if overview_mode is False:
                                     overview_mode=True
                                     main_logger.info("Switching to ROUTE summary mode for routing, message volume > 10msg/sec")
-                                main_logger.debug(f"ROUTE {ev.domain} to {module}, {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
+                                main_logger.debug(f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}")
                                 if time.time() - last_stat_output > 1.0:
                                     main_logger.info(f"ROUTE summary {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
                                     last_stat_output = time.time()
