@@ -246,8 +246,25 @@ class IndraProcess(IndraProcessCore):
                 self.bUncommitted = False
                 self.log.debug("Timer commit")
         elif ev.domain.startswith("$trx"):
-            self.log.warning(f"$trx request not yet implemented: {ev.domain}")
-        elif ev.domain.startswith("mqtt") or ev.domain.startswith("pingpong"):
+            self.trx(ev)
+        elif ev.domain.startswith("$event"):
             self._write_event(ev)
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
+
+    def trx(self, ev: IndraEvent):
+        pass
+        # entity, location, event, session
+
+        # $trx/entity/user/logon/userid
+        # $trx/entity/user/create/userid
+        # $trx/entity/user/delete/userid
+        # $trx/entity/user/rename/userid
+        # $trx/entity/user/read/userid
+
+        # $trx/location/read/location-id
+        # $trx/location/create/location-id
+        # $trx/location/delete/location-id
+        # $trx/location/read/location-id
+
+        # $trx/session/read/session-id
