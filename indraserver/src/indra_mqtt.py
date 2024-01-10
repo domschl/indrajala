@@ -148,3 +148,37 @@ class IndraProcess(IndraProcessCore):
                 self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
                 self.event_queue.put(ev)
 
+    def ha(self, topic, message):
+        self.log.debug(f"inbound-parser-ha: {topic}, {message}")
+        repls = [('pressure_nn', 'pressure-nn'), ('power_consumption', 'power-consumption'),
+                 ('total_energy', 'total-energy'), ('download_throughput', 'download-throughput'),
+                 ('electric_current', 'electric-current'), ('upload_throughput', 'upload-throughput'),
+                 ('gamma_1min_avg', 'gamma-1min-avg'), ('gamma_10min_avg', 'gamma-10min-avg'),
+                 ('unit_illuminance', 'unit-illuminance'), ('current_illumination', 'current-illumination'),
+                 ('energy_counter', 'energy-counter'),]
+        tp = topic
+        for rep in repls:
+            fr = rep[0]
+            to = rep[1]
+            tp = tp.replace(fr, to)
+        tpi = tp.split('/')
+        if len(tpi) == 4:
+            sbi = tpi[2].split('_')
+            sens = sbi[-1]
+            dev = "_".join(sbi[:-1])
+            self.log.info(f"dev: {dev}, type: {sens} = {message}")
+            found = False
+            if found is True:
+                ev = IndraEvent()
+                ev.domain = f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
+                ev.from_id = f"{self.name}/{topic}"
+                ev.data_type = o_data_type
+                ev.to_scope = "world"
+                try:
+                    ev.data = json.dumps(float(message))
+                except Exception as e:
+                    self.log.warning(f"Failed to convert data {message} for {topic}")
+                    return
+                self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
+                self.event_queue.put(ev)
+
