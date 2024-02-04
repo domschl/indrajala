@@ -84,7 +84,8 @@ class IndraProcess(IndraProcessCore):
                 ev.data = msg.payload
                 self.event_queue.put(ev)
         for sub in self.inbound_parsers:
-            self.inbound_parsers[sub](msg.topic, msg.payload)
+            if IndraEvent.mqcmp(msg.topic, sub) is True:
+                self.inbound_parsers[sub](msg.topic, msg.payload)
 
     def inbound_init(self):
         self.mq_client = mq.Client()
@@ -115,7 +116,7 @@ class IndraProcess(IndraProcessCore):
 
     def muwerk(self, topic, message):
         cont_locs = {
-            "omu/enviro-master/#": ("climate", "home-theresienstr"),
+            "omu/enviro-master/#": ("climate", "home"),
         }
         meass = {
             "temperature": ("temperature", "number/float/temperature/celsius"),
@@ -157,34 +158,43 @@ class IndraProcess(IndraProcessCore):
                 except Exception as e:
                     self.log.warning(f"Failed to convert data {message} for {topic}")
                     return
-                self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
+                self.log.info(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
                 self.event_queue.put(ev)
-<<<<<<< HEAD
-=======
+            else:
+                self.log.debug(f"Not found: {message}, {topic}")
 
     def ha(self, topic, message):
         self.log.debug(f"inbound-parser-ha: {topic}, {message}")
-        repls = [('pressure_nn', 'pressure-nn'), ('power_consumption', 'power-consumption'),
-                 ('total_energy', 'total-energy'), ('download_throughput', 'download-throughput'),
-                 ('electric_current', 'electric-current'), ('upload_throughput', 'upload-throughput'),
-                 ('gamma_1min_avg', 'gamma-1min-avg'), ('gamma_10min_avg', 'gamma-10min-avg'),
-                 ('unit_illuminance', 'unit-illuminance'), ('current_illumination', 'current-illumination'),
-                 ('energy_counter', 'energy-counter'),]
+        repls = [
+            ("pressure_nn", "pressure-nn"),
+            ("power_consumption", "power-consumption"),
+            ("total_energy", "total-energy"),
+            ("download_throughput", "download-throughput"),
+            ("electric_current", "electric-current"),
+            ("upload_throughput", "upload-throughput"),
+            ("gamma_1min_avg", "gamma-1min-avg"),
+            ("gamma_10min_avg", "gamma-10min-avg"),
+            ("unit_illuminance", "unit-illuminance"),
+            ("current_illumination", "current-illumination"),
+            ("energy_counter", "energy-counter"),
+        ]
         tp = topic
         for rep in repls:
             fr = rep[0]
             to = rep[1]
             tp = tp.replace(fr, to)
-        tpi = tp.split('/')
+        tpi = tp.split("/")
         if len(tpi) == 4:
-            sbi = tpi[2].split('_')
+            sbi = tpi[2].split("_")
             sens = sbi[-1]
             dev = "_".join(sbi[:-1])
-            self.log.info(f"dev: {dev}, type: {sens} = {message}")
+            # self.log.info(f"dev: {dev}, type: {sens} = {message}")
             found = False
             if found is True:
                 ev = IndraEvent()
-                ev.domain = f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
+                ev.domain = (
+                    f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
+                )
                 ev.from_id = f"{self.name}/{topic}"
                 ev.data_type = o_data_type
                 ev.to_scope = "world"
@@ -195,5 +205,3 @@ class IndraProcess(IndraProcessCore):
                     return
                 self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
                 self.event_queue.put(ev)
-
->>>>>>> cbb2a09ab1d3f6f94502395e8c77e7733e9e026e
