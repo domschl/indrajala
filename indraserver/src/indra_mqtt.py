@@ -121,6 +121,8 @@ class IndraProcess(IndraProcessCore):
         meass = {
             "temperature": ("temperature", "number/float/temperature/celsius"),
             "humidity": ("humidity", "number/float/humidity/percentage"),
+            "illuminance": ("illuminance", "number/float/illuminance/lux"),
+            "pressureNN": ("pressure", "number/float/pressure/hpa"),
         }
         self.log.debug(f"inbound-parser-muwerk: {topic}, {message}")
         if IndraEvent.mqcmp(topic, "omu/+/+/sensor/+"):

@@ -24,10 +24,9 @@ class IndraProcess(IndraProcessCore):
         self.database = os.path.expanduser(config_data["database"])
         self.database_directory = os.path.dirname(self.database)
         self.last_commit = 0
-        self.commit_delay_sec = config_data['commit_delay_sec']
+        self.commit_delay_sec = config_data["commit_delay_sec"]
         self.bUncommitted = False
         self.commit_timer_thread = None
-
 
     def start_commit_timer(self):
         if self.commit_delay_sec > 0.0:
@@ -42,8 +41,8 @@ class IndraProcess(IndraProcessCore):
     def commit_watchdog(self):
         while self.bActive and self.commit_delay_sec > 0.0:
             time.sleep(self.commit_delay_sec)
-            ev=IndraEvent()
-            ev.domain="$self/timer"
+            ev = IndraEvent()
+            ev.domain = "$self/timer"
             self.send_queue.put(ev)
         self.log.info("Timer thread terminated")
 
@@ -253,7 +252,90 @@ class IndraProcess(IndraProcessCore):
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
 
     def trx(self, ev: IndraEvent):
-        pass
+        if ev.domain.startswith("$trx/db"):
+            if ev.domain == "$trx/db/req/history":
+                try:
+                    rq_data = json.loads(ev.data)
+                except Exception as e:
+                    self.log.error(
+                        f"Invalid $trx/db/req/history from {ev.from_id}: {ev.data}"
+                    )
+                    return
+
+                rq_fields = [
+                    "domain",
+                    # "time_jd_start",
+                    # "time_jd_end",
+                    # "limit",
+                    # "data_type",
+                    "mode",
+                ]
+                valid = True
+                inv_err = ""
+                for field in rq_fields:
+                    if field not in rq_data:
+                        valid = False
+                        inv_err = f"missing: {field}"
+                        break
+                if valid is False:
+                    self.log.error(
+                        f"$trx/db/req/history from {ev.from_id} failed, request missing field {inv_err}"
+                    )
+                    return
+                if rq_data["mode"] not in ["Sample", "Sequential"]:
+                    self.log.error(
+                        f"$trx/db/req/history from {ev.from_id} failed, invalid mode {rq_data['mode']}"
+                    )
+                    return
+                if "%" in rq_data["domain"]:
+                    op1 = "LIKE"
+                else:
+                    op1 = "="
+                sql_cmd = f"SELECT id, time_jd_start, data FROM (SELECT * FROM indra_events WHERE domain {op1} ?"  #  AND data_type {op2} ?)"
+                q_params = [rq_data["domain"]]
+                if (
+                    "data_type" in rq_data
+                    and rq_data["data_type"] is not None
+                    and len(rq_data["data_type"]) > 0
+                ):
+                    if "%" in rq_data["data_type"]:
+                        op2 = "LIKE"
+                    else:
+                        op2 = "="
+                    q_params.append(rq_data["data_type"])
+                    sql_cmd += " AND data_type {po2} ?"
+                if "time_jd_start" in rq_data and rq_data["time_jd_start"] is not None:
+                    q_params.append(rq_data["time_jd_start"])
+                    sql_cmd += " AND time_jd_start >= ?"
+                if "time_jd_end" in rq_data and rq_data["time_jd_end"] is not None:
+                    q_params.append(rq_data["time_jd_end"])
+                    sql_cmd += " AND time_jd_end <= ?"
+                if "limit" in rq_data and rq_data["limit"] is not None:
+                    q_params.append(rq_data["limit"])
+                    if rq_data["mode"] == "Sample":
+                        sql_cmd += " ORDER BY RANDOM() LIMIT ?)"
+                    elif rq_data["mode"] == "Sequential":
+                        sql_cmd += " LIMIT ?)"
+                    else:
+                        self.log.error(
+                            f"Failure, unexpected mode {rq_data['mode']}, internal error, rq from {ev.from_id}"
+                        )
+                sql_cmd = +" ORDER BY time_jd_start ASC)"
+                self.cur.execute(sql_cmd, (rq_data["domain"], rq_data["data_type"]))
+                result = self.cur.fetchall()
+                print(result)
+                self.log.info(f"{len(result)} results")
+            else:
+                self.log.error(f"Not (yet!) implemented: {ev.domain}")
+        elif ev.domain.startswith("$trx/entity"):
+            self.log.error(f"Not (yet!) implemented: {ev.domain}")
+        elif ev.domain.startswith("$trx/location"):
+            self.log.error(f"Not (yet!) implemented: {ev.domain}")
+        elif ev.domain.startswith("$trx/session"):
+            self.log.error(f"Not (yet!) implemented: {ev.domain}")
+        else:
+            self.log.error(f"Not implemented: {ev.domain}, invalid request")
+
         # entity, location, event, session
 
         # $trx/entity/user/logon/userid
