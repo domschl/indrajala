@@ -64,16 +64,33 @@ def main_runner(main_logger, event_queue, modules):
     unprocessed_items = 0
     last_stat_output = time.time()
     overview_mode = False
+    qsize_implemented = True
     while terminate_main_runner is False:
         if time.time() - stat_timer > 1.0:
-            unprocessed_items = event_queue.qsize()
+            if qsize_implemented:
+                try:
+                    unprocessed_items = event_queue.qsize()
+                except Exception as e:
+                    main_logger.error(
+                        "Your current platform doesn't support `qsize()` for multiprocessing queues, perf statistics will be invalid!"
+                    )
+                    qsize_implemented = False
+            else:
+                unprocessed_items = 0
             if unprocessed_items > high_water:
-                main_logger.warning(f"Main event loop overloaded: queue entries: {unprocessed_items}/{high_water}")
+                main_logger.warning(
+                    f"Main event loop overloaded: queue entries: {unprocessed_items}/{high_water}"
+                )
             for module in modules:
-                qs = modules[module]['send_queue'].qsize()
+                if qsize_implemented is True:
+                    qs = modules[module]["send_queue"].qsize()
+                else:
+                    qs = 0
                 unprocessed_items = unprocessed_items + qs
                 if qs > high_water:
-                    main_logger.warning(f"Module {module} overloaded: queue entries: {qs}/{high_water}")
+                    main_logger.warning(
+                        f"Module {module} overloaded: queue entries: {qs}/{high_water}"
+                    )
             stat_timer = time.time()
         ev = None
         while stop_timer is not None and event_queue.empty():
@@ -121,7 +138,9 @@ def main_runner(main_logger, event_queue, modules):
                     for sub in sub_list:
                         if sub in subs[origin_module]:
                             subs[origin_module].remove(sub)
-                            main_logger.debug(f"Unsubscribing from {sub} by {origin_module}")
+                            main_logger.debug(
+                                f"Unsubscribing from {sub} by {origin_module}"
+                            )
             else:
                 main_logger.error(
                     f"Unknown command {ev.domain} received from {ev.from_id}, ignored."
@@ -132,40 +151,50 @@ def main_runner(main_logger, event_queue, modules):
                 if module != origin_module:
                     for sub in subs[module]:
                         if IndraEvent.mqcmp(ev.domain, sub) is True:
-                            dt=time.time()-last_msg
-                            if dt_mean==0:
+                            dt = time.time() - last_msg
+                            if dt_mean == 0:
                                 dt_mean = dt
                             avger = 100.0
-                            dt_mean = ((avger-1.0)*dt_mean +dt)/avger
-                            if dt_mean>0.0:
-                                msg_sec = 1.0/dt_mean
+                            dt_mean = ((avger - 1.0) * dt_mean + dt) / avger
+                            if dt_mean > 0.0:
+                                msg_sec = 1.0 / dt_mean
                             else:
-                                msg_sec =0.0
+                                msg_sec = 0.0
                             last_msg = time.time()
                             if msg_sec < 10.0:
                                 if overview_mode is True:
-                                    main_logger.info("Switching back to single-message ROUTE infos, due to reduced message volume")
+                                    main_logger.info(
+                                        "Switching back to single-message ROUTE infos, due to reduced message volume"
+                                    )
                                     overview_mode = False
                                 last_stat_output = time.time()
-                                main_logger.info(f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}")
+                                main_logger.info(
+                                    f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}"
+                                )
                             else:
                                 if overview_mode is False:
-                                    overview_mode=True
-                                    main_logger.info("Switching to ROUTE summary mode for routing, message volume > 10msg/sec")
-                                main_logger.debug(f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}")
+                                    overview_mode = True
+                                    main_logger.info(
+                                        "Switching to ROUTE summary mode for routing, message volume > 10msg/sec"
+                                    )
+                                main_logger.debug(
+                                    f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}"
+                                )
                                 if time.time() - last_stat_output > 1.0:
-                                    main_logger.info(f"ROUTE summary {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}")
+                                    main_logger.info(
+                                        f"ROUTE summary {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}"
+                                    )
                                     last_stat_output = time.time()
-                                    ev_stat=IndraEvent()
-                                    ev_stat.domain = '$sys/stat/msgpersec'
-                                    ev_stat.data_type = 'Float'
-                                    ev_stat.from_id = 'indrajala'
+                                    ev_stat = IndraEvent()
+                                    ev_stat.domain = "$sys/stat/msgpersec"
+                                    ev_stat.data_type = "Float"
+                                    ev_stat.from_id = "indrajala"
                                     ev_stat.data = str(msg_sec)
                                     event_queue.put(ev_stat)
                             modules[module]["send_queue"].put(ev)
                 else:
                     mod_found = True
-            if mod_found is False and ev.from_id != 'indrajala':
+            if mod_found is False and ev.from_id != "indrajala":
                 main_logger.error(
                     f"Task {origin_module} not found, {origin_module} did not set from_id correctly"
                 )
@@ -243,9 +272,13 @@ def load_modules(main_logger, toml_data, args):
                         modules[sub_mod["name"]]["iproc"] = m.IndraProcess(
                             event_queue, send_queue, sub_mod
                         )
-                        main_logger.debug(f"Instantiation of {sub_mod['name']} success.")
+                        main_logger.debug(
+                            f"Instantiation of {sub_mod['name']} success."
+                        )
                     else:
-                        main_logger.debug(f"Module instance {sub_mod['name']} is not active.")
+                        main_logger.debug(
+                            f"Module instance {sub_mod['name']} is not active."
+                        )
     return (event_queue, modules)
 
 

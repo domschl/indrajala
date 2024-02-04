@@ -27,34 +27,42 @@ class IndraProcess(IndraProcessCore):
         self.outbound_prefix = config_data["outbound_prefix"]
         parsers = config_data["inbound_parsers"]
         self.inbound_parsers = {}
-        # XXX: import externally defined parsers at some point
+        # XXX: import externaly defined parsers at some point
         for pars in parsers:
             if len(pars) != 2:
-                self.log.error(f'Invalid inbound parser description, required length is 2: "[mqtt-wildcard, parser-name], got len={len(pars)}: {pars}')
+                self.log.error(
+                    f'Invalid inbound parser description, required length is 2: "[mqtt-wildcard, parser-name], got len={len(pars)}: {pars}'
+                )
                 continue
             else:
                 m_op = getattr(self, pars[1], None)
                 if callable(m_op) is False:
-                    self.log.error(f"Inbound parser method {pars[1]} is not known, {pars} is invalid")
+                    self.log.error(
+                        f"Inbound parser method {pars[1]} is not known, {pars} is invalid"
+                    )
                     continue
                 else:
-                    self.inbound_parsers[pars[0]]=m_op
+                    self.inbound_parsers[pars[0]] = m_op
                     self.log.info(f"Added inbound parser {pars[0]} -> {pars[1]}")
         parsers = config_data["outbound_parsers"]
         self.outbound_parsers = {}
         for pars in parsers:
             if len(pars) != 2:
-                self.log.error(f'Invalid outbound parser description, required length is 2: "[mqtt-wildcard, parser-name], got len={len(pars)}: {pars}')
+                self.log.error(
+                    f'Invalid outbound parser description, required length is 2: "[mqtt-wildcard, parser-name], got len={len(pars)}: {pars}'
+                )
                 continue
             else:
                 m_op = getattr(self, pars[1], None)
                 if callable(m_op) is False:
-                    self.log.error(f"Outbound parser method {pars[1]} is not known, {pars} is invalid")
+                    self.log.error(
+                        f"Outbound parser method {pars[1]} is not known, {pars} is invalid"
+                    )
                     continue
                 else:
-                    self.outbound_parsers[pars[0]]=pars[1]
+                    self.outbound_parsers[pars[0]] = pars[1]
                     self.log.info(f"Added outbound parser {pars[0]} -> {pars[1]}")
-                    
+
         self.bConnectActive = False
 
     def on_connect(self, client, userdata, flags, rc):
@@ -82,9 +90,7 @@ class IndraProcess(IndraProcessCore):
         self.mq_client = mq.Client()
         self.mq_client.on_connect = self.on_connect
         self.mq_client.on_message = self.on_message
-        self.mq_client.connect(
-            self.mqtt_server, self.mqtt_port, self.mqtt_keepalive
-        )
+        self.mq_client.connect(self.mqtt_server, self.mqtt_port, self.mqtt_keepalive)
         return True
 
     def inbound(self):
@@ -94,11 +100,13 @@ class IndraProcess(IndraProcessCore):
 
     def outbound(self, ev: IndraEvent):
         if self.bConnectActive is True:
-            topic = self.outbound_prefix + '/' + ev.domain
+            topic = self.outbound_prefix + "/" + ev.domain
             msg = ev.data
-            self.mq_client.publish(topic = topic, payload = msg )
+            self.mq_client.publish(topic=topic, payload=msg)
         else:
-            self.log.warning(f"Publish-request from {ev.from_id}, {ev.domain}, MQTT connection not established!")
+            self.log.warning(
+                f"Publish-request from {ev.from_id}, {ev.domain}, MQTT connection not established!"
+            )
 
     def shutdown(self):
         if self.bConnectActive is True:
@@ -106,16 +114,18 @@ class IndraProcess(IndraProcessCore):
             self.log.info("MQTT connection closed")
 
     def muwerk(self, topic, message):
-        cont_locs = {'omu/enviro-master/#': ('climate', 'home-theresienstr'),
-                }
-        meass = {'temperature': ('temperature', 'number/float/temperature/celsius'),
-                 'humidity': ('humidity', 'number/float/humidity/percentage'),
-                 }
+        cont_locs = {
+            "omu/enviro-master/#": ("climate", "home-theresienstr"),
+        }
+        meass = {
+            "temperature": ("temperature", "number/float/temperature/celsius"),
+            "humidity": ("humidity", "number/float/humidity/percentage"),
+        }
         self.log.debug(f"inbound-parser-muwerk: {topic}, {message}")
         if IndraEvent.mqcmp(topic, "omu/+/+/sensor/+"):
             self.log.debug(f"Checking sensor: {topic}, {message}")
-            ti = topic.split('/')
-            if len(ti)!=5:
+            ti = topic.split("/")
+            if len(ti) != 5:
                 self.log.error(f"Internal parser assumption failure on {topic}")
                 return
             device = ti[1]
@@ -136,7 +146,9 @@ class IndraProcess(IndraProcessCore):
                     break
             if found is True:
                 ev = IndraEvent()
-                ev.domain = f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
+                ev.domain = (
+                    f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
+                )
                 ev.from_id = f"{self.name}/{topic}"
                 ev.data_type = o_data_type
                 ev.to_scope = "world"
@@ -147,4 +159,3 @@ class IndraProcess(IndraProcessCore):
                     return
                 self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
                 self.event_queue.put(ev)
-
