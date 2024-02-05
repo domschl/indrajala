@@ -364,7 +364,7 @@ class IndraClient:
         return True
 
     async def get_history(
-        self, domain, start_time=None, end_time=None, sample_size=None
+        self, domain, start_time=None, end_time=None, sample_size=None, mode="Sample"
     ):
         """Get history of domain
 
@@ -376,7 +376,7 @@ class IndraClient:
             "time_jd_end": end_time,
             "limit": sample_size,
             # "data_type": "number/float%",
-            "mode": "Sample",
+            "mode": mode,
         }
         ie = IndraEvent()
         ie.domain = "$trx/db/req/history"
@@ -388,9 +388,9 @@ class IndraClient:
         return await self.send_event(ie)
 
     async def get_wait_history(
-        self, domain, start_time, end_time=None, sample_size=None
+        self, domain, start_time, end_time=None, sample_size=None, mode="Sample"
     ):
-        future = await self.get_history(domain, start_time, end_time, sample_size)
+        future = await self.get_history(domain, start_time, end_time, sample_size, mode)
         hist_result = await future
         return json.loads(hist_result.data)
 
@@ -399,14 +399,17 @@ class IndraClient:
         ie = IndraEvent()
         ie.domain = "$trx/db/req/last"
         ie.from_id = "ws/python"
-        ie.data_type = "string"
-        ie.data = domain
+        ie.data_type = "json/reqlast"
+        ie.data = json.dumps({"domain": domain})
         return await self.send_event(ie)
 
     async def get_wait_last_event(self, domain):
         future = await self.get_last_event(domain)
         last_result = await future
-        return json.loads(last_result.data)
+        if last_result.data is not None and last_result.data != "":
+            return IndraEvent.from_json(last_result.data)
+        else:
+            return None
 
     async def get_unique_domains(self, domain=None, data_type=None):
         """Get unique domains"""

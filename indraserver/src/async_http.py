@@ -2,6 +2,7 @@ import asyncio
 import ssl
 import aiohttp
 from aiohttp import web
+import json
 
 # XXX dev only
 import sys
@@ -102,7 +103,9 @@ class IndraProcess(IndraProcessCore):
             self.ws_clients[client_address] = {
                 "ws": ws,
                 "from_id": None,
-                "session_id": None,
+                "user_id": None,
+                "session_ids": [],
+                "subs": [],
             }
             self.log.info(
                 f"New ws client {client_address}! (num clients: {len(self.ws_clients)})"
@@ -125,6 +128,16 @@ class IndraProcess(IndraProcessCore):
                     self.log.info(
                         f"Received (upd.): {client_address}: {ev.from_id}->{ev.domain}"
                     )
+                    if ev.domain == "$cmd/subs":
+                        new_subs = json.loads(ev.data)
+                        for new_sub in new_subs:
+                            self.ws_clients[client_address]["subs"].append(
+                                new_sub
+                            )  # allow dups
+                    elif ev.domain == "$cmd/unsubs":
+                        new_unsubs = json.loads(ev.data)
+                        for new_unsub in new_unsubs:
+                            self.ws_clients[client_address]["subs"].remove(new_unsub)
                     self.event_queue.put(ev)
                 except Exception as e:
                     self.log.warning(f"WebClient sent invalid JSON: {msg.data}: {e}")
@@ -142,13 +155,21 @@ class IndraProcess(IndraProcessCore):
 
     async def async_outbound(self, ev: IndraEvent):
         self.log.debug(f"WS outbound: {ev.domain} from {ev.from_id}")
-        # XXX routing!
         for client_address in self.ws_clients:
             ws = self.ws_clients[client_address]["ws"]
-            self.log.info(
-                f"Sending to ws-client: {client_address}, dom: {ev.domain}, ws_from_id: {self.ws_clients[client_address]['from_id']}"
-            )
-            await ws.send_str(ev.to_json())
+            route = False
+            if ev.domain.endswith(client_address):
+                route = True
+            else:
+                for sub in self.ws_clients[client_address]["subs"]:
+                    if IndraEvent.mqcmp(ev.domain, sub):
+                        route = True
+                        break
+            if route is True:
+                self.log.info(
+                    f"Sending to ws-client: {client_address}, dom: {ev.domain}, ws_from_id: {self.ws_clients[client_address]['from_id']}"
+                )
+                await ws.send_str(ev.to_json())
 
     async def async_shutdown(self):
         # XXX Cleanup!
