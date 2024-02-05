@@ -255,7 +255,6 @@ class IndraProcess(IndraProcessCore):
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
 
     def trx(self, ev: IndraEvent):
-        self.log.info("TRX!")
         if ev.domain.startswith("$trx/db"):
             if ev.domain == "$trx/db/req/history":
                 try:
@@ -325,7 +324,6 @@ class IndraProcess(IndraProcessCore):
                             f"Failure, unexpected mode {rq_data['mode']}, internal error, rq from {ev.from_id}"
                         )
                 sql_cmd += " ORDER BY time_jd_start ASC;"
-                self.log.info(f"Executing SQL: {sql_cmd}, with params: {q_params}")
                 t_start = datetime.datetime.utcnow().replace(
                     tzinfo=datetime.timezone.utc
                 )
@@ -342,7 +340,130 @@ class IndraProcess(IndraProcessCore):
                 )
                 rev.data_type = "vector/tuple/jd/float"
                 rev.data = json.dumps(result)
-                self.log.info(f"{len(result)} results")
+                self.event_queue.put(rev)
+            elif ev.domain == "$trx/db/req/last":
+                try:
+                    rq_data = json.loads(ev.data)
+                except Exception as e:
+                    self.log.error(
+                        f"Invalid $trx/db/req/last from {ev.from_id}: {ev.data}"
+                    )
+                    return
+                rq_fields = [
+                    "domain",
+                ]
+                valid = True
+                inv_err = ""
+                for field in rq_fields:
+                    if field not in rq_data:
+                        valid = False
+                        inv_err = f"missing: {field}"
+                        break
+                if valid is False:
+                    self.log.error(
+                        f"$trx/db/req/last from {ev.from_id} failed, request missing field {inv_err}"
+                    )
+                    return
+                q_params = [rq_data["domain"]]
+                columns = [
+                    "id",
+                    "domain",
+                    "from_id",
+                    "uuid4",
+                    "parent_uuid4",
+                    "seq_no",
+                    "to_scope",
+                    "time_jd_start",
+                    "data_type",
+                    "data",
+                    "auth_hash",
+                    "time_jd_end",
+                ]
+                sel_list = ", ".join(columns)
+                sql_cmd = f"SELECT {sel_list} FROM indra_events WHERE domain = ? ORDER BY time_jd_start DESC LIMIT 1;"
+                t_start = datetime.datetime.utcnow().replace(
+                    tzinfo=datetime.timezone.utc
+                )
+                self.cur.execute(sql_cmd, q_params)
+                result = self.cur.fetchall()
+                rev = IndraEvent()
+                rev.domain = ev.from_id
+                rev.from_id = self.name
+                rev.uuid4 = ev.uuid4
+                rev.to_scope = ev.domain
+                rev.time_jd_start = IndraEvent.datetime2julian(t_start)
+                rev.time_jd_end = IndraEvent.datetime2julian(
+                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                )
+                if result and len(result) == 1:
+                    lev = IndraEvent.from_json(
+                        json.dumps(dict(zip(columns, result[0])))
+                    )
+                    rev.data_type = "json/indraevent"
+                    rev.data = lev.to_json()
+                else:
+                    self.log.warning(f"Not found: {sql_cmd} with {q_params}")
+                    rev.data_type = "errror/notfound"
+                self.event_queue.put(rev)
+            elif ev.domain == "$trx/db/req/uniquedomains":
+                try:
+                    rq_data = json.loads(ev.data)
+                except Exception as e:
+                    self.log.error(
+                        f"Invalid $trx/db/req/uniquedomains from {ev.from_id}: {ev.data}"
+                    )
+                    return
+                rq_fields = []
+                valid = True
+                inv_err = ""
+                for field in rq_fields:
+                    if field not in rq_data:
+                        valid = False
+                        inv_err = f"missing: {field}"
+                        break
+                if valid is False:
+                    self.log.error(
+                        f"$trx/db/req/uniquedomains from {ev.from_id} failed, request missing field {inv_err}"
+                    )
+                    return
+                if "%" in rq_data["domain"]:
+                    op1 = "LIKE"
+                else:
+                    op1 = "="
+                q_params = []
+                sql_cmd = f"SELECT DISTINCT domain FROM indra_events"
+                if "domain" in rq_fields:
+                    d = rq_fields["domain"]
+                    if "%" in d:
+                        op1 = "LIKE"
+                    else:
+                        op1 = "="
+                    q_params.append(d)
+                    sql_cmd += " WHERE domain {op1} ?"
+                if "data_type" in rq_fields:
+                    dt = rq_fields["data_type"]
+                    if "%" in dt:
+                        op2 = "LIKE"
+                    else:
+                        op2 = "="
+                    q_params.append(dt)
+                    sql_cmd = +f" AND data_type {op2} ?"
+                t_start = datetime.datetime.utcnow().replace(
+                    tzinfo=datetime.timezone.utc
+                )
+                self.cur.execute(sql_cmd, q_params)
+                result = self.cur.fetchall()
+                rev = IndraEvent()
+                rev.domain = ev.from_id
+                rev.from_id = self.name
+                rev.uuid4 = ev.uuid4
+                rev.to_scope = ev.domain
+                rev.time_jd_start = IndraEvent.datetime2julian(t_start)
+                rev.time_jd_end = IndraEvent.datetime2julian(
+                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                )
+                rev.data_type = "vector/string"
+                rev.data = json.dumps(result)
                 self.event_queue.put(rev)
             else:
                 self.log.error(f"Not (yet!) implemented: {ev.domain}")
