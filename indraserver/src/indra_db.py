@@ -2,6 +2,7 @@ import sqlite3
 import time
 import json
 import threading
+import datetime
 
 # XXX dev only
 import sys
@@ -125,7 +126,7 @@ class IndraProcess(IndraProcessCore):
                     self.start_commit_timer()
                 self.bUncommitted = True
             self.last_commit = time.time()
-            self.log.info(f"Wrote {ev.uuid4}")
+            # self.log.info(f"Wrote {ev.uuid4}")
         except sqlite3.Error as e:
             self.log.error(f"Failed to write event-record: {e}")
             return False
@@ -294,7 +295,7 @@ class IndraProcess(IndraProcessCore):
                     op1 = "LIKE"
                 else:
                     op1 = "="
-                sql_cmd = f"SELECT id, time_jd_start, data FROM (SELECT * FROM indra_events WHERE domain {op1} ?"  #  AND data_type {op2} ?)"
+                sql_cmd = f"SELECT time_jd_start, data FROM (SELECT * FROM indra_events WHERE domain {op1} ?"  #  AND data_type {op2} ?)"
                 q_params = [rq_data["domain"]]
                 if (
                     "data_type" in rq_data
@@ -325,12 +326,24 @@ class IndraProcess(IndraProcessCore):
                         )
                 sql_cmd += " ORDER BY time_jd_start ASC;"
                 self.log.info(f"Executing SQL: {sql_cmd}, with params: {q_params}")
-                self.cur.execute(
-                    sql_cmd, q_params
-                )  # (rq_data["domain"], rq_data["data_type"]))
+                t_start = datetime.datetime.utcnow().replace(
+                    tzinfo=datetime.timezone.utc
+                )
+                self.cur.execute(sql_cmd, q_params)
                 result = self.cur.fetchall()
-                print(result)
+                rev = IndraEvent()
+                rev.domain = ev.from_id
+                rev.from_id = self.name
+                rev.uuid4 = ev.uuid4
+                rev.to_scope = ev.domain
+                rev.time_jd_start = IndraEvent.datetime2julian(t_start)
+                rev.time_jd_end = IndraEvent.datetime2julian(
+                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                )
+                rev.data_type = "vector/tuple/jd/float"
+                rev.data = json.dumps(result)
                 self.log.info(f"{len(result)} results")
+                self.event_queue.put(rev)
             else:
                 self.log.error(f"Not (yet!) implemented: {ev.domain}")
         elif ev.domain.startswith("$trx/entity"):
