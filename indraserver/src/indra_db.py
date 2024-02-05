@@ -27,6 +27,7 @@ class IndraProcess(IndraProcessCore):
         self.commit_delay_sec = config_data["commit_delay_sec"]
         self.bUncommitted = False
         self.commit_timer_thread = None
+        self.subscribe(["$trx/#", "$event/#"])
 
     def start_commit_timer(self):
         if self.commit_delay_sec > 0.0:
@@ -124,6 +125,7 @@ class IndraProcess(IndraProcessCore):
                     self.start_commit_timer()
                 self.bUncommitted = True
             self.last_commit = time.time()
+            self.log.info(f"Wrote {ev.uuid4}")
         except sqlite3.Error as e:
             self.log.error(f"Failed to write event-record: {e}")
             return False
@@ -243,7 +245,7 @@ class IndraProcess(IndraProcessCore):
             if self.bUncommitted is True:
                 self.conn.commit()
                 self.bUncommitted = False
-                self.log.debug("Timer commit")
+                self.log.info("Timer commit")
         elif ev.domain.startswith("$trx"):
             self.trx(ev)
         elif ev.domain.startswith("$event"):
@@ -252,6 +254,7 @@ class IndraProcess(IndraProcessCore):
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
 
     def trx(self, ev: IndraEvent):
+        self.log.info("TRX!")
         if ev.domain.startswith("$trx/db"):
             if ev.domain == "$trx/db/req/history":
                 try:
@@ -303,7 +306,7 @@ class IndraProcess(IndraProcessCore):
                     else:
                         op2 = "="
                     q_params.append(rq_data["data_type"])
-                    sql_cmd += " AND data_type {po2} ?"
+                    sql_cmd += f" AND data_type {op2} ?"
                 if "time_jd_start" in rq_data and rq_data["time_jd_start"] is not None:
                     q_params.append(rq_data["time_jd_start"])
                     sql_cmd += " AND time_jd_start >= ?"
@@ -320,8 +323,11 @@ class IndraProcess(IndraProcessCore):
                         self.log.error(
                             f"Failure, unexpected mode {rq_data['mode']}, internal error, rq from {ev.from_id}"
                         )
-                sql_cmd = +" ORDER BY time_jd_start ASC)"
-                self.cur.execute(sql_cmd, (rq_data["domain"], rq_data["data_type"]))
+                sql_cmd += " ORDER BY time_jd_start ASC;"
+                self.log.info(f"Executing SQL: {sql_cmd}, with params: {q_params}")
+                self.cur.execute(
+                    sql_cmd, q_params
+                )  # (rq_data["domain"], rq_data["data_type"]))
                 result = self.cur.fetchall()
                 print(result)
                 self.log.info(f"{len(result)} results")

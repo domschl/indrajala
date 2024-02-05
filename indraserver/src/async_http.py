@@ -120,12 +120,12 @@ class IndraProcess(IndraProcessCore):
                 try:
                     ev = IndraEvent.from_json(msg.data)
                     self.ws_clients[client_address]["old_from_id"] = ev.from_id
-                    ev.from_id = f"async_http/ws/{client_address}"
+                    ev.from_id = f"{self.name}/ws/{client_address}"
                     self.ws_clients[client_address]["from_id"] = ev.from_id
                     self.log.info(
                         f"Received (upd.): {client_address}: {ev.from_id}->{ev.domain}"
                     )
-                    self.send_queue.put(ev)
+                    self.event_queue.put(ev)
                 except Exception as e:
                     self.log.warning(f"WebClient sent invalid JSON: {msg.data}: {e}")
             elif msg.type == aiohttp.WSMsgType.ERROR:
