@@ -25,9 +25,8 @@ async def tester():
         logging.error("Could not connect to Indrajala")
         return
     await cl.subscribe(["$event/#"])
-    print("Subed.")
-    await cl.get_wait_history("%", None, None, 10)
-    print("evented.")
+    hist = await cl.get_wait_history("%", None, None, 10)
+    print(hist)
 
 
 logging.basicConfig(level=logging.INFO)
