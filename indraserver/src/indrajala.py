@@ -105,7 +105,6 @@ def main_runner(main_logger, event_queue, modules):
         origin_module = ev.from_id
         if "/" in origin_module:
             origin_module = origin_module.split("/")[0]
-
         if ev.domain.startswith("$log"):
             lvl = ev.domain.split("/")[-1]
             msg = f"{ev.from_id} - {ev.data}"
@@ -168,7 +167,7 @@ def main_runner(main_logger, event_queue, modules):
                                     )
                                     overview_mode = False
                                 last_stat_output = time.time()
-                                main_logger.info(
+                                main_logger.debug(
                                     f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}"
                                 )
                             else:
@@ -177,7 +176,7 @@ def main_runner(main_logger, event_queue, modules):
                                     main_logger.info(
                                         "Switching to ROUTE summary mode for routing, message volume > 10msg/sec"
                                     )
-                                main_logger.debug(
+                                main_logger.info(
                                     f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}"
                                 )
                                 if time.time() - last_stat_output > 1.0:

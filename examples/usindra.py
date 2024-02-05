@@ -26,9 +26,7 @@ async def tester():
         return
     await cl.subscribe(["$event/#"])
     print("Subed.")
-    await cl.get_wait_history(
-        "$event/measurement/temperature/climate/home", None, None, 10
-    )
+    await cl.get_wait_history("%", None, None, 10)
     print("evented.")
 
 
