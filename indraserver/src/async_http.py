@@ -27,7 +27,8 @@ class IndraProcess(IndraProcessCore):
         self.web_root = os.path.expanduser(self.config_data["web_root"])
         self.private_key = None
         self.public_key = None
-        self.ws_clients = []
+        self.ws_clients = {}
+        self.tr_id = 0
         self.tls = False
         if self.config_data["tls"] is True:
             if os.path.exists(self.config_data["private_key"]) is False:
@@ -43,11 +44,11 @@ class IndraProcess(IndraProcessCore):
                 self.public_key = self.config_data["public_key"]
                 self.tls = True
         self.app = web.Application(debug=True)
-        self.app.add_routes([web.get('/', self.web_root_handler)])
+        self.app.add_routes([web.get("/", self.web_root_handler)])
         # if self.tls is True:
         #     self.app.add_routes([web.get('/wss', self.websocket_handler)])
         # else:
-        self.app.add_routes([web.get('/ws', self.websocket_handler)])
+        self.app.add_routes([web.get("/ws", self.websocket_handler)])
         if self.tls is True:
             self.ssl_context = ssl.SSLContext()  # = TLS
             try:
@@ -75,9 +76,13 @@ class IndraProcess(IndraProcessCore):
             # print(f"Webclient at: http://localhost:{self.port}")
         await site.start()
         if self.tls is True:
-            self.log.info(f"Web+Websockets active (TLS), bind={self.bind_addresses}, port={self.port}")
+            self.log.info(
+                f"Web+Websockets active (TLS), bind={self.bind_addresses}, port={self.port}"
+            )
         else:
-            self.log.info(f"Web+Websockets active (no TLS), bind={self.bind_addresses}, port={self.port}")
+            self.log.info(
+                f"Web+Websockets active (no TLS), bind={self.bind_addresses}, port={self.port}"
+            )
         while self.bActive:
             await asyncio.sleep(0.1)
         self.log.info("Web server stopped")
@@ -88,31 +93,38 @@ class IndraProcess(IndraProcessCore):
     async def websocket_handler(self, request):
         ws = web.WebSocketResponse()
         await ws.prepare(request)
-
-        if ws not in self.ws_clients:
-            self.ws_clients.append(ws)
-            self.log.debug(f"New ws client {ws}! (clients: {len(self.ws_clients)})")
-        else:
-            self.thread_log.debug(
-                f"Client already registered! (clients: {len(self.ws_clients)})"
+        client_remote_address = request.remote
+        cur_tr_id = self.tr_id
+        client_address = f"{client_remote_address}/{cur_tr_id}"
+        self.tr_id += 1
+        self.log.info(f"WS Client: {client_address}")
+        if client_address not in self.ws_clients:
+            self.ws_clients[client_address] = {
+                "ws": ws,
+                "from_id": None,
+                "session_id": None,
+            }
+            self.log.info(
+                f"New ws client {client_address}! (num clients: {len(self.ws_clients)})"
             )
-        index = self.ws_clients.index(ws)
-        # try:
-        #     await ws.send_str("hello")
-        # except Exception as e:
-        #     self.log.warning("Sending to WebSocket client {} failed with {}".format(ws, e))
-        #     return
+        else:
+            fid = self.ws_clients[ws].get("from_id", "None")
+            self.thread_log.warning(
+                f"Client {client_address} already registered! Num clients: {len(self.ws_clients)}, from_id: {fid}"
+            )
 
         async for msg in ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
                 # if msg.data is not None:
                 self.log.debug("Client ws_dispatch: ws:{} msg:{}".format(ws, msg.data))
                 try:
-                    self.log.debug(f"Received: {msg.data}")
-                    # ev = IndraEvent()
                     ev = IndraEvent.from_json(msg.data)
-                    ev.from_id = f"async_http/ws/{index}"
-                    self.log.debug(f"Received (upd.): {ev.to_json()}")
+                    self.ws_clients[client_address]["old_from_id"] = ev.from_id
+                    ev.from_id = f"async_http/ws/{client_address}"
+                    self.ws_clients[client_address]["from_id"] = ev.from_id
+                    self.log.info(
+                        f"Received (upd.): {client_address}: {ev.from_id}->{ev.domain}"
+                    )
                     self.send_queue.put(ev)
                 except Exception as e:
                     self.log.warning(f"WebClient sent invalid JSON: {msg.data}: {e}")
@@ -124,16 +136,18 @@ class IndraProcess(IndraProcessCore):
             else:
                 self.log.error(f"Unexpected message {msg.data}, of type {msg.type}")
                 break
-        self.log.warning(f"WS-CLOSE: {ws}")
-        self.ws_clients.remove(ws)
-
+        self.log.warning(f"WS-CLOSE: {client_address}")
+        self.ws_clients.pop(client_address, None)  # Delete key ws
         return ws
 
     async def async_outbound(self, ev: IndraEvent):
         self.log.debug(f"WS outbound: {ev.domain} from {ev.from_id}")
         # XXX routing!
-        for ws in self.ws_clients:
-            self.log.debug(f"Sending to ws-client: {ws}")
+        for client_address in self.ws_clients:
+            ws = self.ws_clients[client_address]["ws"]
+            self.log.info(
+                f"Sending to ws-client: {client_address}, dom: {ev.domain}, ws_from_id: {self.ws_clients[client_address]['from_id']}"
+            )
             await ws.send_str(ev.to_json())
 
     async def async_shutdown(self):
