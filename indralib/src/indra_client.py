@@ -460,6 +460,27 @@ class IndraClient:
         else:
             return json.loads(result.data)
 
+    async def update_recs(self, recs):
+        if isinstance(recs, list) is False:
+            print("Not a list")
+            recs = [recs]
+        cmd = recs
+        ie = IndraEvent()
+        ie.domain = "$trx/db/req/update"
+        ie.from_id = "ws/python"
+        ie.data_type = "json/requpdate"
+        ie.data = json.dumps(cmd)
+        return await self.send_event(ie)
+
+    async def update_recs_wait(self, recs):
+        future = await self.update_recs(recs)
+        result = await future
+        if result.data_type.startswith("error") is True:
+            self.log.error(f"Error: {result.data}")
+            return None
+        else:
+            return json.loads(result.data)
+
     async def indra_log(self, level, message, module_name=None):
         """Log message"""
         if module_name is None:
