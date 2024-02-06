@@ -481,6 +481,67 @@ class IndraClient:
         else:
             return json.loads(result.data)
 
+    async def kv_write(self, key, value):
+        cmd = {
+            "key": key,
+            "value": value,
+        }
+        ie = IndraEvent()
+        ie.domain = "$trx/kv/req/write"
+        ie.from_id = "ws/python"
+        ie.data_type = "kvwrite"
+        ie.data = json.dumps(cmd)
+        return await self.send_event(ie)
+
+    async def kv_write_wait(self, key, value):
+        future = await self.kv_write(key, value)
+        result = await future
+        if result.data_type.startswith("error") is True:
+            self.log.error(f"Error: {result.data}")
+            return None
+        else:
+            return json.loads(result.data)
+
+    async def kv_read(self, key):
+        cmd = {
+            "key": key,
+        }
+        ie = IndraEvent()
+        ie.domain = "$trx/kv/req/read"
+        ie.from_id = "ws/python"
+        ie.data_type = "kvread"
+        ie.data = json.dumps(cmd)
+        return await self.send_event(ie)
+
+    async def kv_read_wait(self, key):
+        future = await self.kv_read(key)
+        result = await future
+        if result.data_type.startswith("error") is True:
+            self.log.error(f"Error: {result.data}")
+            return None
+        else:
+            return json.loads(result.data)
+
+    async def kv_delete(self, key):
+        cmd = {
+            "key": key,
+        }
+        ie = IndraEvent()
+        ie.domain = "$trx/kv/req/delete"
+        ie.from_id = "ws/python"
+        ie.data_type = "kvdelete"
+        ie.data = json.dumps(cmd)
+        return await self.send_event(ie)
+
+    async def kv_delete_wait(self, key):
+        future = await self.kv_delete(key)
+        result = await future
+        if result.data_type.startswith("error") is True:
+            self.log.error(f"Error: {result.data}")
+            return None
+        else:
+            return json.loads(result.data)
+
     async def indra_log(self, level, message, module_name=None):
         """Log message"""
         if module_name is None:

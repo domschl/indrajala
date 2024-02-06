@@ -106,6 +106,16 @@ for d in data:
 # %%
 ret = await cl.update_recs_wait(events)
 print(ret)
+
 # %%
 await cl.delete_recs_wait(domains="$event/measurement/testdata")
+# %%
+0.000001 * 60 * 60 * 24
+# %%
+events
+# %%
+ev = IndraEvent()
+vars(ev)
+# %%
+ev.__dict__
 # %%

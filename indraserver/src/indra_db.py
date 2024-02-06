@@ -79,7 +79,12 @@ class IndraProcess(IndraProcessCore):
             with open(last_state_file, "r") as f:
                 self.last_state = json.load(f)
         if self.last_state is None:
-            self.last_state = {"last_seq_no": 0}
+            self.last_state = {"last_seq_no": 0, "last_kv_seq_no": 0}
+        if "last_seq_no" not in self.last_state:
+            self.last_state["last_seq_no"] = 0
+        if "last_kv_seq_no" not in self.last_state:
+            self.last_state["last_kv_seq_no"] = 0
+
         cmd = "SELECT seq_no FROM indra_events ORDER BY seq_no DESC LIMIT 1;"
         db_last_seq = 0
         try:
@@ -93,15 +98,32 @@ class IndraProcess(IndraProcessCore):
             self.log.error("Failed to retrieve last seq_no from database")
         if db_last_seq > self.last_state["last_seq_no"]:
             self.last_state["last_seq_no"] = db_last_seq
-        return self.last_state["last_seq_no"]
+
+        cmd = "SELECT seq_no FROM indra_kv ORDER BY seq_no DESC LIMIT 1;"
+        db_last_kv_seq = 0
+        try:
+            self.cur.execute(cmd)
+            result = self.cur.fetchone()
+            if result is not None:
+                db_last_kv_seq = result[0]
+            else:
+                self.log.debug(
+                    "No results when retrieving last kv seq_no, new database?"
+                )
+        except Exception as e:
+            self.log.error("Failed to retrieve last kv seq_no from database")
+        if db_last_kv_seq > self.last_state["last_kv_seq_no"]:
+            self.last_state["last_kv_seq_no"] = db_last_kv_seq
+
+        return (self.last_state["last_seq_no"], self.last_state["last_kv_seq_no"])
 
     def _write_last_seq_no(self):
         """Write a backup of the last used seq_no to json file"""
-        seq_no = self._get_last_seq_no()
+        seq_no, seq_kv_no = self._get_last_seq_no()
         last_state_file = os.path.join(self.database_directory, "last_state.json")
         with open(last_state_file, "w") as f:
             json.dump(self.last_state, f)
-        return seq_no
+        return seq_no, seq_kv_no
 
     def _check_commit(self):
         if time.time() - self.last_commit > self.commit_delay_sec:
@@ -136,6 +158,30 @@ class IndraProcess(IndraProcessCore):
             return False
         return True
 
+    def _write_update_kv(self, key: str, value: str):
+        """Write a key/value pair. If the key already exists, update the value."""
+        self.last_state["last_kv_seq_no"] = self.last_state["last_kv_seq_no"] + 1
+        cmd = """INSERT OR REPLACE INTO indra_kv (
+                    seq_no, key, value)
+                 VALUES (
+                    :seq_no, :key, :value);
+              """
+        try:
+            self.cur.execute(
+                cmd,
+                {
+                    "seq_no": self.last_state["last_kv_seq_no"],
+                    "key": key,
+                    "value": value,
+                },
+            )
+            self._check_commit()
+            # self.log.info(f"Wrote {key}")
+        except sqlite3.Error as e:
+            self.log.error(f"Failed to write kv-record: {e}")
+            return False
+        return True
+
     def _delete_event(self, uuid4: str):
         """Delete an IndraEvent from the database"""
         cmd = "DELETE FROM indra_events WHERE uuid4 = ?;"
@@ -147,6 +193,37 @@ class IndraProcess(IndraProcessCore):
             self.log.error(f"Failed to delete event-record: {e}")
             return False
         return True
+
+    def _delete_kv(self, key: str):
+        """Delete a key/value pair from the database"""
+        cmd = "DELETE FROM indra_kv WHERE key = ?;"
+        try:
+            self.cur.execute(cmd, [key])
+            self._check_commit()
+            # self.log.info(f"Deleted {key}")
+        except sqlite3.Error as e:
+            self.log.error(f"Failed to delete kv-record: {e}")
+            return False
+        return True
+
+    def _read_kv(self, key: str):
+        """Read a value(s) from the database"""
+        if "%" in key:
+            op1 = "LIKE"
+        else:
+            op1 = "="
+        cmd = f"SELECT key, value FROM indra_kv WHERE key {op1} ?;"
+        try:
+            self.cur.execute(cmd, [key])
+            result = self.cur.fetchall()
+            if result is not None:
+                value = result
+            else:
+                value = None
+        except sqlite3.Error as e:
+            self.log.error(f"Failed to read kv-record: {e}")
+            return None
+        return value
 
     def _db_open(self):
         """Open database and tune it using pragmas"""
@@ -214,6 +291,19 @@ class IndraProcess(IndraProcessCore):
             self.log.error(f"Failure to create table: {e}")
             return False
 
+        cmd = """CREATE TABLE IF NOT EXISTS indra_kv (
+             id INTEGER PRIMARY KEY,
+             seq_no INTEGER NOT NULL,
+             key TEXT NOT NULL UNIQUE,
+             value TEXT NOT NULL);
+              """
+
+        try:
+            ret = self.cur.execute(cmd)
+        except sqlite3.Error as e:
+            self.log.error(f"Failure to create table: {e}")
+            return False
+
         self.log.debug("Tables available")
 
         cmd = """CREATE INDEX IF NOT EXISTS indra_events_domain ON indra_events (domain);
@@ -231,10 +321,20 @@ class IndraProcess(IndraProcessCore):
             self.log.error(f"Failure to create indices: {e}")
             return False
 
+        cmd = """CREATE INDEX IF NOT EXISTS indra_kv_key ON indra_kv (key);
+                 CREATE INDEX IF NOT EXISTS indra_kv_seq_no ON indra_kv (seq_no);
+        """
+
+        try:
+            ret = self.cur.executescript(cmd)
+        except sqlite3.Error as e:
+            self.log.error(f"Failure to create indices: {e}")
+            return False
+
         self.log.debug("Indices available")
 
-        seq_no = self._get_last_seq_no()
-        self.log.info(f"Database opened, seq_no={seq_no}")
+        seq_no, seq_kv_no = self._get_last_seq_no()
+        self.log.info(f"Database opened, seq_no={seq_no}, seq_kv_no={seq_kv_no}")
         return True
 
     def outbound_init(self):
@@ -246,8 +346,10 @@ class IndraProcess(IndraProcessCore):
         return ret
 
     def shutdown(self):
-        seq_no = self._write_last_seq_no()
-        self.log.info(f"Closing database, last seq_no={seq_no}")
+        seq_no, seq_kv_no = self._write_last_seq_no()
+        self.log.info(
+            f"Closing database, last seq_no={seq_no}, last_kv_seq_no={seq_kv_no}"
+        )
         self.conn.commit()
         self.conn.close()
         if self.commit_timer_thread is not None:
@@ -689,7 +791,134 @@ class IndraProcess(IndraProcessCore):
             else:
                 self._trx_err(ev, f"$trx/db not (yet!) implemented: {ev.domain}")
         elif ev.domain.startswith("$trx/kv"):
-            self._trx_err(ev, f"Key/value db not (yet!) implemented: {ev.domain}")
+            # $trx/kv/req/write,read,delete
+            if ev.domain == "$trx/kv/req/write":
+                try:
+                    rq_data = json.loads(ev.data)
+                except Exception as e:
+                    self._trx_err(
+                        ev, f"Invalid $trx/kv/req/write from {ev.from_id}: {ev.data}"
+                    )
+                    return
+                rq_fields = ["key", "value"]
+                valid = True
+                inv_err = ""
+                for field in rq_fields:
+                    if field not in rq_data:
+                        valid = False
+                        inv_err = f"missing: {field}"
+                        break
+                if valid is False:
+                    self._trx_err(
+                        ev,
+                        f"$trx/kv/req/write from {ev.from_id} failed, request missing field {inv_err}",
+                    )
+                    return
+                if self._write_update_kv(rq_data["key"], rq_data["value"]) is True:
+                    rev = IndraEvent()
+                    rev.domain = ev.from_id
+                    rev.from_id = self.name
+                    rev.uuid4 = ev.uuid4
+                    rev.to_scope = ev.domain
+                    rev.time_jd_start = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.time_jd_end = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.data_type = "string"
+                    rev.data = json.dumps("OK")
+                    self.event_queue.put(rev)
+                else:
+                    self._trx_err(
+                        ev,
+                        f"$trx/kv/req/write from {ev.from_id} failed, internal error",
+                    )
+            elif ev.domain == "$trx/kv/req/read":
+                try:
+                    rq_data = json.loads(ev.data)
+                except Exception as e:
+                    self._trx_err(
+                        ev, f"Invalid $trx/kv/req/read from {ev.from_id}: {ev.data}"
+                    )
+                    return
+                rq_fields = ["key"]
+                valid = True
+                inv_err = ""
+                for field in rq_fields:
+                    if field not in rq_data:
+                        valid = False
+                        inv_err = f"missing: {field}"
+                        break
+                if valid is False:
+                    self._trx_err(
+                        ev,
+                        f"$trx/kv/req/read from {ev.from_id} failed, request missing field {inv_err}",
+                    )
+                    return
+                values = self._read_kv(rq_data["key"])
+                if values is not None:
+                    rev = IndraEvent()
+                    rev.domain = ev.from_id
+                    rev.from_id = self.name
+                    rev.uuid4 = ev.uuid4
+                    rev.to_scope = ev.domain
+                    rev.time_jd_start = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.time_jd_end = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.data_type = "vector/string"
+                    rev.data = json.dumps(values)
+                    self.event_queue.put(rev)
+                else:
+                    self._trx_err(
+                        ev,
+                        f"$trx/kv/req/read from {ev.from_id} failed, not found",
+                    )
+            elif ev.domain == "$trx/kv/req/delete":
+                try:
+                    rq_data = json.loads(ev.data)
+                except Exception as e:
+                    self._trx_err(
+                        ev, f"Invalid $trx/kv/req/delete from {ev.from_id}: {ev.data}"
+                    )
+                    return
+                rq_fields = ["key"]
+                valid = True
+                inv_err = ""
+                for field in rq_fields:
+                    if field not in rq_data:
+                        valid = False
+                        inv_err = f"missing: {field}"
+                        break
+                if valid is False:
+                    self._trx_err(
+                        ev,
+                        f"$trx/kv/req/delete from {ev.from_id} failed, request missing field {inv_err}",
+                    )
+                    return
+                if self._delete_kv(rq_data["key"]) is True:
+                    rev = IndraEvent()
+                    rev.domain = ev.from_id
+                    rev.from_id = self.name
+                    rev.uuid4 = ev.uuid4
+                    rev.to_scope = ev.domain
+                    rev.time_jd_start = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.time_jd_end = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.data_type = "string"
+                    rev.data = json.dumps("OK")
+                    self.event_queue.put(rev)
+                else:
+                    self._trx_err(
+                        ev,
+                        f"$trx/kv/req/delete from {ev.from_id} failed, internal error",
+                    )
         else:
             self.log.error(f"Not implemented: {ev.domain}, invalid request")
 
