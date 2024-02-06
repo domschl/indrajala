@@ -103,6 +103,17 @@ class IndraProcess(IndraProcessCore):
             json.dump(self.last_state, f)
         return seq_no
 
+    def _check_commit(self):
+        if time.time() - self.last_commit > self.commit_delay_sec:
+            self.conn.commit()
+            self.bUncommitted = False
+            self.log.info("Commit due to timeout")
+        else:
+            if self.commit_timer_thread is None:
+                self.start_commit_timer()
+            self.bUncommitted = True
+        self.last_commit = time.time()
+
     def _write_event(self, ev: IndraEvent):
         """Write an IndraEvent to the database"""
         self.last_state["last_seq_no"] = self.last_state["last_seq_no"] + 1
@@ -118,14 +129,7 @@ class IndraProcess(IndraProcessCore):
               """
         try:
             self.cur.execute(cmd, vars(ev))
-            if time.time() - self.last_commit > self.commit_delay_sec:
-                self.conn.commit()
-                self.bUncommitted = False
-            else:
-                if self.commit_timer_thread is None:
-                    self.start_commit_timer()
-                self.bUncommitted = True
-            self.last_commit = time.time()
+            self._check_commit()
             # self.log.info(f"Wrote {ev.uuid4}")
         except sqlite3.Error as e:
             self.log.error(f"Failed to write event-record: {e}")
@@ -254,6 +258,23 @@ class IndraProcess(IndraProcessCore):
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
 
+    def _trx_err(self, ev: IndraEvent, err_msg: str):
+        self.log.error(err_msg)
+        rev = IndraEvent()
+        rev.domain = ev.from_id
+        rev.from_id = self.name
+        rev.uuid4 = ev.uuid4
+        rev.to_scope = ev.domain
+        rev.time_jd_start = IndraEvent.datetime2julian(
+            datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        )
+        rev.time_jd_end = IndraEvent.datetime2julian(
+            datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        )
+        rev.data_type = "error/invalid"
+        rev.data = json.dumps(err_msg)
+        self.event_queue.put(rev)
+
     def trx(self, ev: IndraEvent):
         columns = [
             "id",
@@ -274,24 +295,9 @@ class IndraProcess(IndraProcessCore):
                 try:
                     rq_data = json.loads(ev.data)
                 except Exception as e:
-                    err_msg = (
-                        f"Invalid $trx/db/req/history from {ev.from_id}: {ev.data}"
+                    self._trx_err(
+                        ev, f"Invalid $trx/db/req/history from {ev.from_id}: {ev.data}"
                     )
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
 
                 rq_fields = [
@@ -310,40 +316,16 @@ class IndraProcess(IndraProcessCore):
                         inv_err = f"missing: {field}"
                         break
                 if valid is False:
-                    err_msg = f"$trx/db/req/history from {ev.from_id} failed, request missing field {inv_err}"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev,
+                        f"$trx/db/req/history from {ev.from_id} failed, request missing field {inv_err}",
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
                 if rq_data["mode"] not in ["Sample", "Sequential"]:
-                    err_msg = f"$trx/db/req/history from {ev.from_id} failed, invalid mode {rq_data['mode']}"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev,
+                        f"$trx/db/req/history from {ev.from_id} failed, invalid mode {rq_data['mode']}",
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
                 if "%" in rq_data["domain"]:
                     op1 = "LIKE"
@@ -400,22 +382,9 @@ class IndraProcess(IndraProcessCore):
                 try:
                     rq_data = json.loads(ev.data)
                 except Exception as e:
-                    err_msg = f"Invalid $trx/db/req/last from {ev.from_id}: {ev.data}"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev, f"Invalid $trx/db/req/last from {ev.from_id}: {ev.data}"
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
                 rq_fields = [
                     "domain",
@@ -428,22 +397,10 @@ class IndraProcess(IndraProcessCore):
                         inv_err = f"missing: {field}"
                         break
                 if valid is False:
-                    err_msg = f"$trx/db/req/last from {ev.from_id} failed, request missing field {inv_err}"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev,
+                        f"$trx/db/req/last from {ev.from_id} failed, request missing field {inv_err}",
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
                 q_params = [rq_data["domain"]]
                 sel_list = ", ".join(columns)
@@ -476,22 +433,10 @@ class IndraProcess(IndraProcessCore):
                 try:
                     rq_data = json.loads(ev.data)
                 except Exception as e:
-                    err_msg = f"Invalid $trx/db/req/uniquedomains from {ev.from_id}: {ev.data}"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev,
+                        f"Invalid $trx/db/req/uniquedomains from {ev.from_id}: {ev.data}",
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
                 rq_fields = []
                 valid = True
@@ -502,22 +447,10 @@ class IndraProcess(IndraProcessCore):
                         inv_err = f"missing: {field}"
                         break
                 if valid is False:
-                    err_msg = f"$trx/db/req/uniquedomains from {ev.from_id} failed, request missing field {inv_err}"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev,
+                        f"$trx/db/req/uniquedomains from {ev.from_id} failed, request missing field {inv_err}",
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
                 q_params = []
                 sql_cmd = f"SELECT DISTINCT domain FROM indra_events"
@@ -554,26 +487,13 @@ class IndraProcess(IndraProcessCore):
                 rev.data_type = "vector/string"
                 rev.data = json.dumps(result)
                 self.event_queue.put(rev)
-            elif ev.domain == "$trx/db/del":
+            elif ev.domain == "$trx/db/req/del":
                 try:
                     rq_data = json.loads(ev.data)
                 except Exception as e:
-                    err_msg = f"Invalid $trx/db/req/del {ev.from_id}: {ev.data}"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev, f"Invalid $trx/db/req/del {ev.from_id}: {ev.data}"
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
                 rq_fields = ["domains", "uuid4s"]
                 valids = 0
@@ -582,25 +502,16 @@ class IndraProcess(IndraProcessCore):
                         valids += 1
                         break
                 if valids != 1:
-                    err_msg = f"$trx/db/req/del from {ev.from_id} failed, requires either an array `uuid4s` or an array `domains` as key(s)"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev,
+                        f"$trx/db/req/del from {ev.from_id} failed, requires either an array `uuid4s` or an array `domains` as key(s)",
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
+                t_start = datetime.datetime.utcnow().replace(
+                    tzinfo=datetime.timezone.utc
+                )
                 num_deleted = 0
-                if "domains" in rq_data:
+                if "domains" in rq_data and rq_data["domains"] is not None:
                     if isinstance(rq_data["domains"], list):
                         # Handle array case
                         domains = rq_data["domains"]
@@ -609,7 +520,7 @@ class IndraProcess(IndraProcessCore):
                         domains = [rq_data["domains"]]
                     # Process the domains
                     for domain in domains:
-                        if "%" in rq_data["domain"]:
+                        if "%" in domain:
                             op1 = "LIKE"
                         else:
                             op1 = "="
@@ -617,10 +528,9 @@ class IndraProcess(IndraProcessCore):
                         q_params = [domain]
                         # check if data is deleted:
                         self.cur.execute(sql_cmd, q_params)
-                        deleted_data = self.cur.fetchall()
-                        if deleted_data:
-                            num_deleted += len(deleted_data)
-                elif "uuid4s" in rq_data:
+                        num_deleted += self.cur.rowcount
+                    self._check_commit()
+                elif "uuid4s" in rq_data and rq_data["uuid4s"] is not None:
                     if isinstance(rq_data["uuid4s"], list):
                         # Handle array case
                         uuid4s = rq_data["uuid4s"]
@@ -631,27 +541,15 @@ class IndraProcess(IndraProcessCore):
                     for uuid4 in uuid4s:
                         sql_cmd = f"DELETE FROM indra_events WHERE uuid4 = ?"
                         q_params = [uuid4]
+                        self.log.info(f"Deleting {uuid4} via {sql_cmd}")
                         self.cur.execute(sql_cmd, q_params)
-                        deleted_data = self.cur.fetchall()
-                        if deleted_data:
-                            num_deleted += len(deleted_data)
+                        num_deleted += self.cur.rowcount
+                    self._check_commit()
                 else:
-                    err_msg = f"$trx/db/req/del from {ev.from_id} failed, requires either an array `uuid4s` or an array `domains` as key(s)"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev,
+                        f"$trx/db/req/del from {ev.from_id} failed, requires either an array `uuid4s` or an array `domains` as key(s)",
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
 
                 rev = IndraEvent()
@@ -670,22 +568,9 @@ class IndraProcess(IndraProcessCore):
                 try:
                     rq_data = json.loads(ev.data)
                 except Exception as e:
-                    err_msg = f"Invalid $trx/db/req/update from {ev.from_id}: {ev.data}"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev, f"Invalid $trx/db/req/update from {ev.from_id}: {ev.data}"
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
                 # check if rq_data is an array, (if not, make it array of size 1) and that each element is a dict with the following:
                 rq_fields = ["domain", "time_jd_start", "data_type", "data"]
@@ -705,22 +590,10 @@ class IndraProcess(IndraProcessCore):
                     if valid is False:
                         break
                 if valid is False:
-                    err_msg = f"$trx/db/req/update from {ev.from_id} failed, request missing field {inv_err}"
-                    self.log.error(err_msg)
-                    rev = IndraEvent()
-                    rev.domain = ev.from_id
-                    rev.from_id = self.name
-                    rev.uuid4 = ev.uuid4
-                    rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    self._trx_err(
+                        ev,
+                        f"$trx/db/req/update from {ev.from_id} failed, request missing field {inv_err}",
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-                    )
-                    rev.data_type = "error/invalid"
-                    rev.data = json.dumps(err_msg)
-                    self.event_queue.put(rev)
                     return
                 num_updated = 0
                 for rq in rq_data:
@@ -766,6 +639,7 @@ class IndraProcess(IndraProcessCore):
                         self.log.error(
                             f"Multiple records found for domain={rq['domain']} and time_jd_start={rq['time_jd_start']}, NOT UPDATED!"
                         )
+                self._check_commit()
                 rev = IndraEvent()
                 rev.domain = ev.from_id
                 rev.from_id = self.name
@@ -779,24 +653,9 @@ class IndraProcess(IndraProcessCore):
                 rev.data = json.dumps(num_updated)
                 self.event_queue.put(rev)
             else:
-                self.log.error(f"Not (yet!) implemented: {ev.domain}")
+                self._trx_err(ev, f"$trx/db not (yet!) implemented: {ev.domain}")
         elif ev.domain.startswith("$trx/kv"):
-            err_msg = f"Key/value db not (yet!) implemented: {ev.domain}"
-            self.log.error(err_msg)
-            rev = IndraEvent()
-            rev.domain = ev.from_id
-            rev.from_id = self.name
-            rev.uuid4 = ev.uuid4
-            rev.to_scope = ev.domain
-            rev.time_jd_start = IndraEvent.datetime2julian(
-                datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-            )
-            rev.time_jd_end = IndraEvent.datetime2julian(
-                datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-            )
-            rev.data_type = "error/invalid"
-            rev.data = json.dumps(err_msg)
-            self.event_queue.put(rev)
+            self._trx_err(ev, f"Key/value db not (yet!) implemented: {ev.domain}")
         else:
             self.log.error(f"Not implemented: {ev.domain}, invalid request")
 

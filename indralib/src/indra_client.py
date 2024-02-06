@@ -433,6 +433,33 @@ class IndraClient:
         domain_result = await future
         return json.loads(domain_result.data)
 
+    async def delete_recs(self, domains=None, uuid4s=None):
+        if domains is None and uuid4s is None:
+            self.log.error("Please provide a domain or uuid4s")
+            return False
+        if domains is not None and uuid4s is not None:
+            self.log.error("Please provide either a domain or uuid4s")
+            return False
+        cmd = {
+            "domains": domains,
+            "uuid4s": uuid4s,
+        }
+        ie = IndraEvent()
+        ie.domain = "$trx/db/req/del"
+        ie.from_id = "ws/python"
+        ie.data_type = "json/reqdel"
+        ie.data = json.dumps(cmd)
+        return await self.send_event(ie)
+
+    async def delete_recs_wait(self, domains=None, uuid4s=None):
+        future = await self.delete_recs(domains, uuid4s)
+        result = await future
+        if result.data_type.startswith("error") is True:
+            self.log.error(f"Error: {result.data}")
+            return None
+        else:
+            return json.loads(result.data)
+
     async def indra_log(self, level, message, module_name=None):
         """Log message"""
         if module_name is None:
