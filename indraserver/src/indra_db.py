@@ -136,6 +136,18 @@ class IndraProcess(IndraProcessCore):
             return False
         return True
 
+    def _delete_event(self, uuid4: str):
+        """Delete an IndraEvent from the database"""
+        cmd = "DELETE FROM indra_events WHERE uuid4 = ?;"
+        try:
+            self.cur.execute(cmd, [uuid4])
+            self._check_commit()
+            # self.log.info(f"Deleted {uuid4}")
+        except sqlite3.Error as e:
+            self.log.error(f"Failed to delete event-record: {e}")
+            return False
+        return True
+
     def _db_open(self):
         """Open database and tune it using pragmas"""
         try:
@@ -576,6 +588,9 @@ class IndraProcess(IndraProcessCore):
                 rq_fields = ["domain", "time_jd_start", "data_type", "data"]
                 if not isinstance(rq_data, list):
                     rq_data = [rq_data]
+                    self.log.warning(
+                        f"Non-array input to $trx/db/req/update from {ev.from_id}, converted to array of size 1"
+                    )
                 valid = True
                 inv_err = ""
                 ut_start = IndraEvent.datetime2julian(
@@ -585,7 +600,7 @@ class IndraProcess(IndraProcessCore):
                     for field in rq_fields:
                         if field not in rq:
                             valid = False
-                            inv_err = f"missing: {field}"
+                            inv_err = f"missing: {field} in {rq}"
                             break
                     if valid is False:
                         break
@@ -601,26 +616,45 @@ class IndraProcess(IndraProcessCore):
                     # found, insert a new record by creating a new IndraEvent() and then inserting all fields
                     # NO % wildcard
 
+                    eps = 0.000001
                     # Search for domain and time_jd_start:
-                    sql_cmd = "SELECT * FROM indra_events WHERE domain = ? AND time_jd_start = ?"
+                    fields = ", ".join(columns)
+                    sql_cmd = f"SELECT {fields} FROM indra_events WHERE domain = ? AND ABS(time_jd_start - ?) < {eps};"
                     q_params = [rq["domain"], rq["time_jd_start"]]
                     self.cur.execute(sql_cmd, q_params)
                     result = self.cur.fetchall()
                     # Check that exactly one record was found
                     if len(result) == 1:
+                        changed = False
                         # Update the record
                         dev = dict(zip(columns, result[0]))
                         for key in rq:
                             if key in dev:
-                                dev[key] = rq[key]
+                                if (
+                                    dev[key] != rq[key]
+                                    and key != "seq_no"
+                                    and key != "uuid4"
+                                ):
+                                    changed = True
+                                    self.log.info(
+                                        f"Updating {key} from {dev[key]} to {rq[key]} in {dev['uuid4']}"
+                                    )
+                                    dev[key] = rq[key]
                             else:
                                 self.log.error(
                                     f"Invalid field {key} in $trx/db/req/update from {ev.from_id}, ignored"
                                 )
-                        lev = IndraEvent.from_json(json.dumps(dev))
-                        # Write the updated record
-                        if self._write_event(lev) is True:
-                            num_updated += 1
+                        if changed is True:
+                            lev = IndraEvent.from_json(json.dumps(dev))
+                            # Write the updated record
+                            self.log.info(f"Updating {lev.uuid4}")
+                            if self._delete_event(lev.uuid4) is True:
+                                if self._write_event(lev) is True:
+                                    num_updated += 1
+                        else:
+                            self.log.info(
+                                f"No changes in {lev.uuid4}, not updated, rq from {ev.from_id}"
+                            )
                     elif len(result) == 0:
                         # Insert a new record
                         dev = json.loads(IndraEvent().to_json())

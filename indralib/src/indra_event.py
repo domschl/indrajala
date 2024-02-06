@@ -40,6 +40,9 @@ class IndraEvent:
     def old_versions(self):
         return ["", "01"]
 
+    def to_dict(self):
+        return self.__dict__
+
     def to_json(self):
         """Convert to JSON string"""
         return json.dumps(self.__dict__)
