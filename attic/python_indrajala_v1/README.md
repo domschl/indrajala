@@ -1,3 +1,0 @@
-# Indrajala
-
-T.B.D
