@@ -3,6 +3,7 @@ import time
 import json
 import threading
 import datetime
+import bcrypt
 
 # XXX dev only
 import sys
@@ -136,6 +137,40 @@ class IndraProcess(IndraProcessCore):
                 self.start_commit_timer()
             self.bUncommitted = True
         self.last_commit = time.time()
+
+    @staticmethod
+    def hash_password(password):
+        """
+        Hashes a password using bcrypt.
+
+        Args:
+            password (str): The password to be hashed.
+
+        Returns:
+            str: The hashed password.
+
+        Example:
+            password = "my_secure_password"
+            hashed_password = hash_password(password)
+        """
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+        return hashed_password.decode("utf-8")
+
+    @staticmethod
+    def check_password(plain_password, hashed_password):
+        """
+        Check if a plain password matches a hashed password.
+
+        Args:
+            plain_password (str): The plain password to be checked.
+            hashed_password (str): The hashed password to compare against.
+
+        Returns:
+            bool: True if the plain password matches the hashed password, False otherwise.
+        """
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+        )
 
     def _write_event(self, ev: IndraEvent):
         """Write an IndraEvent to the database"""
