@@ -26,6 +26,7 @@ class IndraProcess(IndraProcessCore):
         self.database_directory = os.path.dirname(self.database)
         self.last_commit = 0
         self.commit_delay_sec = config_data["commit_delay_sec"]
+        self.epsilon = config_data["epsilon"]
         self.bUncommitted = False
         self.commit_timer_thread = None
         self.subscribe(["$trx/#", "$event/#"])
@@ -196,15 +197,19 @@ class IndraProcess(IndraProcessCore):
 
     def _delete_kv(self, key: str):
         """Delete a key/value pair from the database"""
-        cmd = "DELETE FROM indra_kv WHERE key = ?;"
+        if "%" in key:
+            op1 = "LIKE"
+        else:
+            op1 = "="
+        cmd = "DELETE FROM indra_kv WHERE key {op1} ?;"
         try:
             self.cur.execute(cmd, [key])
             self._check_commit()
             # self.log.info(f"Deleted {key}")
         except sqlite3.Error as e:
             self.log.error(f"Failed to delete kv-record: {e}")
-            return False
-        return True
+            return None
+        return self.cur.rowcount
 
     def _read_kv(self, key: str):
         """Read a value(s) from the database"""
@@ -718,10 +723,17 @@ class IndraProcess(IndraProcessCore):
                     # found, insert a new record by creating a new IndraEvent() and then inserting all fields
                     # NO % wildcard
 
-                    eps = 0.000001
                     # Search for domain and time_jd_start:
                     fields = ", ".join(columns)
-                    sql_cmd = f"SELECT {fields} FROM indra_events WHERE domain = ? AND ABS(time_jd_start - ?) < {eps};"
+                    # If epsilon is > 0, searches for julian time allow variation of epsilon while still being considered equal.
+                    # If epsilon is 0, searches for exact match of julian time.
+                    # The trade-off is: epsilon=0 will lead to duplicate entries on update, since the float conversions
+                    # between various languages and SQL are __not__ deterministic.
+                    # epsilon > 0 will falsely equal entries that are not equal, but are within epsilon of each other.
+                    if self.epsilon > 0:
+                        sql_cmd = f"SELECT {fields} FROM indra_events WHERE domain = ? AND ABS(time_jd_start - ?) < {epsilon};"
+                    else:
+                        sql_cmd = f"SELECT {fields} FROM indra_events WHERE domain = ? AND time_jd_start = ?;"
                     q_params = [rq["domain"], rq["time_jd_start"]]
                     self.cur.execute(sql_cmd, q_params)
                     result = self.cur.fetchall()
