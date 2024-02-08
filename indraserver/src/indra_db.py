@@ -3,6 +3,7 @@ import time
 import json
 import threading
 import datetime
+import uuid
 import bcrypt
 
 # XXX dev only
@@ -30,7 +31,9 @@ class IndraProcess(IndraProcessCore):
         self.epsilon = config_data["epsilon"]
         self.bUncommitted = False
         self.commit_timer_thread = None
+        self.sessions = {}
         self.subscribe(["$trx/#", "$event/#"])
+        self._get_secure_key_names(config_data)
 
     def start_commit_timer(self):
         if self.commit_delay_sec > 0.0:
@@ -157,7 +160,7 @@ class IndraProcess(IndraProcessCore):
         return hashed_password.decode("utf-8")
 
     @staticmethod
-    def check_password(plain_password, hashed_password):
+    def check_password(plain_password: str, hashed_password: str):
         """
         Check if a plain password matches a hashed password.
 
@@ -171,6 +174,42 @@ class IndraProcess(IndraProcessCore):
         return bcrypt.checkpw(
             plain_password.encode("utf-8"), hashed_password.encode("utf-8")
         )
+
+    def _create_session(self, key, from_id):
+        user_template = "entity/indrajala/user/+/password"
+        if IndraEvent.mqcmp(key, user_template) is False:
+            return None
+        user = key.split("/")[-2]
+        if user in self.sessions:
+            return self.sessions[user]['session_id']
+        session_id = str(uuid.uuid4())
+        self.log.info(f"Creating session {session_id} for {user}")
+        self.sessions[user] = {
+            'session_id': session_id,
+            'last_access': time.time(),
+            'from_id': from_id
+        }
+        return session_id
+    
+    def _delete_session(self, user=None, session_id=None):
+        if user is not None:
+            if user in self.sessions:
+                if session_id is not None:
+                    if self.sessions[user]['session_id'] == session_id:
+                        del self.sessions[user]
+                        return True
+                    else:
+                        self.log.error(f"Session {session_id} does not match {user}, not deleted")
+                        return False
+                else:
+                    del self.sessions[user]
+                    return True
+        elif session_id is not None:
+            for user in self.sessions:
+                if self.sessions[user]['session_id'] == session_id:
+                    del self.sessions[user]
+                    return True
+        return False
 
     def _write_event(self, ev: IndraEvent):
         """Write an IndraEvent to the database"""
@@ -193,10 +232,35 @@ class IndraProcess(IndraProcessCore):
             self.log.error(f"Failed to write event-record: {e}")
             return False
         return True
+    
+    def _get_secure_key_names(self, config_data):
+        self.secure_keys = ["entity/indrajala/user/+/password"]
+        if "secure_keys" in config_data:
+            self.secure_keys.append(config_data["secure_keys"])
 
+    def _is_secure_key(self, key: str):
+        """Check if a key is secure"""
+        for secure_key in self.secure_keys:
+            if IndraEvent.mqcmp(key, secure_key):
+                return True
+        return False
+
+    def is_valid_key(self, key: str):
+        key_parts = key.split("/")
+        for key in key_parts:
+            for c in key:
+                if c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-":
+                    return False
+        return True
+    
     def _write_update_kv(self, key: str, value: str):
         """Write a key/value pair. If the key already exists, update the value."""
+        if self.is_valid_key(key) is False:
+            self.log.error(f"Invalid key name {key}")
+            return False
         self.last_state["last_kv_seq_no"] = self.last_state["last_kv_seq_no"] + 1
+        if self._is_secure_key(key):
+            value = self.hash_password(value)
         cmd = """INSERT OR REPLACE INTO indra_kv (
                     seq_no, key, value)
                  VALUES (
@@ -264,6 +328,16 @@ class IndraProcess(IndraProcessCore):
             self.log.error(f"Failed to read kv-record: {e}")
             return None
         return value
+    
+    def _verify_kv(self, key: str, value: str):
+        if self._is_secure_key(key) is False:
+            return False
+        encr_pw = self._read_kv(key)
+        if encr_pw is None:
+            return False
+        if self.check_password(value, self._read_kv(key)[0][1]) is True:
+            return True
+        return False
 
     def _db_open(self):
         """Open database and tune it using pragmas"""
@@ -766,7 +840,7 @@ class IndraProcess(IndraProcessCore):
                     # between various languages and SQL are __not__ deterministic.
                     # epsilon > 0 will falsely equal entries that are not equal, but are within epsilon of each other.
                     if self.epsilon > 0:
-                        sql_cmd = f"SELECT {fields} FROM indra_events WHERE domain = ? AND ABS(time_jd_start - ?) < {epsilon};"
+                        sql_cmd = f"SELECT {fields} FROM indra_events WHERE domain = ? AND ABS(time_jd_start - ?) < {self.epsilon};"
                     else:
                         sql_cmd = f"SELECT {fields} FROM indra_events WHERE domain = ? AND time_jd_start = ?;"
                     q_params = [rq["domain"], rq["time_jd_start"]]
@@ -889,6 +963,7 @@ class IndraProcess(IndraProcessCore):
                         ev, f"Invalid $trx/kv/req/read from {ev.from_id}: {ev.data}"
                     )
                     return
+                print("KV-read!", rq_data)
                 rq_fields = ["key"]
                 valid = True
                 inv_err = ""
@@ -923,6 +998,50 @@ class IndraProcess(IndraProcessCore):
                     self._trx_err(
                         ev,
                         f"$trx/kv/req/read from {ev.from_id} failed, not found",
+                    )
+            elif ev.domain == "$trx/kv/req/verify" or ev.domain == "$trx/kv/req/login":
+                try:
+                    rq_data = json.loads(ev.data)
+                except Exception as e:
+                    self._trx_err(
+                        ev, f"Invalid $trx/kv/req/verify from {ev.from_id}: {ev.data}"
+                    )
+                    return
+                rq_fields = ["key", "value"]
+                valid = True
+                inv_err = ""
+                for field in rq_fields:
+                    if field not in rq_data:
+                        valid = False
+                        inv_err = f"missing: {field}"
+                        break
+                if valid is False:
+                    self._trx_err(
+                        ev,
+                        f"$trx/kv/req/verify from {ev.from_id} failed, request missing field {inv_err}",
+                    )
+                    return
+                if self._verify_kv(rq_data["key"], rq_data["value"]) is True:
+                    rev = IndraEvent()
+                    rev.domain = ev.from_id
+                    rev.from_id = self.name
+                    rev.uuid4 = ev.uuid4
+                    rev.to_scope = ev.domain
+                    rev.time_jd_start = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.time_jd_end = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.data_type = "string"
+                    rev.data = json.dumps("OK")
+                    if ev.domain == "$trx/kv/req/login":
+                        rev.auth_hash = self._create_session(key=rq_data["key"], from_id=ev.from_id)
+                    self.event_queue.put(rev)
+                else:
+                    self._trx_err(
+                        ev,
+                        f"$trx/kv/req/verify from {ev.from_id} failed, verify failed",
                     )
             elif ev.domain == "$trx/kv/req/delete":
                 try:
@@ -971,7 +1090,7 @@ class IndraProcess(IndraProcessCore):
 
         # entity, location, event, session
 
-        # $trx/entity/user/logon/userid
+        # $trx/entity/user/login/userid
         # $trx/entity/user/create/userid
         # $trx/entity/user/delete/userid
         # $trx/entity/user/rename/userid

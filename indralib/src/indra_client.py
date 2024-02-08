@@ -511,11 +511,14 @@ class IndraClient:
         ie.from_id = "ws/python"
         ie.data_type = "kvread"
         ie.data = json.dumps(cmd)
+        print("Sending kv_read")
         return await self.send_event(ie)
 
     async def kv_read_wait(self, key):
         future = await self.kv_read(key)
+        print("Waiting for kv_read")
         result = await future
+        print("Got kv_read result")
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
             return None
@@ -541,6 +544,27 @@ class IndraClient:
             return None
         else:
             return json.loads(result.data)
+        
+    async def login(self, username, password):
+        cmd = {
+            "key": f"entity/indrajala/user/{username}/password",
+            "value": password,
+        }
+        ie = IndraEvent()
+        ie.domain = "$trx/kv/req/login"
+        ie.from_id = "ws/python"
+        ie.data_type = "kvverify"
+        ie.data = json.dumps(cmd)
+        return await self.send_event(ie)
+    
+    async def login_wait(self, username, password):
+        future = await self.login(username, password)
+        result = await future
+        if result.data_type.startswith("error") is True:
+            self.log.error(f"Error: {result.data}")
+            return None
+        else:
+            return result.auth_hash
 
     async def indra_log(self, level, message, module_name=None):
         """Log message"""
