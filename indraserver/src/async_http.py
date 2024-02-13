@@ -104,14 +104,14 @@ class IndraProcess(IndraProcessCore):
                 "ws": ws,
                 "from_id": None,
                 "user_id": None,
-                "session_ids": [],
+                "session_id": None,
                 "subs": [],
             }
             self.log.info(
                 f"New ws client {client_address}! (num clients: {len(self.ws_clients)})"
             )
         else:
-            fid = self.ws_clients[ws].get("from_id", "None")
+            fid = self.ws_clients[client_address].get("from_id", "None")
             self.thread_log.warning(
                 f"Client {client_address} already registered! Num clients: {len(self.ws_clients)}, from_id: {fid}"
             )
@@ -122,6 +122,14 @@ class IndraProcess(IndraProcessCore):
                 self.log.debug("Client ws_dispatch: ws:{} msg:{}".format(ws, msg.data))
                 try:
                     ev = IndraEvent.from_json(msg.data)
+                    if (
+                        self.ws_clients[client_address]["session_id"] is None
+                        and IndraEvent.mqcmp(ev.domain, "$trx/kv/req/login") is False
+                    ):
+                        self.log.warning(
+                            f"WS client {client_address} not logged in, ignoring event"
+                        )
+                        continue
                     self.ws_clients[client_address]["old_from_id"] = ev.from_id
                     ev.from_id = f"{self.name}/ws/{client_address}"
                     self.ws_clients[client_address]["from_id"] = ev.from_id
@@ -167,8 +175,19 @@ class IndraProcess(IndraProcessCore):
                         break
             if route is True:
                 self.log.info(
-                    f"Sending to ws-client: {client_address}, dom: {ev.domain}, ws_from_id: {self.ws_clients[client_address]['from_id']}"
+                    f"Sending to ws-client: {client_address}, dom: {ev.domain}, scope: {ev.to_scope}, ws_from_id: {self.ws_clients[client_address]['from_id']}"
                 )
+                if (
+                    ev.to_scope == "$trx/kv/req/login"
+                    and ev.data_type.startswith("error") is False
+                    and ev.auth_hash is not None
+                    and ev.auth_hash != ""
+                ):
+                    self.ws_clients[client_address]["session_id"] = ev.auth_hash
+                    self.log.info(
+                        f"WS client {client_address} logged in, session_id: {ev.auth_hash}"
+                    )
+
                 await ws.send_str(ev.to_json())
 
     async def async_shutdown(self):
