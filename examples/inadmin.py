@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+import getpass
 
 import nest_asyncio
 
@@ -40,7 +41,7 @@ async def main():
         if user is None:
             user = input("User: ")
         if password is None:
-            password = input("Password: ")
+            password = getpass.getpass("Password: ")
         session_id = await cl.login_wait(user, password)
         if session_id is None:
             print("Login failed")
@@ -55,9 +56,12 @@ async def main():
         else:
             cmds = cmd.split(" ")
             if cmds[0] == "adduser":
-                if len(cmds) == 3:
+                if len(cmds) == 2 or len(cmds) == 3:
                     username = cmds[1]
-                    password = cmds[2]
+                    if len(cmds) == 3:
+                        password = cmds[2]
+                    else:
+                        password = getpass.getpass("Password: ")
                     key = f"entity/indrajala/user/{username}/password"
                     res = await cl.kv_write_wait(key, password)
                     if res is not None:
@@ -77,6 +81,13 @@ async def main():
                         print(f"Failed to delete user {username}")
                 else:
                     print("Usage: deluser <username>")
+            elif cmds[0] == "test":
+                ev = IndraEvent()
+                ev.domain = "$trx/test"
+                ev.data = "Test message"
+                t_fut = await cl.send_event(ev)
+                test_result = await t_fut
+                print(f"Test result: {test_result.data}")
             else:
                 print("Unknown command")
     await cl.logout_wait()
