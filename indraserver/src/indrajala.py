@@ -191,6 +191,7 @@ def main_runner(main_logger, event_queue, modules):
                                     ev_stat.data = str(msg_sec)
                                     event_queue.put(ev_stat)
                             modules[module]["send_queue"].put(ev)
+                            break
                 else:
                     mod_found = True
             if mod_found is False and ev.from_id != "indrajala":
