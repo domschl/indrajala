@@ -334,6 +334,7 @@ class IndraClient:
         ie.domain = "$cmd/subs"
         ie.from_id = "ws/python"
         ie.data_type = "vector/string"
+        ie.auth_hash = self.session_id
         if isinstance(domains, list) is True:
             ie.data = json.dumps(domains)
         else:
@@ -358,6 +359,7 @@ class IndraClient:
         ie.domain = "$cmd/unsubs"
         ie.from_id = "ws/python"
         ie.data_type = "vector/string"
+        ie.auth_hash = self.session_id
         if isinstance(domains, list) is True:
             ie.data = json.dumps(domains)
         else:
@@ -384,6 +386,7 @@ class IndraClient:
         ie.domain = "$trx/db/req/history"
         ie.from_id = "ws/python"
         ie.data_type = "historyrequest"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         if self.verbose is True:
             self.log.info(f"Sending: {ie.to_json()}")
@@ -402,6 +405,7 @@ class IndraClient:
         ie.domain = "$trx/db/req/last"
         ie.from_id = "ws/python"
         ie.data_type = "json/reqlast"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps({"domain": domain})
         return await self.send_event(ie)
 
@@ -427,6 +431,7 @@ class IndraClient:
         ie.domain = "$trx/db/req/uniquedomains"
         ie.from_id = "ws/python"
         ie.data_type = "uniquedomainsrequest"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
@@ -450,6 +455,7 @@ class IndraClient:
         ie.domain = "$trx/db/req/del"
         ie.from_id = "ws/python"
         ie.data_type = "json/reqdel"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
@@ -471,6 +477,7 @@ class IndraClient:
         ie.domain = "$trx/db/req/update"
         ie.from_id = "ws/python"
         ie.data_type = "json/requpdate"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
@@ -492,6 +499,7 @@ class IndraClient:
         ie.domain = "$trx/kv/req/write"
         ie.from_id = "ws/python"
         ie.data_type = "kvwrite"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
@@ -512,6 +520,7 @@ class IndraClient:
         ie.domain = "$trx/kv/req/read"
         ie.from_id = "ws/python"
         ie.data_type = "kvread"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         print("Sending kv_read")
         return await self.send_event(ie)
@@ -535,6 +544,7 @@ class IndraClient:
         ie.domain = "$trx/kv/req/delete"
         ie.from_id = "ws/python"
         ie.data_type = "kvdelete"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
@@ -556,6 +566,7 @@ class IndraClient:
         ie.domain = "$trx/kv/req/login"
         ie.from_id = "ws/python"
         ie.data_type = "kvverify"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
@@ -601,6 +612,7 @@ class IndraClient:
         ie.domain = f"$log/{level}"
         ie.from_id = f"ws/python/{module_name}"
         ie.data_type = "log"
+        ie.auth_hash = self.session_id
         ie.data = json.dumps(message)
         return await self.send_event(ie)
 
