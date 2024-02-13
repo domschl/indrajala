@@ -338,7 +338,7 @@ class IndraProcess(IndraProcessCore):
         if self._is_secure_key(key) is False:
             return False
         encr_pw = self._read_kv(key)
-        if encr_pw is None:
+        if encr_pw is None or len(encr_pw) == 0 or len(encr_pw[0]) != 2:
             return False
         if self.check_password(value, self._read_kv(key)[0][1]) is True:
             return True
@@ -456,12 +456,39 @@ class IndraProcess(IndraProcessCore):
         self.log.info(f"Database opened, seq_no={seq_no}, seq_kv_no={seq_kv_no}")
         return True
 
+    def _db_seed_check(self):
+        # create a default admin user, if kv is empty
+        admin_user = "admin"
+        admin_pw = "admin"
+        admin_key = f"entity/indrajala/user/{admin_user}/password"
+        cur_pwd = self._read_kv(admin_key)
+        self.log.info(f"Current admin user-pwd: {cur_pwd}")
+        if cur_pwd is None or len(cur_pwd) == 0:
+            self.log.info(f"Seeding database with default admin user {admin_user}")
+            self._write_update_kv(
+                admin_key, admin_pw
+            )  # This will hash the password automatically
+        else:
+            # Check if admin password is still default:
+            if (
+                len(cur_pwd) > 0
+                and len(cur_pwd[0]) == 2
+                and self.check_password(admin_pw, cur_pwd[0][1]) is True
+            ):
+                self.log.warning(
+                    f"Admin user {admin_user} password is still set to default, please change it!"
+                )
+        return True
+
     def outbound_init(self):
         db_dir = os.path.dirname(self.database)
         if os.path.exists(db_dir) is False:
             self.log.error(f"Database path {db_dir} does not exist!")
             return False
         ret = self._db_open()
+        if ret is False:
+            return False
+        ret = self._db_seed_check()
         return ret
 
     def shutdown(self):
