@@ -191,6 +191,22 @@ class IndraProcess(IndraProcessCore):
         }
         return session_id
 
+    def _remove_session(self, session_id):
+        for user in self.sessions:
+            if self.sessions[user]["session_id"] == session_id:
+                del self.sessions[user]
+                self.log.info(f"Removed session {session_id} for user {user}")
+                return True
+        self.log.error(f"Session {session_id} not found")
+        return False
+
+    def _check_session(self, session_id):
+        for user in self.sessions:
+            if self.sessions[user]["session_id"] == session_id:
+                self.sessions[user]["last_access"] = time.time()
+                return self.session[user]
+        return None
+
     def _delete_session(self, user=None, session_id=None):
         if user is not None:
             if user in self.sessions:
@@ -1077,6 +1093,33 @@ class IndraProcess(IndraProcessCore):
                         ev,
                         f"$trx/kv/req/verify from {ev.from_id} failed, verify failed",
                     )
+            elif ev.domain == "$trx/kv/req/logout":
+                self.log.info(
+                    f"Logout request from {ev.from_id}, session {ev.auth_hash}"
+                )
+                session_id = ev.auth_hash
+                if self._remove_session(session_id) is True:
+                    rev = IndraEvent()
+                    rev.domain = ev.from_id
+                    rev.from_id = self.name
+                    rev.uuid4 = ev.uuid4
+                    rev.to_scope = ev.domain
+                    rev.time_jd_start = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.time_jd_end = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.data_type = "string"
+                    rev.data = json.dumps("OK")
+                    self.log.info(f"Logged out session {session_id}")
+                    self.event_queue.put(rev)
+                else:
+                    self._trx_err(
+                        ev,
+                        f"$trx/kv/req/logout from {ev.from_id} failed, session {session_id} unknown",
+                    )
+
             elif ev.domain == "$trx/kv/req/delete":
                 try:
                     rq_data = json.loads(ev.data)
