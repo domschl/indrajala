@@ -134,7 +134,7 @@ class IndraProcess(IndraProcessCore):
         if time.time() - self.last_commit > self.commit_delay_sec:
             self.conn.commit()
             self.bUncommitted = False
-            self.log.info("Commit due to timeout")
+            self.log.debug("Commit due to timeout")
         else:
             if self.commit_timer_thread is None:
                 self.start_commit_timer()
@@ -181,32 +181,34 @@ class IndraProcess(IndraProcessCore):
             return None
         user = key.split("/")[-2]
         if user in self.sessions:
-            return self.sessions[user]['session_id']
+            return self.sessions[user]["session_id"]
         session_id = str(uuid.uuid4())
         self.log.info(f"Creating session {session_id} for {user}")
         self.sessions[user] = {
-            'session_id': session_id,
-            'last_access': time.time(),
-            'from_id': from_id
+            "session_id": session_id,
+            "last_access": time.time(),
+            "from_id": from_id,
         }
         return session_id
-    
+
     def _delete_session(self, user=None, session_id=None):
         if user is not None:
             if user in self.sessions:
                 if session_id is not None:
-                    if self.sessions[user]['session_id'] == session_id:
+                    if self.sessions[user]["session_id"] == session_id:
                         del self.sessions[user]
                         return True
                     else:
-                        self.log.error(f"Session {session_id} does not match {user}, not deleted")
+                        self.log.error(
+                            f"Session {session_id} does not match {user}, not deleted"
+                        )
                         return False
                 else:
                     del self.sessions[user]
                     return True
         elif session_id is not None:
             for user in self.sessions:
-                if self.sessions[user]['session_id'] == session_id:
+                if self.sessions[user]["session_id"] == session_id:
                     del self.sessions[user]
                     return True
         return False
@@ -232,7 +234,7 @@ class IndraProcess(IndraProcessCore):
             self.log.error(f"Failed to write event-record: {e}")
             return False
         return True
-    
+
     def _get_secure_key_names(self, config_data):
         self.secure_keys = ["entity/indrajala/user/+/password"]
         if "secure_keys" in config_data:
@@ -249,10 +251,13 @@ class IndraProcess(IndraProcessCore):
         key_parts = key.split("/")
         for key in key_parts:
             for c in key:
-                if c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-":
+                if (
+                    c
+                    not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+                ):
                     return False
         return True
-    
+
     def _write_update_kv(self, key: str, value: str):
         """Write a key/value pair. If the key already exists, update the value."""
         if self.is_valid_key(key) is False:
@@ -328,7 +333,7 @@ class IndraProcess(IndraProcessCore):
             self.log.error(f"Failed to read kv-record: {e}")
             return None
         return value
-    
+
     def _verify_kv(self, key: str, value: str):
         if self._is_secure_key(key) is False:
             return False
@@ -478,7 +483,7 @@ class IndraProcess(IndraProcessCore):
             if self.bUncommitted is True:
                 self.conn.commit()
                 self.bUncommitted = False
-                self.log.info("Timer commit")
+                self.log.debug("Timer commit")
         elif ev.domain.startswith("$trx"):
             self.trx(ev)
         elif ev.domain.startswith("$event"):
@@ -1036,7 +1041,9 @@ class IndraProcess(IndraProcessCore):
                     rev.data_type = "string"
                     rev.data = json.dumps("OK")
                     if ev.domain == "$trx/kv/req/login":
-                        rev.auth_hash = self._create_session(key=rq_data["key"], from_id=ev.from_id)
+                        rev.auth_hash = self._create_session(
+                            key=rq_data["key"], from_id=ev.from_id
+                        )
                     self.event_queue.put(rev)
                 else:
                     self._trx_err(
