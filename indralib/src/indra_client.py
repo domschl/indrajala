@@ -207,6 +207,7 @@ class IndraClient:
             return None
         self.recv_queue.empty()
         self.recv_task = asyncio.create_task(self.fn_recv_task())
+        self.session_id = None
         return self.websocket
 
     async def fn_recv_task(self):
@@ -313,6 +314,7 @@ class IndraClient:
         await self.websocket.close()
         self.trx = {}
         self.websocket = None
+        self.session_id = None
         return True
 
     async def subscribe(self, domains):
@@ -544,7 +546,7 @@ class IndraClient:
             return None
         else:
             return json.loads(result.data)
-        
+
     async def login(self, username, password):
         cmd = {
             "key": f"entity/indrajala/user/{username}/password",
@@ -556,7 +558,7 @@ class IndraClient:
         ie.data_type = "kvverify"
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
-    
+
     async def login_wait(self, username, password):
         future = await self.login(username, password)
         result = await future
@@ -564,7 +566,29 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
+            print(
+                f"Login result: {result.data}, {result.data_type}, {result.auth_hash}"
+            )
+            self.session_id = result.auth_hash
             return result.auth_hash
+
+    async def logout(self):
+        ie = IndraEvent()
+        ie.domain = "$trx/kv/req/logout"
+        ie.from_id = "ws/python"
+        ie.auth_hash = self.session_id
+        ie.data_type = ""
+        ie.data = ""
+        return await self.send_event(ie)
+
+    async def logout_wait(self):
+        future = await self.logout()
+        result = await future
+        if result.data_type.startswith("error") is True:
+            self.log.error(f"Error: {result.data}")
+            return False
+        else:
+            return True
 
     async def indra_log(self, level, message, module_name=None):
         """Log message"""
