@@ -157,7 +157,18 @@ class IndraProcess(IndraProcessCore):
             else:
                 self.log.error(f"Unexpected message {msg.data}, of type {msg.type}")
                 break
-        self.log.warning(f"WS-CLOSE: {client_address}")
+
+        if self.ws_clients[client_address]["session_id"] is not None:
+            self.log.warning(
+                f"WS-CLOSE: {client_address}, session {self.ws_clients[client_address]['session_id']} was still active, logging out"
+            )
+            ev = IndraEvent()
+            ev.from_id = f"{self.name}/ws/{client_address}"
+            ev.domain = "$trx/kv/req/logout"
+            ev.auth_hash = self.ws_clients[client_address]["session_id"]
+            self.event_queue.put(ev)
+        else:
+            self.log.warning(f"WS-CLOSE: {client_address}")
         self.ws_clients.pop(client_address, None)  # Delete key ws
         return ws
 
@@ -187,6 +198,9 @@ class IndraProcess(IndraProcessCore):
                     self.log.info(
                         f"WS client {client_address} logged in, session_id: {ev.auth_hash}"
                     )
+                if ev.to_scope == "$trx/kv/req/logout":
+                    self.ws_clients[client_address]["session_id"] = None
+                    self.log.info(f"WS client {client_address} logged out")
 
                 await ws.send_str(ev.to_json())
 
