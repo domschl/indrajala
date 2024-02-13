@@ -2,7 +2,7 @@
 logdir = "log"
 max_loglevel_logfile = "debug"
 loglevel = "info"
-modules = ["pingpong", "indra_mqtt", "indra_db", "async_http"]
+modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_dispatch"]
 data_directory = "~/.config/indrajala"
 
 [[pingpong]]
@@ -58,3 +58,9 @@ tls = true
 private_key = "{{data_directory}}/certs/my-key.pem"
 public_key = "{{data_directory}}/certs/my-cert.pem"
 web_root = "{{data_directory}}/web"
+
+[[indra_dispatch]]
+active = true
+name = "indra_dispatch.1"
+loglevel = "debug"
+subscriptions = []

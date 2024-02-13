@@ -122,14 +122,36 @@ class IndraProcess(IndraProcessCore):
                 self.log.debug("Client ws_dispatch: ws:{} msg:{}".format(ws, msg.data))
                 try:
                     ev = IndraEvent.from_json(msg.data)
-                    if (
-                        self.ws_clients[client_address]["session_id"] is None
-                        and IndraEvent.mqcmp(ev.domain, "$trx/kv/req/login") is False
-                    ):
-                        self.log.warning(
-                            f"WS client {client_address} not logged in, ignoring event"
-                        )
-                        continue
+                    if IndraEvent.mqcmp(ev.domain, "$trx/kv/req/login") is False:
+                        if self.ws_clients[client_address]["session_id"] is None:
+                            self.log.warning(
+                                f"WS client {client_address} not logged in, ignoring event"
+                            )
+                            rev = IndraEvent()
+                            rev.from_id = f"{self.name}/ws/{client_address}"
+                            rev.to_scope = ev.domain
+                            rev.domain = ev.from_id
+                            rev.uuid4 = ev.uuid4
+                            rev.data_type = "error/access"
+                            rev.data = "Not logged in"
+                            await ws.send_str(rev.to_json())
+                            continue
+                        elif (
+                            ev.auth_hash
+                            != self.ws_clients[client_address]["session_id"]
+                        ):
+                            self.log.warning(
+                                f"WS client {client_address} session mismatch, ignoring event"
+                            )
+                            rev = IndraEvent()
+                            rev.from_id = f"{self.name}/ws/{client_address}"
+                            rev.to_scope = ev.domain
+                            rev.domain = ev.from_id
+                            rev.uuid4 = ev.uuid4
+                            rev.data_type = "error/access"
+                            rev.data = "Session mismatch"
+                            await ws.send_str(rev.to_json())
+                            continue
                     self.ws_clients[client_address]["old_from_id"] = ev.from_id
                     ev.from_id = f"{self.name}/ws/{client_address}"
                     self.ws_clients[client_address]["from_id"] = ev.from_id
