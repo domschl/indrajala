@@ -160,7 +160,7 @@ class IndraProcess(IndraProcessCore):
                 except Exception as e:
                     self.log.warning(f"Failed to convert data {message} for {topic}")
                     return
-                self.log.info(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
+                self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
                 self.event_queue.put(ev)
             else:
                 self.log.debug(f"Not found: {message}, {topic}")
