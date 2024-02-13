@@ -53,7 +53,32 @@ async def main():
         if cmd == "quit" or cmd == "logout":
             esc = True
         else:
-            print("Unknown command")
+            cmds = cmd.split(" ")
+            if cmds[0] == "adduser":
+                if len(cmds) == 3:
+                    username = cmds[1]
+                    password = cmds[2]
+                    key = f"entity/indrajala/user/{username}/password"
+                    res = await cl.kv_write_wait(key, password)
+                    if res is not None:
+                        print(f"User {username} added: {res}")
+                    else:
+                        print(f"Failed to add user {username}")
+                else:
+                    print("Usage: adduser <username> <password>")
+            elif cmds[0] == "deluser":
+                if len(cmds) == 2:
+                    username = cmds[1]
+                    key = f"entity/indrajala/user/{username}/password"
+                    res = await cl.kv_delete_wait(key)
+                    if res is not None:
+                        print(f"User {username} deleted: {res}")
+                    else:
+                        print(f"Failed to delete user {username}")
+                else:
+                    print("Usage: deluser <username>")
+            else:
+                print("Unknown command")
     await cl.logout_wait()
     print("Logged out.")
 

@@ -321,14 +321,14 @@ class IndraProcess(IndraProcessCore):
             op1 = "LIKE"
         else:
             op1 = "="
-        cmd = "DELETE FROM indra_kv WHERE key {op1} ?;"
+        cmd = f"DELETE FROM indra_kv WHERE key {op1} ?;"
         try:
             self.cur.execute(cmd, [key])
             self._check_commit()
-            # self.log.info(f"Deleted {key}")
+            self.log.info(f"Deleted {key}")
         except sqlite3.Error as e:
             self.log.error(f"Failed to delete kv-record: {e}")
-            return None
+            return 0
         return self.cur.rowcount
 
     def _read_kv(self, key: str):
@@ -1142,7 +1142,8 @@ class IndraProcess(IndraProcessCore):
                         f"$trx/kv/req/delete from {ev.from_id} failed, request missing field {inv_err}",
                     )
                     return
-                if self._delete_kv(rq_data["key"]) is True:
+                cnt = self._delete_kv(rq_data["key"])
+                if cnt > 0:
                     rev = IndraEvent()
                     rev.domain = ev.from_id
                     rev.from_id = self.name
@@ -1155,12 +1156,12 @@ class IndraProcess(IndraProcessCore):
                         datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
                     )
                     rev.data_type = "string"
-                    rev.data = json.dumps("OK")
+                    rev.data = json.dumps(f"OK, {cnt} deleted")
                     self.event_queue.put(rev)
                 else:
                     self._trx_err(
                         ev,
-                        f"$trx/kv/req/delete from {ev.from_id} failed, internal error",
+                        f"$trx/kv/req/delete from {ev.from_id} failed, not found",
                     )
         else:
             self.log.error(f"Not implemented: {ev.domain}, invalid request")
