@@ -275,14 +275,17 @@ class IndraProcess(IndraProcessCore):
                     self.log.info(f"Got annotation-reply translation, uuid={ev.uuid4}")
                     if ev.data_type == "translation":
                         translation = json.loads(ev.data)
-                    rev = self.async_dist[ev.uuid4]["event"]
-                    msg_data = json.loads(rev.data)
-                    msg_data["translation"] = translation
-                    rev.data = json.dumps(msg_data)
-                    cur_session = self.async_dist[ev.uuid4]["session"]
-                    participants = self.async_dist[ev.uuid4]["participants"]
-                    del self.async_dist[ev.uuid4]
-                    self.distribute(rev, cur_session, participants)
+                        rev = self.async_dist[ev.uuid4]["event"]
+                        msg_data = json.loads(rev.data)
+                        msg_data["translation"] = translation["translation"]
+                        msg_data["lang_code"] = translation["lang_code"]
+                        rev.data = json.dumps(msg_data)
+                        cur_session = self.async_dist[ev.uuid4]["session"]
+                        participants = self.async_dist[ev.uuid4]["participants"]
+                        del self.async_dist[ev.uuid4]
+                        self.distribute(rev, cur_session, participants)
+                    else:
+                        self.log.error(f"Unknown annotation data type: {ev.data_type}")
                 else:
                     self.log.warning(
                         f"Got annotation-reply, uuid={ev.uuid4}, but not found in async_dist"

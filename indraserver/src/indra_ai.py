@@ -44,7 +44,8 @@ class IndraProcess(IndraProcessCore):
                     "model"
                 ]  # "jbochi/madlad400-3b-mt" "google/madlad400-3b-mt"
                 self.model = T5ForConditionalGeneration.from_pretrained(
-                    model_name, device_map="auto"
+                    model_name,
+                    device_map="cpu",  # auto crashes multiprocessing pickle, tbr.
                 )
                 self.tokenizer = T5Tokenizer.from_pretrained(model_name)
                 self.subscribe(["$trx/translation"])
@@ -122,7 +123,7 @@ class IndraProcess(IndraProcessCore):
                 if rf not in translation_data:
                     self._trx_err(ev, f"Missing required field {rf}")
                     return
-            text = f"<2{translation_data['pilang_code']}> {translation_data['text']}"
+            text = f"<2{translation_data['lang_code']}> {translation_data['text']}"
             rev = IndraEvent()
             rev.time_jd_start = IndraEvent.datetime2julian(
                 datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
@@ -139,7 +140,12 @@ class IndraProcess(IndraProcessCore):
                 datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
             )
             rev.data_type = "translation"
-            rev.data = self.tokenizer.decode(result, skip_special_tokens=True)
+            translation = self.tokenizer.decode(result[0], skip_special_tokens=True)
+            trans_data = {
+                "translation": translation,
+                "lang_code": translation_data["lang_code"],
+            }
+            rev.data = json.dumps(trans_data)
             self.event_queue.put(rev)
             self.log.info(f"Translation result: {rev.data}, sent to {rev.domain}")
         else:
