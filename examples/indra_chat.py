@@ -1,6 +1,8 @@
 import asyncio
-import logging
 import os
+import sys
+import logging
+
 import aioconsole
 
 # Add the parent directory to the path so we can import the client
@@ -9,10 +11,13 @@ import sys
 path = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "indralib/src"
 )
-print(path)
+# print(path)
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
 from indra_client import IndraClient  # type: ignore
+
+from indra_client_applib import interactive_login
+
 
 # Terminal control codes for formatting
 CLEAR_SCREEN = "\033[2J\033[H"  # Clear screen
@@ -66,7 +71,8 @@ async def receive_io(cl):
         ie = IndraEvent()
         ie.data = local_message
         ie.data_type = "String"
-        ie.domain = "async_http"
+        ie.domain = f"$chat/{cl.username}"
+        ie.auth_hash = cl.session_id
         await cl.send_event(ie)
         display_output()
 
@@ -86,15 +92,22 @@ def display_output():
 
 
 async def chat():
-    cl = IndraClient(verbose=True, profile="default")
-    if cl is None:
-        logging.error("Could not create Indrajala client")
+    username = None
+    password = None
+    if len(sys.argv) > 1:
+        username = sys.argv[1]
+    if len(sys.argv) > 2:
+        password = sys.argv[2]
+    cl, session_id = await interactive_login(username=username, password=password)
+    if session_id is None:
+        esc = True
+    else:
+        esc = False
+
+    if esc is True:
         return
-    ws = await cl.init_connection(verbose=True)
-    if ws is None:
-        logging.error("Could not connect to Indrajala")
-        return
-    await cl.subscribe(["CHAT.1/#"])
+
+    await cl.subscribe(["chat.1/#"])
 
     print(CLEAR_SCREEN)
     await asyncio.gather(receive_remote(cl), receive_io(cl))
@@ -105,4 +118,3 @@ try:
     asyncio.get_event_loop().run_until_complete(chat())
 except KeyboardInterrupt:
     pass
-
