@@ -7,3 +7,9 @@ indrajala.toml
 __pycache__/
 db/
 certs/
+# Env stuff:
+bin/
+lib/
+lib64
+pyvenv.cfg
+share/
