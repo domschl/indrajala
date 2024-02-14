@@ -88,7 +88,7 @@ class IndraProcess(IndraProcessCore):
                 self.inbound_parsers[sub](msg.topic, msg.payload)
 
     def inbound_init(self):
-        self.mq_client = mq.Client()
+        self.mq_client = mq.Client(mq.CallbackAPIVersion.VERSION1)
         self.mq_client.on_connect = self.on_connect
         self.mq_client.on_message = self.on_message
         self.mq_client.connect(self.mqtt_server, self.mqtt_port, self.mqtt_keepalive)
