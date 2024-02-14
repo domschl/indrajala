@@ -44,6 +44,20 @@ async def receive_remote(cl):
             msg = chat_msg["message"]
             user = chat_msg["user"]
             remote_message = "   " + user + ": " + msg.replace("###", "")
+            if "sentiment" in chat_msg:
+                print(chat_msg["sentiment"])
+                sentiment = chat_msg["sentiment"]
+                if (
+                    isinstance(sentiment, list)
+                    and "score" in sentiment[0]
+                    and "label" in sentiment[0]
+                ):
+                    if sentiment[0]["label"] == "POSITIVE":
+                        f = 1
+                    else:
+                        f = -1
+                    score = sentiment[0]["score"] * f
+                    remote_message += f" [{score:.2f}]"
             if remote_message[-1] == "}":
                 remote_message = remote_message[:-1]
                 nl = True
