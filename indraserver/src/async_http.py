@@ -195,7 +195,7 @@ class IndraProcess(IndraProcessCore):
         return ws
 
     async def async_outbound(self, ev: IndraEvent):
-        self.log.debug(f"WS outbound: {ev.domain} from {ev.from_id}")
+        self.log.info(f"WS outbound (pre-route): {ev.domain} from {ev.from_id}")
         for client_address in self.ws_clients:
             ws = self.ws_clients[client_address]["ws"]
             route = False

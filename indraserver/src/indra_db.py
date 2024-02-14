@@ -202,13 +202,17 @@ class IndraProcess(IndraProcessCore):
         self.event_queue.put(ev)
         return session_id
 
-    def _remove_session(self, session_id):
+    def _remove_session(self, session_id, from_id):
         if session_id in self.sessions:
             ev = IndraEvent()
             ev.domain = f"$interactive/session/end/{self.sessions[session_id]['user']}"
             ev.from_id = self.name
-            ev.data_type = "string/session_id"
-            ev.data = json.dumps(session_id)
+            session_info = {
+                "session_id": session_id,
+                "from_id": from_id,
+            }
+            ev.data_type = "session_info"
+            ev.data = json.dumps(session_info)
             self.event_queue.put(ev)
             self.log.info(
                 f"Removed session {session_id} for user {self.sessions[session_id]['user']}"
@@ -1093,7 +1097,7 @@ class IndraProcess(IndraProcessCore):
                     f"Logout request from {ev.from_id}, session {ev.auth_hash}"
                 )
                 session_id = ev.auth_hash
-                if self._remove_session(session_id) is True:
+                if self._remove_session(session_id, ev.from_id) is True:
                     rev = IndraEvent()
                     rev.domain = ev.from_id
                     rev.from_id = self.name
