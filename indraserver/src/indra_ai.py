@@ -60,8 +60,14 @@ class IndraProcess(IndraProcessCore):
             self.translation_active = False
 
     def outbound_init(self):
-        self.log.info("Indra-AI init complete")
-        return True
+        if self.translation_active is True or self.sentiment_active is True:
+            self.log.info(
+                "Indra-AI init complete, application {self.application} engine {self.engine}"
+            )
+            return True
+        else:
+            self.log.error("Indra-AI init failed, no application active")
+            return False
 
     def shutdown(self):
         self.log.info("Shutdown AI complete")
