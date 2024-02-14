@@ -195,11 +195,15 @@ class IndraProcess(IndraProcessCore):
             if found is True:
                 ev = IndraEvent()
                 ev.domain = (
-                    f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
+                    # f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
+                    "not-filled-in-yet"
                 )
                 ev.from_id = f"{self.name}/{topic}"
-                ev.data_type = o_data_type
+                ev.data_type = "total-mess"
                 ev.to_scope = "world"
+
+                self.log.error("Not implemented yet: ha parser")
+
                 try:
                     ev.data = json.dumps(float(message))
                 except Exception as e:

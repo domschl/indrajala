@@ -19,8 +19,8 @@ from indra_serverlib import IndraProcessCore
 class IndraProcess(IndraProcessCore):
     def __init__(self, event_queue, send_queue, config_data):
         super().__init__(event_queue, send_queue, config_data, mode="single")
-        self.sessions = {}
-        self.users = {}
+        self.chat_sessions = {}
+        self.user_sessions = []
         self.subscribe(["$trx/cs/#", "$event/chat/#", "$interactive/session/#"])
 
     def outbound_init(self):
@@ -50,8 +50,8 @@ class IndraProcess(IndraProcessCore):
     def outbound(self, ev: IndraEvent):
         if IndraEvent.mqcmp(ev.domain, "$interactive/session/#"):
             comps = ev.domain.split("/")
-            if len(comps) < 4:
-                self.log.error(f"Invalid session event: {ev.domain}")
+            if len(comps) != 4:
+                self.log.error(f"Invalid $interactive/session event: {ev.domain}")
                 return
             if comps[2] == "start":
                 user = comps[3]
@@ -61,26 +61,44 @@ class IndraProcess(IndraProcessCore):
                     if field not in session_data:
                         self.log.error(f"Session start missing required field: {field}")
                         return
-                self.users[session_data["session_id"]] = session_data
+                if session_data["user"] != user:
+                    self.log.error(
+                        f"User domain {user} does not match session user {session_data['user']}, internal error"
+                    )
+                    return
+                self.user_sessions.append(session_data)
                 self.log.info(
                     f"User {user} started an interactive session from {session_data['from_id']}"
                 )
             elif comps[2] == "end":
                 user = comps[3]
-                session_id = json.loads(ev.data)
-                if session_id not in self.users:
-                    self.log.warning(f"Session {session_id} by {user} does not exist")
-                    return
-                else:
-                    if user != self.users[session_id]["user"]:
-                        self.log.warning(
-                            f"User {user} is not the owner of session {session_id}, actual owner is {self.users[session_id]['user']}"
-                        )
+                session_data = json.loads(ev.data)
+                req_fields = ["session_id", "from_id"]
+                for field in req_fields:
+                    if field not in session_data:
+                        self.log.error(f"Session end missing required field: {field}")
                         return
-                    self.log.info(
-                        f"User {user} ended an interactive session {session_id} from {self.users[session_id]['from_id']}"
+                session_id = session_data["session_id"]
+                found = False
+                for user_session in self.user_sessions:
+                    if (
+                        user_session["session_id"] == session_id
+                        and user_session["from_id"] == session_data["from_id"]
+                    ):
+                        self.log.info(
+                            f"User {user} ended an interactive session {session_id} from {user_session['from_id']}"
+                        )
+                        self.user_sessions.remove(user_session)
+                        found = True
+                        break
+                if found is False:
+                    self.log.warning(
+                        f"Session {session_id} by {user} at {user_session['from_id']} does not exist"
                     )
-                del self.users[session_id]
+                    return
+            else:
+                self.log.error(f"Invalid $interactive/session event: {ev.domain}")
+                return
         elif IndraEvent.mqcmp(ev.domain, "$trx/cs/#"):
             try:
                 chat_cmd = json.loads(ev.data)
@@ -92,16 +110,7 @@ class IndraProcess(IndraProcessCore):
                 self.log.error(f"Session command missing 'cmd' field: {ev.data}")
                 self._trx_err(ev, "Session command missing 'cmd' field")
                 return
-            if chat_cmd["cmd"] == "register_user":
-                if "user" not in chat_cmd:
-                    self.log.error(
-                        f"Session command 'register_user' missing 'user' field: {ev.data}"
-                    )
-                    self._trx_err(
-                        ev, "Session command 'register_user' missing 'user' field"
-                    )
-                    return
-            elif chat_cmd["cmd"] == "new_session":
+            if chat_cmd["cmd"] == "new_chat":
                 if "participants" not in chat_cmd:
                     self.log.error(
                         f"Session command 'new_session' missing 'participants' field: {ev.data}"
@@ -127,12 +136,22 @@ class IndraProcess(IndraProcessCore):
                     originator_username = chat_cmd["originator_username"]
                 if originator_username not in participants:
                     participants.append(originator_username)
-                session_id = str(uuid.uuid4())
-                session = {
-                    "participants": participants,
-                    "originator_username": originator_username,
-                }
-                self.sessions[session_id] = session
+                is_new_session = True
+                for session in self.chat_sessions:
+                    if self.chat_sessions[session]["participants"] == participants:
+                        session_id = session
+                        is_new_session = False
+                        self.log.info(
+                            f"Joining existing session {session_id} for {participants}"
+                        )
+                        break
+                if is_new_session is True:
+                    session = {
+                        "participants": participants,
+                        "originator_username": originator_username,
+                    }
+                    session_id = str(uuid.uuid4())
+                    self.chat_sessions[session_id] = session
                 rev = IndraEvent()
                 rev.domain = ev.from_id
                 rev.from_id = self.name
@@ -149,6 +168,63 @@ class IndraProcess(IndraProcessCore):
                 self.event_queue.put(rev)
 
         elif IndraEvent.mqcmp(ev.domain, "$event/chat/#"):
-            pass
+            try:
+                chat_msg = json.loads(ev.data)
+            except json.JSONDecodeError:
+                self.log.error(
+                    f"Failed to decode chat message: {ev.data} from {ev.from_id}"
+                )
+                return
+            req_fields = ["user", "session_id", "message"]
+            for field in req_fields:
+                if field not in chat_msg:
+                    self.log.error(
+                        f"Chat message {ev.data} from {ev.from_id} missing required field: {field}"
+                    )
+                    return
+            cur_session = None
+            for session_id in self.chat_sessions:
+                if chat_msg["session_id"] == session_id:
+                    cur_session = session_id
+                    break
+            if cur_session is None:
+                self.log.error(
+                    f"Chat message {ev.data} from {ev.from_id} has invalid session_id: {chat_msg['session_id']}"
+                )
+                return
+            participants = self.chat_sessions[cur_session]["participants"]
+            self.log.info(
+                f"Chat message from {chat_msg['user']} in session {cur_session} to {participants}"
+            )
+            if chat_msg["user"] not in participants:
+                self.log.error(
+                    f"Chat message {ev.data} from {ev.from_id} has invalid user: {chat_msg['user']}"
+                )
+                return
+            for participant in participants:
+                for user_session in self.user_sessions:
+                    if user_session["user"] == participant:
+                        rev = IndraEvent()
+                        rev.from_id = self.name
+                        rev.data_type = ev.data_type
+                        rev.parent_uuid4 = cur_session
+                        rev.data = ev.data
+                        rev.to_scope = ev.domain
+                        rev.time_jd_start = IndraEvent.datetime2julian(
+                            datetime.datetime.utcnow().replace(
+                                tzinfo=datetime.timezone.utc
+                            )
+                        )
+                        rev.time_jd_end = IndraEvent.datetime2julian(
+                            datetime.datetime.utcnow().replace(
+                                tzinfo=datetime.timezone.utc
+                            )
+                        )
+                        rev.uuid4 = str(uuid.uuid4())
+                        rev.domain = user_session["from_id"]
+                        self.log.info(
+                            f"Sending chat message to {participant} at {rev.domain}"
+                        )
+                        self.event_queue.put(rev)
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")

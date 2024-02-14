@@ -219,8 +219,9 @@ class IndraClient:
                 if self.verbose is True:
                     self.log.info(f"Received message: {message}")
             except Exception as e:
-                self.log.error(f"Could not receive message: {e}")
-                break
+                self.log.error(f"Could not receive message: {e}, exiting recv_task()")
+                self.recv_task = None
+                return False
             # ie = IndraEvent()
             ie = IndraEvent.from_json(message)
             if ie.uuid4 in self.trx:
