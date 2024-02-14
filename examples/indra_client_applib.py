@@ -30,7 +30,7 @@ async def interactive_login(
         if verbose:
             print("Connected.")
     else:
-        return (cl, session_id)
+        return cl
     # Get user and password either by args or by prompting:
     ret_count = 0
     while session_id is None:
@@ -48,7 +48,7 @@ async def interactive_login(
             if ret_count >= login_retries:
                 if verbose:
                     print("Too many retries, exiting.")
-                return (cl, session_id)
+                return cl
     if verbose:
         print(f"Logged in, user: {username}, session: {session_id}")
-    return (cl, session_id)
+    return cl

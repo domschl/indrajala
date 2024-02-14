@@ -98,8 +98,8 @@ async def chat():
         username = sys.argv[1]
     if len(sys.argv) > 2:
         password = sys.argv[2]
-    cl, session_id = await interactive_login(username=username, password=password)
-    if session_id is None:
+    cl = await interactive_login(username=username, password=password)
+    if cl is None or cl.session_id is None:
         esc = True
     else:
         esc = False

@@ -32,7 +32,7 @@ class IndraProcess(IndraProcessCore):
         self.bUncommitted = False
         self.commit_timer_thread = None
         self.sessions = {}
-        self.subscribe(["$trx/#", "$event/#"])
+        self.subscribe(["$trx/db/#", "$trx/kv/#", "$event/#"])
         self._get_secure_key_names(config_data)
 
     def start_commit_timer(self):
@@ -180,54 +180,49 @@ class IndraProcess(IndraProcessCore):
         if IndraEvent.mqcmp(key, user_template) is False:
             return None
         user = key.split("/")[-2]
-        if user in self.sessions:
-            return self.sessions[user]["session_id"]
+        # if user in self.sessions:
+        #     return self.sessions[user]["session_id"]
         session_id = str(uuid.uuid4())
         self.log.info(f"Creating session {session_id} for {user}")
-        self.sessions[user] = {
-            "session_id": session_id,
+        self.sessions[session_id] = {
+            "user": user,
             "last_access": time.time(),
             "from_id": from_id,
         }
+        ev = IndraEvent()
+        ev.domain = f"$interactive/session/start/{user}"
+        ev.from_id = self.name
+        session_info = {
+            "session_id": session_id,
+            "user": user,
+            "from_id": from_id,
+        }
+        ev.data_type = "session_info"
+        ev.data = json.dumps(session_info)
+        self.event_queue.put(ev)
         return session_id
 
     def _remove_session(self, session_id):
-        for user in self.sessions:
-            if self.sessions[user]["session_id"] == session_id:
-                del self.sessions[user]
-                self.log.info(f"Removed session {session_id} for user {user}")
-                return True
+        if session_id in self.sessions:
+            ev = IndraEvent()
+            ev.domain = f"$interactive/session/end/{self.sessions[session_id]['user']}"
+            ev.from_id = self.name
+            ev.data_type = "string/session_id"
+            ev.data = json.dumps(session_id)
+            self.event_queue.put(ev)
+            self.log.info(
+                f"Removed session {session_id} for user {self.sessions[session_id]['user']}"
+            )
+            del self.sessions[session_id]
+            return True
         self.log.error(f"Session {session_id} not found")
         return False
 
     def _check_session(self, session_id):
-        for user in self.sessions:
-            if self.sessions[user]["session_id"] == session_id:
-                self.sessions[user]["last_access"] = time.time()
-                return self.session[user]
+        for session_id in self.sessions:
+            self.sessions[session_id]["last_access"] = time.time()
+            return self.session[session_id]
         return None
-
-    def _delete_session(self, user=None, session_id=None):
-        if user is not None:
-            if user in self.sessions:
-                if session_id is not None:
-                    if self.sessions[user]["session_id"] == session_id:
-                        del self.sessions[user]
-                        return True
-                    else:
-                        self.log.error(
-                            f"Session {session_id} does not match {user}, not deleted"
-                        )
-                        return False
-                else:
-                    del self.sessions[user]
-                    return True
-        elif session_id is not None:
-            for user in self.sessions:
-                if self.sessions[user]["session_id"] == session_id:
-                    del self.sessions[user]
-                    return True
-        return False
 
     def _write_event(self, ev: IndraEvent):
         """Write an IndraEvent to the database"""
