@@ -41,7 +41,10 @@ async def receive_remote(cl):
                 print(f"Unexpected event, {ie.domain}, data_type: {ie.data_type}")
                 continue
             chat_msg = json.loads(ie.data)
-            msg = chat_msg["message"]
+            if "translation" in chat_msg:
+                msg = chat_msg["translation"]
+            else:
+                msg = chat_msg["message"]
             user = chat_msg["user"]
             remote_message = "   " + user + ": " + msg.replace("###", "")
             if "sentiment" in chat_msg:
