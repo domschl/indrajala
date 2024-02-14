@@ -208,6 +208,7 @@ class IndraClient:
         self.recv_queue.empty()
         self.recv_task = asyncio.create_task(self.fn_recv_task())
         self.session_id = None
+        self.username = None
         return self.websocket
 
     async def fn_recv_task(self):
@@ -315,6 +316,7 @@ class IndraClient:
         self.trx = {}
         self.websocket = None
         self.session_id = None
+        self.username = None
         return True
 
     async def subscribe(self, domains):
@@ -562,6 +564,7 @@ class IndraClient:
             "key": f"entity/indrajala/user/{username}/password",
             "value": password,
         }
+        self.username = username
         ie = IndraEvent()
         ie.domain = "$trx/kv/req/login"
         ie.from_id = "ws/python"
@@ -575,6 +578,8 @@ class IndraClient:
         result = await future
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
+            self.session_id = None
+            self.username = None
             return None
         else:
             print(
