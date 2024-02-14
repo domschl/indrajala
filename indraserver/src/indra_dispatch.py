@@ -229,6 +229,27 @@ class IndraProcess(IndraProcessCore):
                     "participants": participants,
                 }
                 self.event_queue.put(rev)
+            if "translation" in self.annotate:
+                self.log.info(
+                    f"Annotating chat message from {chat_msg['user']} in session {cur_session}"
+                )
+                rev = IndraEvent()
+                rev.domain = "$trx/translation"
+                rev.from_id = f"{self.name}/annotate/translation"
+                rev.data_type = "translation_data"
+                translation_data = {
+                    "text": chat_msg["message"],
+                    "lang_code": "de",
+                    "user": chat_msg["user"],
+                    "session_id": chat_msg["session_id"],
+                }
+                rev.data = json.dumps(translation_data)
+                self.async_dist[rev.uuid4] = {
+                    "event": ev,
+                    "session": cur_session,
+                    "participants": participants,
+                }
+                self.event_queue.put(rev)
             else:
                 self.distribute(ev, cur_session, participants)
         elif IndraEvent.mqcmp(ev.domain, f"{self.name}/annotate/#"):
@@ -240,6 +261,23 @@ class IndraProcess(IndraProcessCore):
                     rev = self.async_dist[ev.uuid4]["event"]
                     msg_data = json.loads(rev.data)
                     msg_data["sentiment"] = sentiment
+                    rev.data = json.dumps(msg_data)
+                    cur_session = self.async_dist[ev.uuid4]["session"]
+                    participants = self.async_dist[ev.uuid4]["participants"]
+                    del self.async_dist[ev.uuid4]
+                    self.distribute(rev, cur_session, participants)
+                else:
+                    self.log.warning(
+                        f"Got annotation-reply, uuid={ev.uuid4}, but not found in async_dist"
+                    )
+            elif ev.domain == f"{self.name}/annotate/translation":
+                if ev.uuid4 in self.async_dist:
+                    self.log.info(f"Got annotation-reply translation, uuid={ev.uuid4}")
+                    if ev.data_type == "translation":
+                        translation = json.loads(ev.data)
+                    rev = self.async_dist[ev.uuid4]["event"]
+                    msg_data = json.loads(rev.data)
+                    msg_data["translation"] = translation
                     rev.data = json.dumps(msg_data)
                     cur_session = self.async_dist[ev.uuid4]["session"]
                     participants = self.async_dist[ev.uuid4]["participants"]

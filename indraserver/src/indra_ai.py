@@ -34,6 +34,29 @@ class IndraProcess(IndraProcessCore):
                     "Subscribed to $trx/sentiment/#, using huggingface/pipeline/sentiment-analysis"
                 )
                 self.sentiment_active = True
+                self.translation_active = False
+        elif self.application == "translation":
+            # https://huggingface.co/google/madlad400-3b-mt
+            if self.engine == "huggingface/accelerate/sentencepiece":
+                from transformers import T5ForConditionalGeneration, T5Tokenizer
+
+                model_name = config_data[
+                    "model"
+                ]  # "jbochi/madlad400-3b-mt" "google/madlad400-3b-mt"
+                self.model = T5ForConditionalGeneration.from_pretrained(
+                    model_name, device_map="auto"
+                )
+                self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+                self.subscribe(["$trx/translation"])
+                self.log.info(
+                    "Subscribed to $trx/translation/#, using huggingface/accelerate/sentencepiece"
+                )
+                self.sentiment_active = False
+                self.translation_active = True
+        else:
+            self.log.error(f"Unknown application: {self.application}")
+            self.sentiment_active = False
+            self.translation_active = False
 
     def outbound_init(self):
         self.log.info("Indra-AI init complete")
@@ -88,5 +111,36 @@ class IndraProcess(IndraProcessCore):
             rev.data = json.dumps(result)
             self.event_queue.put(rev)
             self.log.info(f"Sentiment result: {result}, sent to {rev.domain}")
+        elif IndraEvent.mqcmp(ev.domain, "$trx/translation") is True:
+            if self.translation_active is False:
+                self._trx_err(ev, "indra_ai translation not active")
+                return
+            self.log.info(f"Got translation request: {ev.data}")
+            translation_data = json.loads(ev.data)
+            req_fields = ["text", "lang_code"]
+            for rf in req_fields:
+                if rf not in translation_data:
+                    self._trx_err(ev, f"Missing required field {rf}")
+                    return
+            text = f"<2{translation_data['pilang_code']}> {translation_data['text']}"
+            rev = IndraEvent()
+            rev.time_jd_start = IndraEvent.datetime2julian(
+                datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+            )
+            inputs = self.tokenizer.encode(text, return_tensors="pt")
+            result = self.model.generate(
+                inputs
+            )  # , max_length=40, num_beams=4, early_stopping=True)
+            rev.domain = ev.from_id
+            rev.from_id = self.name
+            rev.uuid4 = ev.uuid4
+            rev.to_scope = ev.domain
+            rev.time_jd_end = IndraEvent.datetime2julian(
+                datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+            )
+            rev.data_type = "translation"
+            rev.data = self.tokenizer.decode(result, skip_special_tokens=True)
+            self.event_queue.put(rev)
+            self.log.info(f"Translation result: {rev.data}, sent to {rev.domain}")
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
