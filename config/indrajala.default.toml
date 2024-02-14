@@ -2,7 +2,7 @@
 logdir = "log"
 max_loglevel_logfile = "debug"
 loglevel = "info"
-modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_dispatch"]
+modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_dispatch", "indra_ai"]
 data_directory = "~/.config/indrajala"
 
 [[pingpong]]
