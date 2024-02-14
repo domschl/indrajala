@@ -477,7 +477,6 @@ class IndraProcess(IndraProcessCore):
         admin_pw = "admin"
         admin_key = f"entity/indrajala/user/{admin_user}/password"
         cur_pwd = self._read_kv(admin_key)
-        self.log.info(f"Current admin user-pwd: {cur_pwd}")
         if cur_pwd is None or len(cur_pwd) == 0:
             self.log.info(f"Seeding database with default admin user {admin_user}")
             self._write_update_kv(

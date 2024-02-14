@@ -21,7 +21,16 @@ class IndraProcess(IndraProcessCore):
         super().__init__(event_queue, send_queue, config_data, mode="single")
         self.chat_sessions = {}
         self.user_sessions = []
-        self.subscribe(["$trx/cs/#", "$event/chat/#", "$interactive/session/#"])
+        self.async_dist = {}
+        self.annotate = config_data["annotate"]
+        self.subscribe(
+            [
+                "$trx/cs/#",
+                "$event/chat/#",
+                "$interactive/session/#",
+                f"{self.name}/annotate/#",
+            ]
+        )
 
     def outbound_init(self):
         self.log.info("Indra-dispatch init complete")
@@ -166,7 +175,6 @@ class IndraProcess(IndraProcessCore):
                 rev.data_type = "session/new"
                 rev.data = json.dumps(session_id)
                 self.event_queue.put(rev)
-
         elif IndraEvent.mqcmp(ev.domain, "$event/chat/#"):
             try:
                 chat_msg = json.loads(ev.data)
@@ -201,30 +209,72 @@ class IndraProcess(IndraProcessCore):
                     f"Chat message {ev.data} from {ev.from_id} has invalid user: {chat_msg['user']}"
                 )
                 return
-            for participant in participants:
-                for user_session in self.user_sessions:
-                    if user_session["user"] == participant:
-                        rev = IndraEvent()
-                        rev.from_id = self.name
-                        rev.data_type = ev.data_type
-                        rev.parent_uuid4 = cur_session
-                        rev.data = ev.data
-                        rev.to_scope = ev.domain
-                        rev.time_jd_start = IndraEvent.datetime2julian(
-                            datetime.datetime.utcnow().replace(
-                                tzinfo=datetime.timezone.utc
-                            )
-                        )
-                        rev.time_jd_end = IndraEvent.datetime2julian(
-                            datetime.datetime.utcnow().replace(
-                                tzinfo=datetime.timezone.utc
-                            )
-                        )
-                        rev.uuid4 = str(uuid.uuid4())
-                        rev.domain = user_session["from_id"]
-                        self.log.info(
-                            f"Sending chat message to {participant} at {rev.domain}"
-                        )
-                        self.event_queue.put(rev)
+            if "sentiment" in self.annotate:
+                self.log.info(
+                    f"Annotating chat message from {chat_msg['user']} in session {cur_session}"
+                )
+                rev = IndraEvent()
+                rev.domain = "$trx/sentiment"
+                rev.from_id = f"{self.name}/annotate/sentiment"
+                rev.data_type = "sentiment_data"
+                sentiment_data = {
+                    "text": chat_msg["message"],
+                    "user": chat_msg["user"],
+                    "session_id": chat_msg["session_id"],
+                }
+                rev.data = json.dumps(sentiment_data)
+                self.async_dist[rev.uuid4] = {
+                    "event": ev,
+                    "session": cur_session,
+                    "participants": participants,
+                }
+                self.event_queue.put(rev)
+            else:
+                self.distribute(ev, cur_session, participants)
+        elif IndraEvent.mqcmp(ev.domain, f"{self.name}/annotate/#"):
+            if ev.domain == f"{self.name}/annotate/sentiment":
+                if ev.uuid4 in self.async_dist:
+                    self.log.info(f"Got annotation-reply sentiment, uuid={ev.uuid4}")
+                    if ev.data_type == "sentiment":
+                        sentiment = json.loads(ev.data)
+                    rev = self.async_dist[ev.uuid4]["event"]
+                    msg_data = json.loads(rev.data)
+                    msg_data["sentiment"] = sentiment
+                    rev.data = json.dumps(msg_data)
+                    cur_session = self.async_dist[ev.uuid4]["session"]
+                    participants = self.async_dist[ev.uuid4]["participants"]
+                    del self.async_dist[ev.uuid4]
+                    self.distribute(rev, cur_session, participants)
+                else:
+                    self.log.warning(
+                        f"Got annotation-reply, uuid={ev.uuid4}, but not found in async_dist"
+                    )
+            else:
+                self.log.warning(
+                    f"Unknown annotation domain {ev.domain}, uuid={ev.uuid4}, ignored"
+                )
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
+
+    def distribute(self, ev: IndraEvent, cur_session: str, participants: list):
+        for participant in participants:
+            for user_session in self.user_sessions:
+                if user_session["user"] == participant:
+                    rev = IndraEvent()
+                    rev.from_id = self.name
+                    rev.data_type = ev.data_type
+                    rev.parent_uuid4 = cur_session
+                    rev.data = ev.data
+                    rev.to_scope = ev.domain
+                    rev.time_jd_start = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.time_jd_end = IndraEvent.datetime2julian(
+                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    )
+                    rev.uuid4 = str(uuid.uuid4())
+                    rev.domain = user_session["from_id"]
+                    self.log.info(
+                        f"Sending chat message to {participant} at {rev.domain}"
+                    )
+                    self.event_queue.put(rev)
