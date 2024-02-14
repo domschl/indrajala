@@ -134,7 +134,8 @@ class IndraProcess(IndraProcessCore):
             )
             inputs = self.tokenizer.encode(text, return_tensors="pt")
             result = self.model.generate(
-                inputs
+                inputs,
+                max_length=80,
             )  # , max_length=40, num_beams=4, early_stopping=True)
             rev.domain = ev.from_id
             rev.from_id = self.name
