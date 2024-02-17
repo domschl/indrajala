@@ -4,9 +4,11 @@ max_loglevel_logfile = "debug"
 loglevel = "info"
 modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_dispatch", "indra_ai"]
 data_directory = "~/.config/indrajala"
+zeromq_port = 8091
 
 [[pingpong]]
 active = false
+zeromq_port = 8092
 name = "pingpong.1"
 loglevel = "debug"
 subscriptions = ["pingpong/#"]
@@ -85,3 +87,10 @@ application = "translation"
 engine = "huggingface/accelerate/sentencepiece"
 # model = "Helsinki-NLP/opus-mt-en-de"
 model = "jbochi/madlad400-3b-mt"
+
+[[zero_test]]
+active = true
+name = "zero_test.1"
+zeromq_port = 8092
+loglevel = "debug"
+subscriptions = ["zero_test/#"]
