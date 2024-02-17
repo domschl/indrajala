@@ -9,9 +9,13 @@ import argparse
 import pathlib
 import importlib
 import multiprocessing as mp
+import subprocess
+import threading
 import json
 import time
 import signal
+import zmq
+import shlex
 
 try:
     import tomllib
@@ -32,6 +36,7 @@ INDRAJALA_VERSION = "0.1.0"
 
 
 def main_runner(main_logger, event_queue, modules):
+    global abort_zmq_thread
     subs = {}
 
     for module in modules:
@@ -42,17 +47,18 @@ def main_runner(main_logger, event_queue, modules):
                 subs[module].append(sub)
 
     for module in modules:
-        m_op = getattr(modules[module]["iproc"], "launcher", None)
-        if callable(m_op) is True:
-            main_logger.debug(f"adding task from {module}")
-            p = mp.Process(target=modules[module]["iproc"].launcher, args=[])
-            p.start()
-            modules[module]["process"] = p
-            main_logger.debug(f"Module {module} started")
-        else:
-            main_logger.error(
-                f"Cannot start process for {module}, entry-point 'indra_process' not found!"
-            )
+        if modules[module]["mode"] == "queue":
+            m_op = getattr(modules[module]["iproc"], "launcher", None)
+            if callable(m_op) is True:
+                main_logger.debug(f"adding task from {module}")
+                p = mp.Process(target=modules[module]["iproc"].launcher, args=[])
+                p.start()
+                modules[module]["process"] = p
+                main_logger.debug(f"Module {module} started")
+            else:
+                main_logger.error(
+                    f"Cannot start process for {module}, entry-point 'indra_process' not found!"
+                )
 
     # Main event loop
     terminate_main_runner = False
@@ -120,10 +126,15 @@ def main_runner(main_logger, event_queue, modules):
             if ev.domain == "$cmd/quit":
                 stop_timer = time.time() + 0.5
                 for module in modules:
-                    main_logger.debug(
-                        f"Sending termination cmd to {modules[module]['config_data']['name']}... "
-                    )
-                    modules[module]["send_queue"].put(ev)
+                    if modules[module]["mode"] == "queue":
+                        main_logger.debug(
+                            f"Sending termination cmd to {modules[module]['config_data']['name']}... "
+                        )
+                        modules[module]["send_queue"].put(ev)
+                    else:
+                        main_logger.warning(
+                            f"Sending termination cmd to {modules[module]['config_data']['name']} via ZMQ not yet implemented!"
+                        )
             elif ev.domain == "$cmd/subs":
                 sub_list = json.loads(ev.data)
                 if isinstance(sub_list, list) is True:
@@ -190,7 +201,12 @@ def main_runner(main_logger, event_queue, modules):
                                     ev_stat.from_id = "indrajala"
                                     ev_stat.data = str(msg_sec)
                                     event_queue.put(ev_stat)
-                            modules[module]["send_queue"].put(ev)
+                            if modules[module]["mode"] == "queue":
+                                modules[module]["send_queue"].put(ev)
+                            else:
+                                main_logger.error(
+                                    f"Routing to {module} via ZMQ not yet implemented!"
+                                )
                             break
                 else:
                     mod_found = True
@@ -200,18 +216,79 @@ def main_runner(main_logger, event_queue, modules):
                 )
 
     main_logger.debug("Waiting for all sub processes to terminate")
+    if zmq_started is True:
+        abort_zmq_thread = True
+        main_logger.info("Informing ZMQ thread to terminate")
     # Wait for all processes to stop
+    zmq_skip = False
     for module in modules:
-        main_logger.debug(
-            f"Waiting for termination of {modules[module]['config_data']['name']}... "
+        if modules[module]["mode"] == "queue":
+            main_logger.debug(
+                f"Waiting for termination of {modules[module]['config_data']['name']}... "
+            )
+            modules[module]["process"].join()
+            main_logger.debug(f"{modules[module]['config_data']['name']} OK.")
+        else:
+            reps = 5
+            modules[module]["iproc"].terminate()
+            while modules[module]["iproc"].poll() is None:
+                main_logger.info("Waiting for ZMQ process to terminate")
+                if reps == 3:
+                    modules[module]["iproc"].kill()
+                    main_logger.warning(
+                        "ZMQ process did not terminate, killing it with SIGKILL"
+                    )
+                time.sleep(0.5)
+                reps = reps - 1
+                if reps == 0:
+                    zmq_skip = True
+                    break
+    if zmq_skip is False:
+        main_logger.info("All sub processes terminated")
+    else:
+        main_logger.warning(
+            "Some sub processes were not terminated, ZMQ termination not yet implemented"
         )
-        modules[module]["process"].join()
-        main_logger.debug(f"{modules[module]['config_data']['name']} OK.")
-    main_logger.info("All sub processes terminated")
-    exit(0)
+    sys.exit(0)
+
+
+def _handle_zmq_messages(socket):
+    global abort_zmq_thread
+    main_logger.info("ZMQ thread started")
+    while True:
+        try:
+            msg = socket.recv()
+        except zmq.error.Again:
+            if socket.closed or abort_zmq_thread is True:
+                main_logger.info("ZMQ thread terminated")
+                socket.close()
+                return
+            continue
+        main_logger.info(f"ZMQ message received: {msg}")
+        ev = IndraEvent.from_json(msg)
+        event_queue.put(ev)
+
+
+def _create_zmq(zmq_port):
+    global abort_zmq_thread, zmq_started
+    if zmq_port < 1024 or zmq_port > 65535:
+        main_logger.warning(f"Incorrect ZMQ port {zmq_port}, not starting ZMQ")
+        return None
+    else:
+        abort_zmq_thread = False
+        context = zmq.Context()
+        socket = context.socket(zmq.PULL)
+        socket.setsockopt(zmq.RCVTIMEO, 200)
+        socket.bind(f"tcp://*:{zmq_port}")
+        zmq_thread = threading.Thread(target=_handle_zmq_messages, args=(socket,))
+        zmq_thread.start()
+        logging.info(f"ZMQ thread started, listening on port {zmq_port}")
+        zmq_started = True
+        return socket
 
 
 def load_modules(main_logger, toml_data, args):
+    global zmq_started
     modules = {}
     event_queue = mp.Queue()
     if "indrajala" not in toml_data:
@@ -219,6 +296,20 @@ def load_modules(main_logger, toml_data, args):
             f"The toml_file {args.toml_file} needs to contain a section [indrajala], cannot continue with invalid configuration."
         )
         return {}
+    if "zeromq_port" not in toml_data["indrajala"]:
+        main_logger.error(
+            f"In toml_file {args.toml_file}, [indrajala] has no entry zeromq_port, cannot continue with invalid configuration."
+        )
+        return {}
+
+    zmq_event_queue_port = toml_data["indrajala"]["zeromq_port"]
+    zmq_started = False
+    if zmq_event_queue_port is not None and zmq_event_queue_port != 0:
+        main_logger.info(f"ZMQ active, listening on port {zmq_event_queue_port}")
+        _create_zmq(zmq_event_queue_port)
+    else:
+        zmq_event_queue_port = 0
+
     if "modules" not in toml_data["indrajala"]:
         main_logger.error(
             f"In toml_file {args.toml_file}, [indrajala] has no list of modules, add: modules=[..]"
@@ -261,20 +352,51 @@ def load_modules(main_logger, toml_data, args):
                         name = sub_mod["name"]
                         main_logger.debug(f"Module {module} has no name, using {name}")
                     if sub_mod["active"] is True:
-                        obj_name = sub_mod["name"]
-                        ind = obj_name.rfind(".")
-                        if ind != -1:
-                            obj_name = obj_name[:ind]
-                        modules[sub_mod["name"]] = {}
-                        send_queue = mp.Queue()
-                        modules[sub_mod["name"]]["send_queue"] = send_queue
-                        modules[sub_mod["name"]]["config_data"] = sub_mod
-                        modules[sub_mod["name"]]["iproc"] = m.IndraProcess(
-                            event_queue, send_queue, sub_mod
-                        )
-                        main_logger.debug(
-                            f"Instantiation of {sub_mod['name']} success."
-                        )
+                        if "zeromq_port" not in sub_mod:
+                            obj_name = sub_mod["name"]
+                            ind = obj_name.rfind(".")
+                            if ind != -1:
+                                obj_name = obj_name[:ind]
+                            modules[sub_mod["name"]] = {}
+                            send_queue = mp.Queue()
+                            modules[sub_mod["name"]]["mode"] = "queue"
+                            modules[sub_mod["name"]]["send_queue"] = send_queue
+                            modules[sub_mod["name"]]["config_data"] = sub_mod
+                            modules[sub_mod["name"]]["iproc"] = m.IndraProcess(
+                                event_queue, send_queue, sub_mod
+                            )
+                            main_logger.debug(
+                                f"Instantiation of {sub_mod['name']} success."
+                            )
+                        else:
+                            if zmq_event_queue_port == 0:
+                                main_logger.error(
+                                    f"Module {sub_mod['name']} has a zeromq_port, but the main process is not listening on a ZMQ port, cannot start module."
+                                )
+                                continue
+                            json_str = json.dumps(sub_mod)
+                            escaped_json_str = shlex.quote(json_str)
+                            module = (
+                                f"indraserver/src/{sub_mod['name'].split('.')[0]}.py"
+                            )
+                            cmd = [
+                                "python",
+                                module,
+                                str(zmq_event_queue_port),
+                                escaped_json_str,
+                            ]
+                            # spawn a new process for the module
+                            main_logger.debug(
+                                f"Module {sub_mod['name']} has a zeromq_port, starting in separate process: {cmd}"
+                            )
+                            modules[sub_mod["name"]] = {}
+                            modules[sub_mod["name"]]["mode"] = "zeromq"
+                            modules[sub_mod["name"]]["send_port"] = sub_mod[
+                                "zeromq_port"
+                            ]
+                            modules[sub_mod["name"]]["config_data"] = sub_mod
+                            # Throws FileNotFoundError if the module is not found:
+                            modules[sub_mod["name"]]["iproc"] = subprocess.Popen(cmd)
                     else:
                         main_logger.debug(
                             f"Module instance {sub_mod['name']} is not active."
