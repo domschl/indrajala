@@ -9,7 +9,10 @@ if __name__ == "__main__":
         sys.exit(1)
     port = int(sys.argv[1])
     try:
-        config = json.loads(sys.argv[2][1:-1])
+        if sys.argv[2][0] == "'" and sys.argv[2][-1] == "'":
+            config = json.loads(sys.argv[2][1:-1])
+        else:
+            config = json.loads(sys.argv[2])
     except Exception as e:
         print("JSON Error: ", e)
         sys.exit(1)
