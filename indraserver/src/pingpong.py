@@ -32,9 +32,7 @@ class IndraProcess(IndraProcessCore):
             mode="dual",
         )
         self.n = 0
-        self.set_throttle(
-            1.0 / config_data["ping_frequency_hz"]
-        )  # Max 1 message per sec to inbound
+        self.set_throttle(1.0 / config_data["ping_frequency_hz"])
 
     def inbound(self):
         self.n = self.n + 1

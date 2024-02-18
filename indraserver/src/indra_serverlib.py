@@ -262,13 +262,15 @@ class IndraProcessCore:
             if self.transport == "zmq":
                 try:
                     msg = self.zmq_send_socket.recv()
+                    ev = IndraEvent.from_json(msg)
+                    self.log.info(f"ZMQ message received: {ev}")
                 except zmq.error.Again:
+                    msg = None
+                    ev = None
                     if self.zmq_send_socket.closed is True:
                         self.log.info("{self.name} ZMQ thread terminated")
                         self.zmq_send_socket.close()
                         exit(0)
-                self.log.info(f"ZMQ message received: {msg}")
-                ev = IndraEvent.from_json(msg)
             else:
                 try:
                     ev = self.send_queue.get(timeout=0.1)
