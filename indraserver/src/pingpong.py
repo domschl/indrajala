@@ -13,10 +13,28 @@ from indra_serverlib import IndraProcessCore
 
 
 class IndraProcess(IndraProcessCore):
-    def __init__(self, event_queue, send_queue, config_data):
-        super().__init__(event_queue, send_queue, config_data)
+    def __init__(
+        self,
+        config_data,
+        transport,
+        event_queue,
+        send_queue,
+        zmq_event_queue_port,
+        zmq_send_queue_port,
+    ):
+        super().__init__(
+            config_data,
+            transport,
+            event_queue,
+            send_queue,
+            zmq_event_queue_port,
+            zmq_send_queue_port,
+            mode="dual",
+        )
         self.n = 0
-        self.set_throttle(1.0/config_data['ping_frequency_hz'])  # Max 1 message per sec to inbound
+        self.set_throttle(
+            1.0 / config_data["ping_frequency_hz"]
+        )  # Max 1 message per sec to inbound
 
     def inbound(self):
         self.n = self.n + 1
