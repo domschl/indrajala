@@ -92,5 +92,7 @@ model = "jbochi/madlad400-3b-mt"
 active = true
 name = "zero_test.1"
 zeromq_port = 8092
+# zeromq_host = "localhost"
+# zeromq_executable = "some path to module"
 loglevel = "debug"
 subscriptions = ["zero_test/#"]
