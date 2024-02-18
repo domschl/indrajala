@@ -6,6 +6,7 @@ import threading
 import time
 import signal
 import asyncio
+import zmq
 
 try:
     import tomllib
@@ -24,13 +25,28 @@ from indra_event import IndraEvent  # type: ignore
 
 
 class IndraServerLog:
-    def __init__(self, name, event_queue, loglevel):
+    def __init__(
+        self: str,
+        name,
+        transport: str,
+        loglevel: str,
+        event_queue: queue.Queue = None,
+        socket=None,
+    ):
         self.loglevels = ["none", "error", "warning", "info", "debug"]
+        self.transports = ["zmq", "queue"]
+        if transport not in self.transports:
+            print(
+                f"Invalid transport: {transport}, for IndraServerLog, cannot continue"
+            )
+            exit(1)
         if loglevel in self.loglevels:
             self.loglevel = self.loglevels.index(loglevel)
         else:
             self.loglevel = self.loglevels.index("info")
         self.name = name
+        self.transport = transport
+        self.socket = socket
         self.event_queue = event_queue
 
     def _send_log(self, level, msg):
@@ -39,7 +55,10 @@ class IndraServerLog:
         self.ev.from_id = self.name
         self.ev.domain = "$log/" + level
         self.ev.data = msg
-        self.event_queue.put(self.ev)
+        if self.transport == "zmq":
+            self.socket.send_json(self.ev.to_dict())
+        else:
+            self.event_queue.put(self.ev)
 
     def error(self, msg):
         if self.loglevel > 0:
@@ -60,10 +79,21 @@ class IndraServerLog:
 
 class IndraProcessCore:
     def __init__(
-        self, event_queue, send_queue, config_data, signal_handler=True, mode="dual"
+        self,
+        config_data,
+        transport,
+        event_queue=None,
+        send_queue=None,
+        zmq_event_queue_port=0,
+        zmq_send_queue_port=0,
+        signal_handler=True,
+        mode="dual",
     ):
         """Super-class that is used to instantiate the IndraProcess object
-
+        There are two different transports: 'zmq' and 'queue'. The 'zmq' transport is used for
+        inter-process communication and the 'queue' transport is used for Python queue() communication
+        using event_queue and send_queue. The 'zmq' transport is used for inter-process communication
+        using ports zmq_event_queue_port and zmq_send_queue_port.
         There are three different modes, an IndraProcess can be implemented: 'single', 'dual' and
         'async'.
         In 'single' mode the instance needs to implement outbound() and optionally outbound_init()
@@ -73,10 +103,35 @@ class IndraProcessCore:
         async_outbound() and async_shutdown() [Example: async_http]
         """
         self.name = config_data["name"]
-        self.log = IndraServerLog(self.name, event_queue, config_data["loglevel"])
+        self.transports = ["zmq", "queue"]
+        if transport not in self.transports:
+            print(
+                f"Invalid transport: {transport}, for IndraProcessCore, cannot continue"
+            )
+            exit(1)
+        self.transport = transport
+        if transport == "zmq":
+            self.context = zmq.Context()
+            self.zmq_event_socket = self.context.socket(zmq.PUSH)
+            self.zmq_event_socket.connect(f"tcp://localhost:{zmq_event_queue_port}")
+            self.zmq_send_socket = self.context.socket(zmq.PULL)
+            self.zmq_send_socket.setsockopt(zmq.RCVTIMEO, 200)
+            self.zmq_send_socket.connect(f"tcp://localhost:{zmq_send_queue_port}")
+            self.send_queue = None
+            self.event_queue = None
+        elif transport == "queue":
+            self.send_queue = send_queue
+            self.event_queue = event_queue
+            self.zmq_event_socket = None
+            self.zmq_send_socket = None
+        self.log = IndraServerLog(
+            self.name,
+            transport,
+            config_data["loglevel"],
+            self.event_queue,
+            self.zmq_event_socket,
+        )
         self.bActive = True
-        self.send_queue = send_queue
-        self.event_queue = event_queue
         self.config_data = config_data
         self.throttle = 0
 
@@ -94,6 +149,20 @@ class IndraProcessCore:
             self.subscribe(sub)
 
         self.log.info(f"IndraProcess {self.name} instantiated")
+
+    def event_send(self, ev):
+        """Send an event to the event queue"""
+        if self.transport == "zmq":
+            self.zmq_event_socket.send_json(ev.to_dict())
+        else:
+            self.event_queue.put(ev)
+
+    def event_send_self(self, ev):
+        """Send an event to the send queue (incoming to self)"""
+        if self.transport == "zmq":
+            self.zmq_send_socket.send_json(ev.to_dict())  # XXX Does this work?
+        else:
+            self.send_queue.put(ev)
 
     def launcher(self):
         if self.mode == "dual":
@@ -150,25 +219,25 @@ class IndraProcessCore:
         """send_worker (inbound) is active only in 'dual' mode"""
         self.log.debug(f"{self.name} started send_worker")
         if self.inbound_init() is True:
-            dt_corr= time.time()
+            dt_corr = time.time()
             start = time.time()
             while self.bActive is True:
-                dt_corr = time.time()-start
+                dt_corr = time.time() - start
                 start = time.time()
-                ev = self.inbound()                
+                ev = self.inbound()
                 if ev is not None:
-                    self.event_queue.put(ev)
+                    self.event_send(ev)
                     if self.throttle > 0:
                         dt = time.time() - start
                         if dt < self.throttle:
                             delay = self.throttle - dt
                             if delay < 0.001:
-                                corr = dt_corr-self.throttle
-                                if corr>0:
+                                corr = dt_corr - self.throttle
+                                if corr > 0:
                                     if corr > delay:
                                         time.sleep(0.0000001)
                                     else:
-                                        time.sleep(delay-corr)
+                                        time.sleep(delay - corr)
                                 else:
                                     time.sleep(delay)
                             else:
@@ -190,10 +259,21 @@ class IndraProcessCore:
         self.log.debug(f"{self.name} started receive_worker")
         outbound_active = self.outbound_init()
         while self.bActive is True:
-            try:
-                ev = self.send_queue.get(timeout=0.1)
-            except queue.Empty:
-                ev = None
+            if self.transport == "zmq":
+                try:
+                    msg = self.zmq_send_socket.recv()
+                except zmq.error.Again:
+                    if self.zmq_send_socket.closed is True:
+                        self.log.info("{self.name} ZMQ thread terminated")
+                        self.zmq_send_socket.close()
+                        exit(0)
+                self.log.info(f"ZMQ message received: {msg}")
+                ev = IndraEvent.from_json(msg)
+            else:
+                try:
+                    ev = self.send_queue.get(timeout=0.1)
+                except queue.Empty:
+                    ev = None
             if ev is not None:
                 self.log.debug(f"Received: {ev.domain}")
                 if ev.domain == "$cmd/quit":
@@ -264,7 +344,7 @@ class IndraProcessCore:
             ie.data = json.dumps(domains)
         else:
             ie.data = json.dumps([domains])
-        self.event_queue.put(ie)
+        self.event_send(ie)
         return True
 
     def unsubscribe(self, domains):
@@ -280,5 +360,5 @@ class IndraProcessCore:
             ie.data = json.dumps(domains)
         else:
             ie.data = json.dumps([domains])
-        self.event_queue.put(ie)
+        self.event_send(ie)
         return True

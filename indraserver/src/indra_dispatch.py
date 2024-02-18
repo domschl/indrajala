@@ -17,8 +17,24 @@ from indra_serverlib import IndraProcessCore
 
 
 class IndraProcess(IndraProcessCore):
-    def __init__(self, event_queue, send_queue, config_data):
-        super().__init__(event_queue, send_queue, config_data, mode="single")
+    def __init__(
+        self,
+        config_data,
+        transport,
+        event_queue,
+        send_queue,
+        zmq_event_queue_port,
+        zmq_send_queue_port,
+    ):
+        super().__init__(
+            config_data,
+            transport,
+            event_queue,
+            send_queue,
+            zmq_event_queue_port,
+            zmq_send_queue_port,
+            mode="single",
+        )
         self.chat_sessions = {}
         self.user_sessions = []
         self.async_dist = {}
@@ -54,7 +70,7 @@ class IndraProcess(IndraProcessCore):
         )
         rev.data_type = "error/invalid"
         rev.data = json.dumps(err_msg)
-        self.event_queue.put(rev)
+        self.event_send(rev)
 
     def outbound(self, ev: IndraEvent):
         if IndraEvent.mqcmp(ev.domain, "$interactive/session/#"):
@@ -174,7 +190,7 @@ class IndraProcess(IndraProcessCore):
                 )
                 rev.data_type = "session/new"
                 rev.data = json.dumps(session_id)
-                self.event_queue.put(rev)
+                self.event_send(rev)
         elif IndraEvent.mqcmp(ev.domain, "$event/chat/#"):
             try:
                 chat_msg = json.loads(ev.data)
@@ -228,7 +244,7 @@ class IndraProcess(IndraProcessCore):
                     "session": cur_session,
                     "participants": participants,
                 }
-                self.event_queue.put(rev)
+                self.event_send(rev)
             if "translation" in self.annotate:
                 self.log.info(
                     f"Annotating chat message from {chat_msg['user']} in session {cur_session}"
@@ -249,7 +265,7 @@ class IndraProcess(IndraProcessCore):
                     "session": cur_session,
                     "participants": participants,
                 }
-                self.event_queue.put(rev)
+                self.event_send(rev)
             else:
                 self.distribute(ev, cur_session, participants)
         elif IndraEvent.mqcmp(ev.domain, f"{self.name}/annotate/#"):
@@ -318,4 +334,4 @@ class IndraProcess(IndraProcessCore):
                     self.log.info(
                         f"Sending chat message to {participant} at {rev.domain}"
                     )
-                    self.event_queue.put(rev)
+                    self.event_send(rev)

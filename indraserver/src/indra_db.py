@@ -21,8 +21,24 @@ from indra_serverlib import IndraProcessCore
 
 
 class IndraProcess(IndraProcessCore):
-    def __init__(self, event_queue, send_queue, config_data):
-        super().__init__(event_queue, send_queue, config_data, mode="single")
+    def __init__(
+        self,
+        config_data,
+        transport,
+        event_queue,
+        send_queue,
+        zmq_event_queue_port,
+        zmq_send_queue_port,
+    ):
+        super().__init__(
+            config_data,
+            transport,
+            event_queue,
+            send_queue,
+            zmq_event_queue_port,
+            zmq_send_queue_port,
+            mode="single",
+        )
         self.set_throttle(1)  # Max 1 message per sec to inbound
         self.database = os.path.expanduser(config_data["database"])
         self.database_directory = os.path.dirname(self.database)
@@ -50,7 +66,7 @@ class IndraProcess(IndraProcessCore):
             time.sleep(self.commit_delay_sec)
             ev = IndraEvent()
             ev.domain = "$self/timer"
-            self.send_queue.put(ev)
+            self.event_sent_self(ev)
         self.log.info("Timer thread terminated")
 
     # def inbound_init(self):
@@ -199,7 +215,7 @@ class IndraProcess(IndraProcessCore):
         }
         ev.data_type = "session_info"
         ev.data = json.dumps(session_info)
-        self.event_queue.put(ev)
+        self.event_send(ev)
         return session_id
 
     def _remove_session(self, session_id, from_id):
@@ -213,7 +229,7 @@ class IndraProcess(IndraProcessCore):
             }
             ev.data_type = "session_info"
             ev.data = json.dumps(session_info)
-            self.event_queue.put(ev)
+            self.event_send(ev)
             self.log.info(
                 f"Removed session {session_id} for user {self.sessions[session_id]['user']}"
             )
@@ -547,7 +563,7 @@ class IndraProcess(IndraProcessCore):
         )
         rev.data_type = "error/invalid"
         rev.data = json.dumps(err_msg)
-        self.event_queue.put(rev)
+        self.event_send(rev)
 
     def trx(self, ev: IndraEvent):
         columns = [
@@ -651,7 +667,7 @@ class IndraProcess(IndraProcessCore):
                 )
                 rev.data_type = "vector/tuple/jd/float"
                 rev.data = json.dumps(result)
-                self.event_queue.put(rev)
+                self.event_send(rev)
             elif ev.domain == "$trx/db/req/last":
                 try:
                     rq_data = json.loads(ev.data)
@@ -702,7 +718,7 @@ class IndraProcess(IndraProcessCore):
                 else:
                     self.log.warning(f"Not found: {sql_cmd} with {q_params}")
                     rev.data_type = "errror/notfound"
-                self.event_queue.put(rev)
+                self.event_send(rev)
             elif ev.domain == "$trx/db/req/uniquedomains":
                 try:
                     rq_data = json.loads(ev.data)
@@ -760,7 +776,7 @@ class IndraProcess(IndraProcessCore):
                 )
                 rev.data_type = "vector/string"
                 rev.data = json.dumps(result)
-                self.event_queue.put(rev)
+                self.event_send(rev)
             elif ev.domain == "$trx/db/req/del":
                 try:
                     rq_data = json.loads(ev.data)
@@ -837,7 +853,7 @@ class IndraProcess(IndraProcessCore):
                 )
                 rev.data_type = "number/int"
                 rev.data = json.dumps(num_deleted)
-                self.event_queue.put(rev)
+                self.event_send(rev)
             elif ev.domain == "$trx/db/req/update":
                 try:
                     rq_data = json.loads(ev.data)
@@ -954,7 +970,7 @@ class IndraProcess(IndraProcessCore):
                 )
                 rev.data_type = "number/int"
                 rev.data = json.dumps(num_updated)
-                self.event_queue.put(rev)
+                self.event_send(rev)
             else:
                 self._trx_err(ev, f"$trx/db not (yet!) implemented: {ev.domain}")
         elif ev.domain.startswith("$trx/kv"):
@@ -995,7 +1011,7 @@ class IndraProcess(IndraProcessCore):
                     )
                     rev.data_type = "string"
                     rev.data = json.dumps("OK")
-                    self.event_queue.put(rev)
+                    self.event_send(rev)
                 else:
                     self._trx_err(
                         ev,
@@ -1039,7 +1055,7 @@ class IndraProcess(IndraProcessCore):
                     )
                     rev.data_type = "vector/string"
                     rev.data = json.dumps(values)
-                    self.event_queue.put(rev)
+                    self.event_send(rev)
                 else:
                     self._trx_err(
                         ev,
@@ -1085,7 +1101,7 @@ class IndraProcess(IndraProcessCore):
                         rev.auth_hash = self._create_session(
                             key=rq_data["key"], from_id=ev.from_id
                         )
-                    self.event_queue.put(rev)
+                    self.event_send(rev)
                 else:
                     self._trx_err(
                         ev,
@@ -1111,7 +1127,7 @@ class IndraProcess(IndraProcessCore):
                     rev.data_type = "string"
                     rev.data = json.dumps("OK")
                     self.log.info(f"Logged out session {session_id}")
-                    self.event_queue.put(rev)
+                    self.event_send(rev)
                 else:
                     self._trx_err(
                         ev,
@@ -1155,7 +1171,7 @@ class IndraProcess(IndraProcessCore):
                     )
                     rev.data_type = "string"
                     rev.data = json.dumps(f"OK, {cnt} deleted")
-                    self.event_queue.put(rev)
+                    self.event_send(rev)
                 else:
                     self._trx_err(
                         ev,

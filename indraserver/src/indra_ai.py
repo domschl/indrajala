@@ -16,8 +16,24 @@ from indra_serverlib import IndraProcessCore
 
 
 class IndraProcess(IndraProcessCore):
-    def __init__(self, event_queue, send_queue, config_data):
-        super().__init__(event_queue, send_queue, config_data, mode="single")
+    def __init__(
+        self,
+        config_data,
+        transport,
+        event_queue,
+        send_queue,
+        zmq_event_queue_port,
+        zmq_send_queue_port,
+    ):
+        super().__init__(
+            config_data,
+            transport,
+            event_queue,
+            send_queue,
+            zmq_event_queue_port,
+            zmq_send_queue_port,
+            mode="single",
+        )
         self.application = config_data["application"]
         self.engine = config_data["engine"]
         if self.application == "sentiment":
@@ -85,7 +101,7 @@ class IndraProcess(IndraProcessCore):
         )
         rev.data_type = "error/invalid"
         rev.data = json.dumps(err_msg)
-        self.event_queue.put(rev)
+        self.event_send(rev)
 
     def outbound(self, ev: IndraEvent):
         if IndraEvent.mqcmp(ev.domain, "$trx/sentiment") is True:
@@ -114,7 +130,7 @@ class IndraProcess(IndraProcessCore):
             )
             rev.data_type = "sentiment"
             rev.data = json.dumps(result)
-            self.event_queue.put(rev)
+            self.event_send(rev)
             self.log.info(f"Sentiment result: {result}, sent to {rev.domain}")
         elif IndraEvent.mqcmp(ev.domain, "$trx/translation") is True:
             if self.translation_active is False:
@@ -151,7 +167,7 @@ class IndraProcess(IndraProcessCore):
                 "lang_code": translation_data["lang_code"],
             }
             rev.data = json.dumps(trans_data)
-            self.event_queue.put(rev)
+            self.event_send(rev)
             self.log.info(f"Translation result: {rev.data}, sent to {rev.domain}")
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")

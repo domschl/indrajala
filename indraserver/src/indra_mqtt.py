@@ -16,8 +16,24 @@ from indra_serverlib import IndraProcessCore
 
 
 class IndraProcess(IndraProcessCore):
-    def __init__(self, event_queue, send_queue, config_data):
-        super().__init__(event_queue, send_queue, config_data, signal_handler=False)
+    def __init__(
+        self,
+        config_data,
+        transport,
+        event_queue,
+        send_queue,
+        zmq_event_queue_port,
+        zmq_send_queue_port,
+    ):
+        super().__init__(
+            config_data,
+            transport,
+            event_queue,
+            send_queue,
+            zmq_event_queue_port,
+            zmq_send_queue_port,
+            mode="dual",
+        )
         self.set_throttle(1)
 
         self.mqtt_server = config_data["mqtt_server"]
@@ -82,7 +98,7 @@ class IndraProcess(IndraProcessCore):
                 ev.domain = "mqtt/" + msg.topic
                 ev.from_id = self.name
                 ev.data = msg.payload
-                self.event_queue.put(ev)
+                self.event_send(ev)
         for sub in self.inbound_parsers:
             if IndraEvent.mqcmp(msg.topic, sub) is True:
                 self.inbound_parsers[sub](msg.topic, msg.payload)
@@ -161,7 +177,7 @@ class IndraProcess(IndraProcessCore):
                     self.log.warning(f"Failed to convert data {message} for {topic}")
                     return
                 self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
-                self.event_queue.put(ev)
+                self.event_send(ev)
             else:
                 self.log.debug(f"Not found: {message}, {topic}")
 
@@ -210,4 +226,4 @@ class IndraProcess(IndraProcessCore):
                     self.log.warning(f"Failed to convert data {message} for {topic}")
                     return
                 self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
-                self.event_queue.put(ev)
+                self.event_send(ev)

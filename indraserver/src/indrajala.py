@@ -365,7 +365,12 @@ def load_modules(main_logger, toml_data, args):
                             modules[sub_mod["name"]]["send_queue"] = send_queue
                             modules[sub_mod["name"]]["config_data"] = sub_mod
                             modules[sub_mod["name"]]["iproc"] = m.IndraProcess(
-                                event_queue, send_queue, sub_mod
+                                sub_mod,
+                                "queue",
+                                event_queue,
+                                send_queue,
+                                zmq_event_queue_port,
+                                0,
                             )
                             main_logger.debug(
                                 f"Instantiation of {sub_mod['name']} success."

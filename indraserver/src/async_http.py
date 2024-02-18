@@ -19,8 +19,24 @@ from indra_serverlib import IndraProcessCore
 
 
 class IndraProcess(IndraProcessCore):
-    def __init__(self, event_queue, send_queue, config_data):
-        super().__init__(event_queue, send_queue, config_data, mode="async")
+    def __init__(
+        self,
+        config_data,
+        transport,
+        event_queue,
+        send_queue,
+        zmq_event_queue_port,
+        zmq_send_queue_port,
+    ):
+        super().__init__(
+            config_data,
+            transport,
+            event_queue,
+            send_queue,
+            zmq_event_queue_port,
+            zmq_send_queue_port,
+            mode="async",
+        )
 
     async def async_init(self):
         self.port = self.config_data["port"]
@@ -168,7 +184,7 @@ class IndraProcess(IndraProcessCore):
                         new_unsubs = json.loads(ev.data)
                         for new_unsub in new_unsubs:
                             self.ws_clients[client_address]["subs"].remove(new_unsub)
-                    self.event_queue.put(ev)
+                    self.event_send(ev)
                 except Exception as e:
                     self.log.warning(f"WebClient sent invalid JSON: {msg.data}: {e}")
             elif msg.type == aiohttp.WSMsgType.ERROR:
@@ -188,7 +204,7 @@ class IndraProcess(IndraProcessCore):
             ev.from_id = f"{self.name}/ws/{client_address}"
             ev.domain = "$trx/kv/req/logout"
             ev.auth_hash = self.ws_clients[client_address]["session_id"]
-            self.event_queue.put(ev)
+            self.event_send(ev)
         else:
             self.log.warning(f"WS-CLOSE: {client_address}")
         self.ws_clients.pop(client_address, None)  # Delete key ws
