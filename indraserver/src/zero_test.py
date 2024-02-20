@@ -35,11 +35,13 @@ class IndraProcess(IndraProcessCore):
         )
         self.n = 0
         self.set_throttle(1.0 / config_data["ping_frequency_hz"])
-        self.log.info(f"Starting PingPong with config: {config_data}")
+        self.log.info(
+            f"Starting ZMQ-PingPong, message frequency: {config_data['ping_frequency_hz']}"
+        )  #  with config: {config_data}")
 
     def inbound(self):
         self.n = self.n + 1
-        self.log.info(f"Z-Padam! {self.n}")
+        # self.log.info(f"Z-Padam! {self.n}")
         ev = IndraEvent()
         ev.from_id = self.name
         ev.domain = f"zero_test/{self.name}/{self.n}"
@@ -53,7 +55,7 @@ class IndraProcess(IndraProcessCore):
 
 
 if __name__ == "__main__":
-    print("Starting zero_test.py")
+    # print("Starting zero_test.py")
     if len(sys.argv) != 3:
         print("Usage: zero_test.py <main_process_zeromq_port> <json_config_string>")
         sys.exit(1)

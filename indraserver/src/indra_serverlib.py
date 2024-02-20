@@ -113,10 +113,12 @@ class IndraProcessCore:
         if transport == "zmq":
             self.context = zmq.Context()
             self.zmq_event_socket = self.context.socket(zmq.PUSH)
-            self.zmq_event_socket.connect(f"tcp://localhost:{zmq_event_queue_port}")
+            self.zmq_event_socket_uri = f"tcp://localhost:{zmq_event_queue_port}"
+            self.zmq_event_socket.connect(self.zmq_event_socket_uri)
             self.zmq_send_socket = self.context.socket(zmq.PULL)
             self.zmq_send_socket.setsockopt(zmq.RCVTIMEO, 200)
-            self.zmq_send_socket.connect(f"tcp://localhost:{zmq_send_queue_port}")
+            self.zmq_send_socket_uri = f"tcp://*:{zmq_send_queue_port}"
+            self.zmq_send_socket.bind(self.zmq_send_socket_uri)
             self.send_queue = None
             self.event_queue = None
         elif transport == "queue":
@@ -147,6 +149,11 @@ class IndraProcessCore:
 
         for sub in config_data["subscriptions"]:
             self.subscribe(sub)
+
+        if transport == "zmq":
+            self.log.info(
+                f"ZMQ sockets connected: Event: {self.zmq_event_socket_uri}, Send: {self.zmq_send_socket_uri}"
+            )
 
         self.log.info(f"IndraProcess {self.name} instantiated")
 
@@ -262,8 +269,6 @@ class IndraProcessCore:
             if self.transport == "zmq":
                 try:
                     msg = self.zmq_send_socket.recv()
-                    ev = IndraEvent.from_json(msg)
-                    self.log.info(f"ZMQ message received: {ev}")
                 except zmq.error.Again:
                     msg = None
                     ev = None
@@ -271,6 +276,10 @@ class IndraProcessCore:
                         self.log.info("{self.name} ZMQ thread terminated")
                         self.zmq_send_socket.close()
                         exit(0)
+                if msg is not None:
+                    ev = IndraEvent.from_json(msg)
+                else:
+                    ev = None
             else:
                 try:
                     ev = self.send_queue.get(timeout=0.1)

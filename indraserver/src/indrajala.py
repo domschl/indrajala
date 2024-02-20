@@ -107,6 +107,7 @@ def main_runner(main_logger, event_queue, modules):
         if terminate_main_runner is True:
             break
         ev = event_queue.get()
+        # main_logger.info(f"Got event: {ev.to_json()}")
 
         origin_module = ev.from_id
         if "/" in origin_module:
@@ -131,11 +132,15 @@ def main_runner(main_logger, event_queue, modules):
                             f"Sending termination cmd to {modules[module]['config_data']['name']}... "
                         )
                         modules[module]["send_queue"].put(ev)
-                    else:
+                    elif modules[module]["mode"] == "zeromq":
                         main_logger.debug(
                             f"Sending termination cmd to {modules[module]['config_data']['name']} via zeromq... "
                         )
                         modules[module]["push_socket"].send_string(ev.to_json())
+                    else:
+                        main_logger.error(
+                            f"Module {module} has no valid mode {modules[module]['mode']}, cannot send termination cmd"
+                        )
             elif ev.domain == "$cmd/subs":
                 sub_list = json.loads(ev.data)
                 if isinstance(sub_list, list) is True:
@@ -158,8 +163,11 @@ def main_runner(main_logger, event_queue, modules):
                 )
         else:
             mod_found = False
+            route_target = False
             for module in modules:
-                if module != origin_module:
+                if module == origin_module:
+                    mod_found = True
+                if module != origin_module or True:
                     for sub in subs[module]:
                         if IndraEvent.mqcmp(ev.domain, sub) is True:
                             dt = time.time() - last_msg
@@ -179,7 +187,7 @@ def main_runner(main_logger, event_queue, modules):
                                     )
                                     overview_mode = False
                                 last_stat_output = time.time()
-                                main_logger.debug(
+                                main_logger.info(
                                     f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}"
                                 )
                             else:
@@ -204,14 +212,33 @@ def main_runner(main_logger, event_queue, modules):
                                     event_queue.put(ev_stat)
                             if modules[module]["mode"] == "queue":
                                 modules[module]["send_queue"].put(ev)
+                            elif modules[module]["mode"] == "zeromq":
+                                if modules[module]["push_socket"] is not None:
+                                    main_logger.info(
+                                        f"Sending ZMQ event: {ev.domain} to {module}"
+                                    )
+                                    modules[module]["push_socket"].send_json(
+                                        ev.to_dict()
+                                    )
+                                else:
+                                    main_logger.error(
+                                        f"ZMQ socket for {module} not available, cannot send event {ev.domain}"
+                                    )
                             else:
-                                modules[module]["push_socket"].send_string(ev.to_json())
+                                main_logger.error(
+                                    f"Module {module} has no valid mode {modules[module]['mode']}, cannot route event {ev.domain}"
+                                )
+                            route_target = True
                             break
                 else:
                     mod_found = True
             if mod_found is False and ev.from_id != "indrajala":
                 main_logger.error(
                     f"Task {origin_module} not found, {origin_module} did not set from_id correctly"
+                )
+            if route_target is False:
+                main_logger.warning(
+                    f"No target found for {ev.domain}, {ev.data}, {ev.from_id}"
                 )
 
     main_logger.debug("Waiting for all sub processes to terminate")
@@ -227,7 +254,7 @@ def main_runner(main_logger, event_queue, modules):
             )
             modules[module]["process"].join()
             main_logger.debug(f"{modules[module]['config_data']['name']} OK.")
-        else:
+        elif modules[module]["mode"] == "zeromq":
             reps = 5
             if modules[module]["push_socket"] is not None:
                 modules[module]["push_socket"].close()
@@ -245,6 +272,10 @@ def main_runner(main_logger, event_queue, modules):
                 if reps == 0:
                     zmq_skip = True
                     break
+        else:
+            main_logger.error(
+                f"Module {module} has no valid mode {modules[module]['mode']}, cannot terminate it"
+            )
     if zmq_skip is False:
         main_logger.info("All sub processes terminated")
     else:
@@ -255,7 +286,7 @@ def main_runner(main_logger, event_queue, modules):
 
 
 def _handle_zmq_messages(socket):
-    global abort_zmq_thread
+    global abort_zmq_thread, event_queue
     main_logger.info("ZMQ thread started")
     while True:
         try:
@@ -266,7 +297,7 @@ def _handle_zmq_messages(socket):
                 socket.close()
                 return
             continue
-        main_logger.info(f"ZMQ message received: {msg}")
+        # main_logger.info(f"ZMQ message received: {msg}")
         ev = IndraEvent.from_json(msg)
         event_queue.put(ev)
 
@@ -290,7 +321,7 @@ def _create_zmq(zmq_port):
 
 
 def load_modules(main_logger, toml_data, args):
-    global zmq_started, zmq_context
+    global zmq_started, zmq_context, event_queue
     modules = {}
     event_queue = mp.Queue()
     if "indrajala" not in toml_data:
@@ -412,14 +443,12 @@ def load_modules(main_logger, toml_data, args):
                                 host = sub_mod["zeromq_host"]
                             else:
                                 host = "localhost"
-                            socket = zmq_context.socket(zmq.PUSH)
-                            socket.connect(f"tcp://{host}:{sub_mod['zeromq_port']}")
                             modules[sub_mod["name"]] = {}
                             modules[sub_mod["name"]]["mode"] = "zeromq"
+                            modules[sub_mod["name"]]["push_socket"] = None
                             modules[sub_mod["name"]]["send_port"] = sub_mod[
                                 "zeromq_port"
                             ]
-                            modules[sub_mod["name"]]["push_socket"] = socket
                             modules[sub_mod["name"]]["config_data"] = sub_mod
                             # Throws FileNotFoundError if the module is not found:
                             try:
@@ -433,6 +462,21 @@ def load_modules(main_logger, toml_data, args):
                                 modules[sub_mod["name"]]["iproc"] = None
                                 modules[sub_mod["name"]]["push_socket"].close()
                                 modules[sub_mod["name"]]["push_socket"] = None
+                                modules[sub_mod["name"]]["active"] = False
+                                continue
+                            socket = zmq_context.socket(zmq.PUSH)
+                            modules[sub_mod["name"]][
+                                "push_socket_uri"
+                            ] = f"tcp://{host}:{sub_mod['zeromq_port']}"
+                            main_logger.info(
+                                f"Connecting to {sub_mod['name']} at {modules[sub_mod['name']]['push_socket_uri']}"
+                            )
+                            socket.connect(modules[sub_mod["name"]]["push_socket_uri"])
+                            modules[sub_mod["name"]]["push_socket"] = socket
+                            if socket is None:
+                                main_logger.error(
+                                    f"Module {sub_mod['name']} failed to connect to {modules[sub_mod['name']]['push_socket_uri']}"
+                                )
                                 modules[sub_mod["name"]]["active"] = False
                                 continue
                     else:
