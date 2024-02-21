@@ -48,7 +48,7 @@ class IndraProcess(IndraProcessCore):
         return ev
 
     def outbound(self, ev: IndraEvent):
-        self.log.info(f"Got a ZMQ-PingPong: {ev.domain}, sent by {ev.from_id}")
+        self.log.debug(f"Got a ZMQ-PingPong: {ev.domain}, sent by {ev.from_id}")
 
     def run(self):
         self.launcher()

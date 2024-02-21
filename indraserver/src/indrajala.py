@@ -71,6 +71,7 @@ def main_runner(main_logger, event_queue, modules):
     last_stat_output = time.time()
     overview_mode = False
     qsize_implemented = True
+    sysstat_subs = False
     while terminate_main_runner is False:
         if time.time() - stat_timer > 1.0:
             if qsize_implemented:
@@ -145,6 +146,8 @@ def main_runner(main_logger, event_queue, modules):
                 sub_list = json.loads(ev.data)
                 if isinstance(sub_list, list) is True:
                     for sub in sub_list:
+                        if sub.startswith("$sys/stat"):
+                            sysstat_subs = True
                         # if sub not in subs[origin_module]:  # XXX different sessions can sub to the same thing, alternative would be reference counting...
                         subs[origin_module].append(sub)
                         main_logger.debug(f"Subscribing to {sub} by {origin_module}")
@@ -157,6 +160,13 @@ def main_runner(main_logger, event_queue, modules):
                             main_logger.debug(
                                 f"Unsubscribing from {sub} by {origin_module}"
                             )
+                        if sub.startswith("$sys/stat"):
+                            sysstat_subs = False
+                            # Check if subscriber to sysstat is still active
+                            for module in subs:
+                                for sub in subs[module]:
+                                    if sub.startswith("$sys/stat"):
+                                        sysstat_subs = True
             else:
                 main_logger.error(
                     f"Unknown command {ev.domain} received from {ev.from_id}, ignored."
@@ -196,27 +206,26 @@ def main_runner(main_logger, event_queue, modules):
                                     main_logger.info(
                                         "Switching to ROUTE summary mode for routing, message volume > 10msg/sec"
                                     )
-                                main_logger.info(
-                                    f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}"
-                                )
+                                # main_logger.info(
+                                #     f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}"
+                                # )
                                 if time.time() - last_stat_output > 1.0:
                                     main_logger.info(
                                         f"ROUTE summary {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}"
                                     )
                                     last_stat_output = time.time()
-                                    ev_stat = IndraEvent()
-                                    ev_stat.domain = "$sys/stat/msgpersec"
-                                    ev_stat.data_type = "Float"
-                                    ev_stat.from_id = "indrajala"
-                                    ev_stat.data = str(msg_sec)
-                                    event_queue.put(ev_stat)
+                                    if sysstat_subs is True:
+                                        # Only send statistics, if there is a subscriber
+                                        ev_stat = IndraEvent()
+                                        ev_stat.domain = "$sys/stat/msgpersec"
+                                        ev_stat.data_type = "Float"
+                                        ev_stat.from_id = "indrajala"
+                                        ev_stat.data = str(msg_sec)
+                                        event_queue.put(ev_stat)
                             if modules[module]["mode"] == "queue":
                                 modules[module]["send_queue"].put(ev)
                             elif modules[module]["mode"] == "zeromq":
                                 if modules[module]["push_socket"] is not None:
-                                    main_logger.info(
-                                        f"Sending ZMQ event: {ev.domain} to {module}"
-                                    )
                                     modules[module]["push_socket"].send_json(
                                         ev.to_dict()
                                     )
