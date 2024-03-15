@@ -11,6 +11,7 @@ path = os.path.join(
 )
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
+from indra_time import IndraTime  # type: ignore
 
 from indra_serverlib import IndraProcessCore
 

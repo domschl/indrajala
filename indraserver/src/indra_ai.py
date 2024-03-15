@@ -93,11 +93,11 @@ class IndraProcess(IndraProcessCore):
         rev.from_id = self.name
         rev.uuid4 = ev.uuid4
         rev.to_scope = ev.domain
-        rev.time_jd_start = IndraEvent.datetime2julian(
-            datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        rev.time_jd_start = IndraTime.datetime2julian(
+            datetime.datetime.now(tz=datetime.timezone.utc)
         )
-        rev.time_jd_end = IndraEvent.datetime2julian(
-            datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        rev.time_jd_end = IndraTime.datetime2julian(
+            datetime.datetime.now(tz=datetime.timezone.utc)
         )
         rev.data_type = "error/invalid"
         rev.data = json.dumps(err_msg)
@@ -117,16 +117,16 @@ class IndraProcess(IndraProcessCore):
                     return
             text = sentiment_data["text"]
             rev = IndraEvent()
-            rev.time_jd_start = IndraEvent.datetime2julian(
-                datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+            rev.time_jd_start = IndraTime.datetime2julian(
+                datetime.datetime.now(tz=datetime.timezone.utc)
             )
             result = self.sentiment_pipeline(text)
             rev.domain = ev.from_id
             rev.from_id = self.name
             rev.uuid4 = ev.uuid4
             rev.to_scope = ev.domain
-            rev.time_jd_end = IndraEvent.datetime2julian(
-                datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+            rev.time_jd_end = IndraTime.datetime2julian(
+                datetime.datetime.now(tz=datetime.timezone.utc)
             )
             rev.data_type = "sentiment"
             rev.data = json.dumps(result)
@@ -145,8 +145,8 @@ class IndraProcess(IndraProcessCore):
                     return
             text = f"<2{translation_data['lang_code']}> {translation_data['text']}"
             rev = IndraEvent()
-            rev.time_jd_start = IndraEvent.datetime2julian(
-                datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+            rev.time_jd_start = IndraTime.datetime2julian(
+                datetime.datetime.now(tz=datetime.timezone.utc)
             )
             inputs = self.tokenizer.encode(text, return_tensors="pt")
             result = self.model.generate(
@@ -157,8 +157,8 @@ class IndraProcess(IndraProcessCore):
             rev.from_id = self.name
             rev.uuid4 = ev.uuid4
             rev.to_scope = ev.domain
-            rev.time_jd_end = IndraEvent.datetime2julian(
-                datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+            rev.time_jd_end = IndraTime.datetime2julian(
+                datetime.datetime.now(tz=datetime.timezone.utc)
             )
             rev.data_type = "translation"
             translation = self.tokenizer.decode(result[0], skip_special_tokens=True)
