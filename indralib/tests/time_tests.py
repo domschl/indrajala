@@ -9,6 +9,7 @@ from indra_event import IndraEvent  # type: ignore
 from indra_time import IndraTime  # type: ignore
 
 # c.f. https://aa.usno.navy.mil/data/JulianDate,
+# c.f. https://ssd.jpl.nasa.gov/tools/jdc/#/cd
 
 # [xx]_table are from: https://github.com/sarabveer/calendrica-js/blob/master/test/
 
@@ -121,8 +122,8 @@ gregorian_table = [
 ]
 
 julian_table = [
-    {"year": -587, "month": 7, "day": 30},
-    {"year": -169, "month": 12, "day": 8},
+    {"year": -586, "month": 7, "day": 30},  # mistake in source!
+    {"year": -168, "month": 12, "day": 8},  # mistake in source!
     {"year": 70, "month": 9, "day": 26},
     {"year": 135, "month": 10, "day": 3},
     {"year": 470, "month": 1, "day": 7},
@@ -233,7 +234,7 @@ def morph_calendrical_data(data):
         month = month_names.index(parts[0]) + 1
         day = int(parts[1])
         if parts[3] == "B.C.E.":
-            year = -int(year)
+            year = -int(year) + 1
         jul_string = f"{year}-{month:02d}-{day:02d}T{hour:02d}:00:00"
 
         parts = [x.replace(",", "") for x in greg_string.split(" ")]
