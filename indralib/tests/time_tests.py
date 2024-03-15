@@ -264,11 +264,21 @@ def add_js_data(data=[]):
             "Calendar": "JS-Data",
             "RD": rd_table[i],
             "JulianDate": jd_table[i],
-            "julian_string": f"{julian_table[i]['year']}-{julian_table[i]['month']:02d}-{julian_table[i]['day']:02d}T12:00:00",
-            "gregorian_string": f"{gregorian_table[i]['year']}-{gregorian_table[i]['month']:02d}-{gregorian_table[i]['day']:02d}T12:00:00",
+            "julian_string": f"{julian_table[i]['year']}-{julian_table[i]['month']:02d}-{julian_table[i]['day']:02d}T00:00:00",
+            "gregorian_string": f"{gregorian_table[i]['year']}-{gregorian_table[i]['month']:02d}-{gregorian_table[i]['day']:02d}T00:00:00",
         }
         data.append(d)
     return data
+
+
+def cmp_time(d1: str, d2: str):
+    l1 = len(d1)
+    l2 = len(d2)
+    if l1 < l2:
+        d2 = d2[: len(d1)]
+    if l2 < l1:
+        d1 = d1[: len(d2)]
+    return d1 == d2
 
 
 data = (
@@ -283,15 +293,15 @@ data = sorted(data, key=lambda x: x["RD"])
 
 errors = 0
 for d in data:
-    d["indra_text"] = IndraTime.julian_2_string_time(d["JulianDate"])
+    d["indra_text"] = IndraTime.julian2ISO(d["JulianDate"])
     res = ""
     it = d["indra_text"]
     if it.endswith(" BC"):
         it = "-" + it[:-3]
 
-    if d["julian_string"][: len(it)] == it:
+    if cmp_time(d["julian_string"], it):
         res += "[JD]"
-    if d["gregorian_string"][: len(it)] == it:
+    if cmp_time(d["gregorian_string"], it):
         res += "[GD]"
     if res == "":
         res = "Error"

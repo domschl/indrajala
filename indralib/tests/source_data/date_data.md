@@ -11,7 +11,7 @@ $jd_{epoch} = rd_{epoch} + 1721424.5$
 | Hebrew                     | -1373427     | September 7, -3760 (Gregorian)       | October 7, 3761 B.C.E. (Julian)        |
 | Mayan                      | -1137142     | August 11, -3113 (Gregorian)         | September 6, 3114 B.C.E. (Julian)      |
 | Hindu (Kali Yuga)          | -1132959     | January 23, -3101 (Gregorian)        | February 18, 3102 B.C.E. (Julian)      |
-| Chinese                    | -963099      | February 15, -2636 (Gregorian)       | March 8, 2636 B.C.E. (Julian)          |
+| Chinese                    | -963099      | February 15, -2636 (Gregorian)       | March 8, 2637 B.C.E. (Julian)          |
 | Samaritan                  | -598573      | March 1, -1638 (Gregorian)           | March 15, 1639 B.C.E. (Julian)         |
 | Egyptian                   | -272787      | February 18, -746 (Gregorian)        | February 26, 747 B.C.E. (Julian)       |
 | Babylonian                 | -113502      | March 29, -310 (Gregorian)           | April 3, 311 B.C.E. (Julian)           |
