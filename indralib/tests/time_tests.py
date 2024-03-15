@@ -295,6 +295,7 @@ data = sorted(data, key=lambda x: x["RD"])
 errors = 0
 for d in data:
     d["indra_text"] = IndraTime.julian2ISO(d["JulianDate"])
+    d["indra_jd"] = IndraTime.ISO2julian(d["indra_text"])
     res = ""
     it = d["indra_text"]
     if it.endswith(" BC"):
@@ -306,6 +307,10 @@ for d in data:
         res += "[GD]"
     if res == "":
         res = "Error"
+        errors += 1
+
+    if d["indra_jd"] != d["JulianDate"]:
+        res += f"[JD-Error: {d["indra_jd"]} {d["JulianDate"]}]"
         errors += 1
     d["Result"] = res
 

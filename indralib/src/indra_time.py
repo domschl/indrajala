@@ -1,4 +1,5 @@
 import datetime
+import math
 
 
 class IndraTime:
@@ -22,10 +23,11 @@ class IndraTime:
         minute = dt.minute
         second = dt.second
         microsecond = dt.microsecond
-        IndraTime.to_julian(year, month, day, hour, minute, second, microsecond)
+        IndraTime.time_to_julian(year, month, day, hour, minute, second, microsecond)
 
     @staticmethod
-    def to_julian(year, month, day, hour, minute, second, microsecond):
+    def to_julian_gd(year, month, day, hour, minute, second, microsecond):
+        # Convert Gregorian date to Julian date
         if month <= 2:
             year -= 1
             month += 12
@@ -76,6 +78,56 @@ class IndraTime:
             int(second),
             int(microsecond),
         )
+
+    @staticmethod
+    def time_to_julian(year, month, day, hour, minute, second, microsecond):
+        """Convert discrete time to Julian date, assume julian dates for time < change julian to gregorian calendar"""
+        if year == 0:
+            print("There is no year 0")
+            return None
+        if year == 1582 and month == 10 and day > 4 and day < 15:
+            print(
+                "The dates 5 - 14 Oct 1582 do not exist in the Gregorian calendar! Use to_time_gd for continuous juse of extended Gregorian calendar."
+            )
+            return None
+
+        if month > 2:
+            jy = year
+            jm = month + 1
+        else:
+            jy = year - 1
+            jm = month + 13
+
+        intgr = math.floor(
+            math.floor(365.25 * jy) + math.floor(30.6001 * jm) + day + 1720995
+        )
+
+        # check for switch to Gregorian calendar
+        gregcal = 15 + 31 * (10 + 12 * 1582)
+        if day + 31 * (month + 12 * year) >= gregcal:
+            ja = math.floor(0.01 * jy)
+            intgr += 2 - ja + math.floor(0.25 * ja)
+
+        # correct for half-day offset
+        dayfrac = hour / 24.0 - 0.5
+        if dayfrac < 0.0:
+            dayfrac += 1.0
+            intgr -= 1
+
+        # now set the fraction of a day
+        frac = dayfrac + (minute + second / 60.0) / 60.0 / 24.0
+
+        # round to nearest second XXX maybe not?
+        jd0 = (intgr + frac) * 100000
+        jd = math.floor(jd0)
+        if jd0 - jd > 0.5:
+            jd += 1
+        jd = jd / 100000
+
+        # add microsecond
+        jd += microsecond / 86400000000
+
+        return jd
 
     @staticmethod
     def julian2datetime(jd):
@@ -207,7 +259,7 @@ class IndraTime:
                 if len(dts) == 1:
                     # Year
                     year = int(dts[0])
-                    jdt = IndraTime.to_julian(
+                    jdt = IndraTime.time_to_julian(
                         year, month, day, hour, minute, second, microsecond
                     )
                     # jdt = IndraTime.datetime2julian(
@@ -217,7 +269,7 @@ class IndraTime:
                     # Year and month
                     year = int(dts[0])
                     month = int(dts[1])
-                    jdt = IndraTime.to_julian(
+                    jdt = IndraTime.time_to_julian(
                         year, month, day, hour, minute, second, microsecond
                     )
                     # jdt = IndraTime.datetime2julian(
@@ -232,7 +284,7 @@ class IndraTime:
                     minute = 0
                     second = 0
                     microsecond = 0
-                    jdt = IndraTime.to_julian(
+                    jdt = IndraTime.time_to_julian(
                         year, month, day, hour, minute, second, microsecond
                     )
                     # jdt = IndraTime.datetime2julian(
@@ -293,3 +345,31 @@ class IndraTime:
             return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
         else:
             return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
+
+    @staticmethod
+    def ISO2julian(iso):
+        """Convert extended ISO 8601 string to Julian date"""
+        parts = iso.split("T")
+        if len(parts) != 2:
+            raise ValueError(f"Invalid ISO 8601 string: {iso}")
+        date = parts[0]
+        time = parts[1]
+        if date[0] == "-":
+            parts = date[1:].split("-")
+            parts[0] = "-" + parts[0]
+        else:
+            parts = date.split("-")
+        year = int(parts[0])
+        month = int(parts[1])
+        day = int(parts[2])
+        parts = time.split(":")
+        hour = int(parts[0])
+        minute = int(parts[1])
+        parts = parts[2].split(".")
+        second = int(parts[0])
+        microsecond = int(parts[1][:-1])
+        # if microsecond == None:
+        #     microsecond = 0
+        return IndraTime.time_to_julian(
+            year, month, day, hour, minute, second, microsecond
+        )
