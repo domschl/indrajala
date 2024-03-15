@@ -12,6 +12,7 @@ path = os.path.join(
 )
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
+from indra_time import IndraTime  # type: ignore
 
 from indra_serverlib import IndraProcessCore
 
@@ -62,11 +63,11 @@ class IndraProcess(IndraProcessCore):
         rev.from_id = self.name
         rev.uuid4 = ev.uuid4
         rev.to_scope = ev.domain
-        rev.time_jd_start = IndraEvent.datetime2julian(
-            datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        rev.time_jd_start = IndraTime.datetime2julian(
+            datetime.datetime.now(tz=datetime.timezone.utc)
         )
-        rev.time_jd_end = IndraEvent.datetime2julian(
-            datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        rev.time_jd_end = IndraTime.datetime2julian(
+            datetime.datetime.now(tz=datetime.timezone.utc)
         )
         rev.data_type = "error/invalid"
         rev.data = json.dumps(err_msg)
@@ -182,11 +183,11 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraEvent.datetime2julian(
-                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                rev.time_jd_start = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
                 )
-                rev.time_jd_end = IndraEvent.datetime2julian(
-                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                rev.time_jd_end = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "session/new"
                 rev.data = json.dumps(session_id)
@@ -323,11 +324,11 @@ class IndraProcess(IndraProcessCore):
                     rev.parent_uuid4 = cur_session
                     rev.data = ev.data
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_start = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_end = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.uuid4 = str(uuid.uuid4())
                     rev.domain = user_session["from_id"]

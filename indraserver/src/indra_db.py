@@ -16,6 +16,7 @@ path = os.path.join(
 )
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
+from indra_time import IndraTime  # type: ignore
 
 from indra_serverlib import IndraProcessCore
 
@@ -555,11 +556,11 @@ class IndraProcess(IndraProcessCore):
         rev.from_id = self.name
         rev.uuid4 = ev.uuid4
         rev.to_scope = ev.domain
-        rev.time_jd_start = IndraEvent.datetime2julian(
-            datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        rev.time_jd_start = IndraTime.datetime2julian(
+            datetime.datetime.now(tz=datetime.timezone.utc)
         )
-        rev.time_jd_end = IndraEvent.datetime2julian(
-            datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        rev.time_jd_end = IndraTime.datetime2julian(
+            datetime.datetime.now(tz=datetime.timezone.utc)
         )
         rev.data_type = "error/invalid"
         rev.data = json.dumps(err_msg)
@@ -651,9 +652,7 @@ class IndraProcess(IndraProcessCore):
                             f"Failure, unexpected mode {rq_data['mode']}, internal error, rq from {ev.from_id}"
                         )
                 sql_cmd += " ORDER BY time_jd_start ASC;"
-                t_start = datetime.datetime.utcnow().replace(
-                    tzinfo=datetime.timezone.utc
-                )
+                t_start = datetime.datetime.now(tz=datetime.timezone.utc)
                 self.cur.execute(sql_cmd, q_params)
                 result = self.cur.fetchall()
                 rev = IndraEvent()
@@ -661,9 +660,9 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraEvent.datetime2julian(t_start)
-                rev.time_jd_end = IndraEvent.datetime2julian(
-                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                rev.time_jd_start = IndraTime.datetime2julian(t_start)
+                rev.time_jd_end = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "vector/tuple/jd/float"
                 rev.data = json.dumps(result)
@@ -695,9 +694,7 @@ class IndraProcess(IndraProcessCore):
                 q_params = [rq_data["domain"]]
                 sel_list = ", ".join(columns)
                 sql_cmd = f"SELECT {sel_list} FROM indra_events WHERE domain = ? ORDER BY time_jd_start DESC LIMIT 1;"
-                t_start = datetime.datetime.utcnow().replace(
-                    tzinfo=datetime.timezone.utc
-                )
+                t_start = datetime.datetime.now(tz=datetime.timezone.utc)
                 self.cur.execute(sql_cmd, q_params)
                 result = self.cur.fetchall()
                 rev = IndraEvent()
@@ -705,9 +702,9 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraEvent.datetime2julian(t_start)
-                rev.time_jd_end = IndraEvent.datetime2julian(
-                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                rev.time_jd_start = IndraTime.datetime2julian(t_start)
+                rev.time_jd_end = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 if result and len(result) == 1:
                     lev = IndraEvent.from_json(
@@ -760,9 +757,7 @@ class IndraProcess(IndraProcessCore):
                         op2 = "="
                     q_params.append(dt)
                     sql_cmd = +f" AND data_type {op2} ?"
-                t_start = datetime.datetime.utcnow().replace(
-                    tzinfo=datetime.timezone.utc
-                )
+                t_start = datetime.datetime.now(tz=datetime.timezone.utc)
                 self.cur.execute(sql_cmd, q_params)
                 result = self.cur.fetchall()
                 rev = IndraEvent()
@@ -770,9 +765,9 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraEvent.datetime2julian(t_start)
-                rev.time_jd_end = IndraEvent.datetime2julian(
-                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                rev.time_jd_start = IndraTime.datetime2julian(t_start)
+                rev.time_jd_end = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "vector/string"
                 rev.data = json.dumps(result)
@@ -797,9 +792,7 @@ class IndraProcess(IndraProcessCore):
                         f"$trx/db/req/del from {ev.from_id} failed, requires either an array `uuid4s` or an array `domains` as key(s)",
                     )
                     return
-                t_start = datetime.datetime.utcnow().replace(
-                    tzinfo=datetime.timezone.utc
-                )
+                t_start = datetime.datetime.now(tz=datetime.timezone.utc)
                 num_deleted = 0
                 if "domains" in rq_data and rq_data["domains"] is not None:
                     if isinstance(rq_data["domains"], list):
@@ -847,9 +840,9 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraEvent.datetime2julian(t_start)
-                rev.time_jd_end = IndraEvent.datetime2julian(
-                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                rev.time_jd_start = IndraTime.datetime2julian(t_start)
+                rev.time_jd_end = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "number/int"
                 rev.data = json.dumps(num_deleted)
@@ -871,8 +864,8 @@ class IndraProcess(IndraProcessCore):
                     )
                 valid = True
                 inv_err = ""
-                ut_start = IndraEvent.datetime2julian(
-                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                ut_start = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 for rq in rq_data:
                     for field in rq_fields:
@@ -965,8 +958,8 @@ class IndraProcess(IndraProcessCore):
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
                 rev.time_jd_start = ut_start
-                rev.time_jd_end = IndraEvent.datetime2julian(
-                    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                rev.time_jd_end = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "number/int"
                 rev.data = json.dumps(num_updated)
@@ -1003,11 +996,11 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_start = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_end = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "string"
                     rev.data = json.dumps("OK")
@@ -1047,11 +1040,11 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_start = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_end = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "vector/string"
                     rev.data = json.dumps(values)
@@ -1089,11 +1082,11 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_start = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_end = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "string"
                     rev.data = json.dumps("OK")
@@ -1118,11 +1111,11 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_start = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_end = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "string"
                     rev.data = json.dumps("OK")
@@ -1163,11 +1156,11 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_start = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraEvent.datetime2julian(
-                        datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    rev.time_jd_end = IndraTime.datetime2julian(
+                        datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "string"
                     rev.data = json.dumps(f"OK, {cnt} deleted")
