@@ -67,7 +67,7 @@ class IndraProcess(IndraProcessCore):
             time.sleep(self.commit_delay_sec)
             ev = IndraEvent()
             ev.domain = "$self/timer"
-            self.event_sent_self(ev)
+            self.event_send_self(ev)
         self.log.info("Timer thread terminated")
 
     # def inbound_init(self):
