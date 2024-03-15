@@ -26,8 +26,8 @@ class IndraTime:
         IndraTime.time_to_julian(year, month, day, hour, minute, second, microsecond)
 
     @staticmethod
-    def to_julian_gd(year, month, day, hour, minute, second, microsecond):
-        # Convert Gregorian date to Julian date
+    def time_to_julian_gregorian(year, month, day, hour, minute, second, microsecond):
+        # Convert (extended) Gregorian date to Julian date
         if month <= 2:
             year -= 1
             month += 12
@@ -81,7 +81,7 @@ class IndraTime:
 
     @staticmethod
     def time_to_julian(year, month, day, hour, minute, second, microsecond):
-        """Convert discrete time to Julian date, assume julian dates for time < change julian to gregorian calendar"""
+        """Convert discrete time to Julian date, assume julian dates for time < 1582 otherwise gregorian calendar"""
         if year == 0:
             print("There is no year 0")
             return None
@@ -336,7 +336,10 @@ class IndraTime:
 
     @staticmethod
     def julian2ISO(jd):
-        """Convert Julian date to extended ISO 8601 string"""
+        """Convert Julian date to extended ISO 8601 string
+
+        Note: length of year is not limited to 4 digits, below 1000 AD, shorted and longer years may be used. No leading zeros are used, and year may be negative.
+        """
         year, month, day, hour, minute, second, microsecond = IndraTime.julian_to_time(
             jd
         )
@@ -348,7 +351,9 @@ class IndraTime:
 
     @staticmethod
     def ISO2julian(iso):
-        """Convert extended ISO 8601 string to Julian date"""
+        """Convert extended ISO 8601 string to Julian date
+        Year may be negative and longer or shorter than 4 digits. Only UTC time is supported.
+        """
         parts = iso.split("T")
         if len(parts) != 2:
             raise ValueError(f"Invalid ISO 8601 string: {iso}")
