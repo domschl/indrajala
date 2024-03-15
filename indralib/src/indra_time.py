@@ -289,7 +289,7 @@ class IndraTime:
             jd
         )
         if year < 0:
-            year -= 1
+            # year -= 1
             return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
         else:
             return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
