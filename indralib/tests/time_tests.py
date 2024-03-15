@@ -296,6 +296,7 @@ errors = 0
 for d in data:
     d["indra_text"] = IndraTime.julian2ISO(d["JulianDate"])
     d["indra_jd"] = IndraTime.ISO2julian(d["indra_text"])
+    d["indra_human"] = IndraTime.julian_2_string_time(d["JulianDate"])
     res = ""
     it = d["indra_text"]
     if it.endswith(" BC"):

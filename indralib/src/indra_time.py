@@ -81,9 +81,11 @@ class IndraTime:
 
     @staticmethod
     def time_to_julian(year, month, day, hour, minute, second, microsecond):
-        """Convert discrete time to Julian date, assume julian dates for time < 1582 otherwise gregorian calendar"""
+        """Convert discrete time to Julian date, assume Julian calendar for time < 1582 otherwise Gregorian calendar"""
         if year == 0:
-            print("There is no year 0")
+            print(
+                "There is no year 0 in julian calendar! Use to_time_gd for continuous juse of extended Gregorian calendar."
+            )
             return None
         if year == 1582 and month == 10 and day > 4 and day < 15:
             print(
@@ -311,8 +313,12 @@ class IndraTime:
             # > 13000 BP? Use BC, else use BP, and if < 100000 BP use kya BP
             if jd > 1721423.5 - 13000 * 365.25:
                 # BC
-                bc = int((1721423.5 - jd) / 365.25)
-                return f"{bc} BC"
+                year, month, day, hour, minute, second, microsecond = (
+                    IndraTime.julian_to_time(jd)
+                )
+                # bc = int((1721423.5 - jd) / 365.25) + 1
+                year = 1 - year
+                return f"{year} BC"
             elif jd > 1721423.5 - 100000 * 365.25:
                 # BP
                 bp = int((1721423.5 - jd) / 365.25)
@@ -343,11 +349,7 @@ class IndraTime:
         year, month, day, hour, minute, second, microsecond = IndraTime.julian_to_time(
             jd
         )
-        if year < 0:
-            # year -= 1
-            return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
-        else:
-            return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
+        return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
 
     @staticmethod
     def ISO2julian(iso):
