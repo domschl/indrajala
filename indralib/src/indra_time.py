@@ -63,6 +63,10 @@ class IndraTime:
         minute = 60 * (hour - int(hour))
         second = 60 * (minute - int(minute))
         microsecond = 1000000 * (second - int(second))
+
+        # if year < 0:  ## XXX VERIFY!
+        #     year -= 1
+
         return (
             year,
             month,
@@ -280,6 +284,12 @@ class IndraTime:
 
     @staticmethod
     def julian2ISO(jd):
-        """Convert Julian date to ISO 8601 string"""
-        dt = IndraTime.julian2datetime(jd)
-        return dt.isoformat()
+        """Convert Julian date to extended ISO 8601 string"""
+        year, month, day, hour, minute, second, microsecond = IndraTime.julian_to_time(
+            jd
+        )
+        if year < 0:
+            year -= 1
+            return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
+        else:
+            return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
