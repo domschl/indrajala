@@ -1,0 +1,26 @@
+[citation]
+title = "EPICA Dome C high resolution carbon dioxide concentrations"
+description = "EDC (EPICA Dome C) * Latitude: -75.100000 * Longitude: 123.350000 * Date/Time Start: 1993-01-01T00:00:00 * Date/Time End: 2004-12-31T00:00:00 * Elevation: 3233.0 m * Recovery: 3300 m * Location: Dome C, Antarctica * Campaign: Dome C * Method/Device: Ice drill (ICEDRILL) * Comment: Drill site is 56 km from the site of a previous Dome C core that provided records extending into the last glacial period, and 560 km from the site of the Vostok cores. The completion of the Dome C core was delayed when the first drilling became stuck at 788 m in 1999 (EDC96)."
+authors = ["Eric Monnin"]
+publication_date = "2006"
+last_update = ""
+publisher = "European Project for Ice Coring in Antarctica (EPICA)"
+id = "https://doi.pangaea.de/10.1594/PANGAEA.472488"
+indra_id = "epicadomec2006monnin"
+indra_domain = "$event/geodata/paleo/{indra_id}/icecore"
+version = ""
+redirect = true
+data_source = "https://doi.pangaea.de/10.1594/PANGAEA.472488?format=textfile"
+related_publications = [
+    "https://doi.pangaea.de/10.1594/PANGAEA.472488",
+    "https://en.wikipedia.org/wiki/European_Project_for_Ice_Coring_in_Antarctica",
+]
+time_interval = ["0.173 ka BP", "21.676 ka BP"]
+tags = ["co2", "icecore", "antarctica"]
+
+[datasets]
+DomeC2016CO2 = [
+    "decode('utf-8')",
+    "extract_lines(20)",
+    "pandas_csv_separator('\t')",
+]

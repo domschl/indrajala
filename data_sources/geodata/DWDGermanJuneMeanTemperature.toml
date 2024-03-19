@@ -1,0 +1,20 @@
+[citation]
+title = "Zeitreihen fuer Gebietsmittel fuer Bundeslaender und Kombinationen von Bundeslaender, erstellt am: 20220702"
+description = ""
+authors = ["DWD OpenData"]
+publication_date = "2022-07-02"
+publisher = "DWD OpenData"
+id = ""
+indra_id = "dwd/meantemp/germany/june"
+indra_domain = "$event/geodata/germany/{indra_id}/"
+version = ""
+data_source = "https://opendata.dwd.de/climate_environment/CDC/regional_averages_DE/monthly/air_temperature_mean/regional_averages_tm_06.txt"
+related_publications = ["https://opendata.dwd.de/climate_environment/CDC/"]
+tags = ["temperature", "germany", "direct_measurement", "summer"]
+
+[datasets]
+germany_june_meantemp = [
+    "decode('utf-8')",
+    "extract_lines(2)",
+    "pandas_csv_separator(';')",
+]

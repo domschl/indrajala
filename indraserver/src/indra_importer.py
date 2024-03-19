@@ -11,6 +11,9 @@ path = os.path.join(
 )
 sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
+from indra_time import IndraTime  # type: ignore
+from indra_downloader import IndraDownloader
+
 from indra_serverlib import IndraProcessCore
 
 
@@ -33,8 +36,30 @@ class IndraProcess(IndraProcessCore):
             zmq_send_queue_port,
             mode="dual",
         )
+        self.data_sources_directory = os.path.expanduser(
+            config_data["data_sources_directory"]
+        )
+        self.data_cache_directory = os.path.expanduser(
+            config_data["data_cache_directory"]
+        )
+        if os.path.exists(self.data_sources_directory) is False:
+            self.log.warning(
+                f"Data sources directory {self.data_sources} does not exist, disabling importer, no work."
+            )
+            self.bConnectActive = False
+        else:
+            if os.path.exists(self.data_cache_directory) is False:
+                os.makedirs(self.data_cache_directory)
+            self.bConnectActive = False
+            self.init_downloads()
 
-        self.bConnectActive = False
+    def init_downloads(self):
+        self.downloader = IndraDownloader(cache_dir=self.data_cache_directory)
+        self.dfs = self.downloader.get_datasets(
+            data_sources_dir=self.data_sources_directory
+        )
+        self.log.info(f"Data sources: {len(self.dfs)}")
+        self.bConnectActive = True
 
     def inbound_init(self):
         return True

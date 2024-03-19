@@ -1,0 +1,310 @@
+[citation]
+title = "Law Dome Ice Core 2000-Year CO2, CH4, and N2O Data"
+description = "New measurements of atmospheric greenhouse gas concentrations in ice from Law Dome, Antarctica reproduce published Law Dome CO2 and CH4 records, extend them back to 2000 years BP, and include N2O. They have very high air age resolution, data density and measurement precision. Firn air measurements span the past 65 years and overlap with the ice core and direct atmospheric observations. Major increases in CO2, CH4 and N2O concentrations during the past 200 years followed a period of relative stability beforehand. Decadal variations during the industrial period include the stabilization of CO2 and slowing of CH4 and N2O growth in the 1940s and 1950s. Variations of up to 10 ppm CO2, 40 ppb CH4 and 10 ppb N2O occurred throughout the preindustrial period.  Methane concentrations grew by 100 ppb from AD 0 to 1800, possibly due to early anthropogenic emissions."
+authors = [
+    "A.M. Smith",
+    "C.E. Allison",
+    "C.M. MacFarling Meure",
+    "C.M. Trudinger",
+    "D.A. Spencer",
+    "D.C. Lowe",
+    "D.F. Ferretti",
+    "D.M. Etheridge",
+    "G.A. Sturrock",
+    "I.G. Enting",
+    "J. Elkins",
+    "J.-M. Barnola",
+    "J.B. Miller",
+    "J.W.C. White",
+    "K.R. Lassey",
+    "L.N. Cooper",
+    "L.P. Steele",
+    "L.W. Porter",
+    "M.F. Dreier",
+    "M.V. Van der Schoot",
+    "P.B. Krummel",
+    "P.J. Fraser",
+    "P.J. Rayner",
+    "R.J. Francey",
+    "R.L. Langenfelds ",
+    "T.D. van Ommen",
+    "V.I. Morgan",
+]
+publication_date = "2010"
+last_update = "2010-07"
+publisher = "World Data Center for Paleoclimatology, Boulder and NOAA Paleoclimatology Program"
+id = "IGBP PAGES/World Data Center for Paleoclimatology Data Contribution Series # 2010-070"
+indra_id = "lawdomeco2icecore2010smith"
+indra_domain = "$event/geodata/paleo/{indra_id}/icecore"
+version = ""
+data_source = "https://www.ncei.noaa.gov/pub/data/paleo/icecore/antarctica/law/law2006.txt"
+related_publications = [
+    "https://www.ncei.noaa.gov/pub/data/paleo/icecore/antarctica/law/",
+]
+time_interval = ["1 AD", "2004 AD"]
+tags = ["co2", "ch4", "n20", "icecore", "antarctica"]
+
+[datasets]
+LawDome2006_CO2_CH4_N20 = [
+    "decode('latin1')",
+    "extract_lines(183,2187)",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CO2_Core_DSS_Eth1996 = [
+    "decode('latin1')",
+    "extract_lines(2196,2237)",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CO2_Core_DSS_MacFM20042006 = [
+    "decode('latin1')",
+    "extract_lines(2239,2301)",
+    "add_prefix('SampleType   CO2gasAge  CO2(ppm)  Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CO2_Core_DE08-2_Eth1996 = [
+    "decode('latin1')",
+    "extract_lines(2303,2313)",
+    "add_prefix('SampleType   CO2gasAge  CO2(ppm)  Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CO2_Core_DE08-2_MacFM20042006 = [
+    "decode('latin1')",
+    "extract_lines(2315,2322)",
+    "add_prefix('SampleType   CO2gasAge  CO2(ppm)  Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CO2_Core_DE08_Eth1996 = [
+    "decode('latin1')",
+    "extract_lines(2324,2355)",
+    "add_prefix('SampleType   CO2gasAge  CO2(ppm)  Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CO2_Core_DE08_MacFM20042006 = [
+    "decode('latin1')",
+    "extract_lines(2357,2413)",
+    "add_prefix('SampleType   CO2gasAge  CO2(ppm)  Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CO2_Core_DSSW20Kfirn = [
+    "decode('latin1')",
+    "extract_lines(2415,2422)",
+    "add_prefix('SampleType   CO2gasAge  CO2(ppm)')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CO2_Core_CAPEGRIM = [
+    "decode('latin1')",
+    "extract_lines(2424,2453)",
+    "add_prefix('SampleType   CO2gasAge  CO2(ppm)')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CO2_All = [
+    "decode('latin1')",
+    "extract_lines(2464,2714)",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CH4_Core_DSS_Eth1996 = [
+    "decode('latin1')",
+    "extract_lines(2725,2771)",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CH4_Core_DSS_MacFM20042006 = [
+    "decode('latin1')",
+    "extract_lines(2773,2843)",
+    "add_prefix('SampleType  CH4gasAge  CH4(ppb)  NOAA04    Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CH4_Core_DE08-2_Eth1996 = [
+    "decode('latin1')",
+    "extract_lines(2845,2855)",
+    "add_prefix('SampleType  CH4gasAge  CH4(ppb)  NOAA04    Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CH4_Core_DE08-2_MacFM20042006 = [
+    "decode('latin1')",
+    "extract_lines(2857,2866)",
+    "add_prefix('SampleType  CH4gasAge  CH4(ppb)  NOAA04    Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CH4_Core_DE08_Eth1996 = [
+    "decode('latin1')",
+    "extract_lines(2868,2897)",
+    "add_prefix('SampleType  CH4gasAge  CH4(ppb)  NOAA04    Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CH4_Core_DE08_MacFM20042006 = [
+    "decode('latin1')",
+    "extract_lines(2899,2958)",
+    "add_prefix('SampleType  CH4gasAge  CH4(ppb)  NOAA04    Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CH4_Core_DSSW20Kfirn = [
+    "decode('latin1')",
+    "extract_lines(2960,2966)",
+    "add_prefix('SampleType  CH4gasAge  CH4(ppb)  NOAA04')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CH4_Core_CAPEGRIM = [
+    "decode('latin1')",
+    "extract_lines(2968,3063)",
+    "add_prefix('SampleType  CH4gasAge  CH4(ppb)  NOAA04')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_CH4_All = [
+    "decode('latin1')",
+    "extract_lines(3075,3406)",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_N20_Core_DSS_MacFM20042006 = [
+    "decode('latin1')",
+    "extract_lines(3416,3468)",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_N20_Core_DSS08-2_MacFM20042006 = [
+    "decode('latin1')",
+    "extract_lines(3470,3479)",
+    "add_prefix('SampleType   N2OgasAge  N2O(ppb)  Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_N20_Core_DSS08_MacFM20042006 = [
+    "decode('latin1')",
+    "extract_lines(3481,3521)",
+    "add_prefix('SampleType   N2OgasAge  N2O(ppb)  Publication status')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_N20_Core_DSSW20Kfirn = [
+    "decode('latin1')",
+    "extract_lines(3523,3530)",
+    "add_prefix('SampleType   N2OgasAge  N2O(ppb)')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_N20_Core_CAPEGRIM = [
+    "decode('latin1')",
+    "extract_lines(3532,3543)",
+    "add_prefix('SampleType   N2OgasAge  N2O(ppb)')",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
+LawDome2006_N20_All = [
+    "decode('latin1')",
+    "extract_lines(3553,3676)",
+    "replace('Publication status','Publication')",
+    "replace('Eth et al., 199','Eth199')",
+    "replace('CAPE GRIM','CAPEGRIM')",
+    "replace('DSSW20K firn','DSSW20Kfirn')",
+    "replace('MacFM 2004/2006','MacFM20042006')",
+    "pandas_csv_separator(' ')",
+]
