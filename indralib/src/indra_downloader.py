@@ -14,6 +14,9 @@ import tomllib as toml
 import uuid
 
 from indra_event import IndraEvent
+import io
+
+# Requires: pandas, lxml, openpyxl
 
 
 class IndraDownloader:
@@ -147,9 +150,7 @@ class IndraDownloader:
     def pandas_csv_separator(self, sep):
         data = self.tf_data
         if sep == " ":
-            return pd.read_csv(
-                io.StringIO(data), delim_whitespace=True, engine="python"
-            )
+            return pd.read_csv(io.StringIO(data), sep=r"\s+", engine="python")
         return pd.read_csv(io.StringIO(data), sep=sep, engine="python")
 
     def pandas_filter(self, column_list):
@@ -160,13 +161,15 @@ class IndraDownloader:
         data = self.tf_data
         if sep == " ":
             return pd.read_csv(
-                io.StringIO(data), delim_whitespace=True, na_values=nan, engine="python"
+                io.StringIO(data), sep=r"\s+", na_values=nan, engine="python"
             )
         return pd.read_csv(io.StringIO(data), sep=sep, na_values=nan, engine="python")
 
     def pandas_excel_rowskips(self, skiprow_list):
         data = self.tf_data
-        return pd.read_excel(data, skiprows=skiprow_list)
+        # change to use BytesIO:
+        data_bio = io.BytesIO(data)
+        return pd.read_excel(data_bio, skiprows=skiprow_list)
 
     def pandas_excel_worksheet_subset(
         self, worksheet_name, include_rows, include_columns

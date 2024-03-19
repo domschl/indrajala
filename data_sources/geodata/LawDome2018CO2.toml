@@ -1,0 +1,39 @@
+[citation]
+title = "Revised records of atmospheric trace gases CO2, CH4, N2O and d13C-O2 over the last 2000 years from Law Dome, Antarctica"
+description = "Law Dome, Antarctica, 66°44' S, 112°50' E, 1390m above mean annual sea level (M.A.S.L.). The CO2 and CH4 records presented here are derived from three ice cores obtained at Law Dome, East Antarctica from 1987 to 1993. The Law Dome site satisfies many of the desirable characteristics of an ideal ice core site for atmospheric CO2 reconstructions including negligible melting of the ice sheet surface, low concentrations of impurities, regular stratigraphic layering undisturbed at the surface by wind or at depth by ice flow, and high snow accumulation rate."
+authors = [
+    "Mauro Rubino",
+    "David Etheridge",
+    "David Thornton",
+    "Russell Howden",
+    "Colin Allison",
+    "Roger Francey",
+    "Ray Langenfelds",
+    "Paul Steele",
+    "Cathy Trudinger",
+    "Darren Spencer",
+    "Mark Curran",
+    "Tas Van Ommen",
+    "Andrew Smith",
+]
+publication_date = "2018-12-14"
+last_update = ""
+publisher = "Earth System Science Data Discussions"
+id = "DOI: 10.5194/essd-2018-146"
+indra_id = "lawdomeco2icecore2018rubino"
+indra_domain = "$event/geodata/paleo/{indra_id}/icecore"
+version = ""
+data_source = "https://www.ncei.noaa.gov/pub/data/paleo/icecore/antarctica/law/law2018co2.txt"
+related_publications = [
+    "https://www.earth-syst-sci-data-discuss.net/essd-2018-146/",
+]
+time_interval = ["154", "1996"]
+tags = ["co2", "icecore", "antarctica"]
+note = "Some identical dates have multiple values"
+
+[datasets]
+LawDome2018CO2 = [
+    "decode('utf-8')",
+    "extract_lines(111)",
+    "pandas_csv_separator('\t')",
+]

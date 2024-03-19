@@ -84,9 +84,13 @@ class IndraTime:
         """Convert discrete time to Julian date, assume Julian calendar for time < 1582 otherwise Gregorian calendar"""
         if year == 0:
             print(
-                "There is no year 0 in julian calendar! Use to_time_gd for continuous juse of extended Gregorian calendar."
+                "There is no year 0 in julian calendar! Use to_time_gd for continuous use of extended Gregorian calendar."
             )
             return None
+        # The new calendar was developed by Aloysius Lilius (about 1510 - 1576) and Christophorus Clavius (1537/38 - 1612).
+        # It was established by a papal bull of Pope Gregor XIII that Thursday, October 4th, 1582, should be followed by Friday, October 15th, 1582.
+        # This shifted the date of the vernal equinox to its proper date.
+        # (https://www.ptb.de/cms/en/ptb/fachabteilungen/abt4/fb-44/ag-441/realisation-of-legal-time-in-germany/gregorian-calendar.html)
         if year == 1582 and month == 10 and day > 4 and day < 15:
             print(
                 "The dates 5 - 14 Oct 1582 do not exist in the Gregorian calendar! Use to_time_gd for continuous juse of extended Gregorian calendar."

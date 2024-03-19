@@ -1,0 +1,29 @@
+[citation]
+title = "Solanki et al. 2004 11,000 Year Sunspot Number Reconstruction"
+description = "Records of changes in solar irradiance, volcanic aerosols, atmospheric trace gases, and other properties thought to influence climate in the past. Parameter keywords describe what was measured in this data set. Additional summary information can be found in the abstracts of papers listed in the data set citations."
+authors = [
+    "Solanki, S.K.",
+    "Usoskin, I.G.",
+    "Kromer, B.",
+    "Schuessler, M.",
+    "Beer, J.",
+]
+publication_date = "2004-10-28"
+last_update = "2005-02"
+publisher = "Environmental Research Letters, 11, 2, 024001"
+id = "https://doi.org/10.25921/y6td-ne29"
+indra_id = "solanki2004"
+indra_domain = "$event/geodata/paleo/{indra_id}/sunspots"
+version = ""
+data_source = "https://www.ncei.noaa.gov/pub/data/paleo/climate_forcing/solar_variability/solanki2004-ssn.txt"
+related_publications = [
+    "https://www.ncei.noaa.gov/access/paleo-search/study/5780",
+]
+tags = ['sunspots']
+
+[datasets]
+sunspots11000yrs = [
+    "decode('latin1')",
+    "extract_lines(70)",
+    "pandas_csv_separator(' ')",
+]

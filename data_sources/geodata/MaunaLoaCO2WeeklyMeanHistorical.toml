@@ -1,0 +1,21 @@
+[citation]
+title = "Mauna Loa CO2 weekly mean and historical comparisons"
+description = "NOTE: DATA FOR THE LAST SEVERAL MONTHS ARE PRELIMINARY, ARE STILL SUBJECT TO QUALITY CONTROL PROCEDURES. NOTE: The week '1 yr ago' is exactly 365 days ago, and thus does not run from Sunday through Saturday. 365 also ignores the possibility of a leap year. The week '10 yr ago' is exactly 10*365 days +3 days (for leap years) ago."
+authors = ["Dr. Pieter Tans", "Dr. Ralph Keeling"]
+publication_date = "2022-07"
+last_update = "2022-07"
+publisher = "Dr. Pieter Tans, NOAA/GML (gml.noaa.gov/ccgg/trends/) and Dr. Ralph Keeling, Scripps Institution of Oceanography (scrippsco2.ucsd.edu/)."
+id = ""
+indra_id = "manualoaco2weeklymean"
+indra_domain = "$event/geodata/historical/{indra_id}"
+version = ""
+data_source = "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.csv"
+related_publications = ["https://gml.noaa.gov/ccgg/trends/data.html"]
+tags = ["co2", "mauna_loa", "direct_measurement"]
+
+[datasets]
+MaunaLoaWeeklyHistoricalCO2 = [
+    "decode('utf-8')",
+    "remove_comments('#')",
+    "pandas_csv_separator_nan(',', [-999.99])",
+]

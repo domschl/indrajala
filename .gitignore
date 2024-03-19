@@ -13,3 +13,5 @@ lib/
 lib64
 pyvenv.cfg
 share/
+.DS_Store
+data_sources/data_cache/
