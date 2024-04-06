@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "indraserver"
 version = "0.0.1"
-authors = [{ name = "Dominik Schlösser", email = "dsc@dosc.net" }]
-description = "Websocket client for the Indrajala system"
+authors = [{ name = "Dominik Schlösser", email = "dominik.schloesser@gmail.com" }]
+description = "Indrajala server system"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
