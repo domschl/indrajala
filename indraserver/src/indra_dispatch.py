@@ -2,14 +2,8 @@ import json
 import datetime
 import uuid
 
-# path = os.path.join(
-#     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-#     "indralib/src",
-# )
-# sys.path.append(path)
 from indralib.indra_event import IndraEvent  # type: ignore
 from indralib.indra_time import IndraTime  # type: ignore
-
 from indra_serverlib import IndraProcessCore
 
 

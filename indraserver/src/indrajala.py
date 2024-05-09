@@ -16,19 +16,13 @@ import time
 import signal
 import zmq
 import shlex
+import sys
 
 try:
     import tomllib
 except ModuleNotFoundError:  # Python 3.10 and older:
     import tomli as tomllib  # type: ignore
 
-import sys
-
-# path = os.path.join(
-#     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-#     "indralib/src",
-# )
-# sys.path.append(path)
 from indralib.indra_event import IndraEvent  # type: ignore
 
 INDRAJALA_VERSION = "0.1.0"
