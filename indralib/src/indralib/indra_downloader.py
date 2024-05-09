@@ -13,7 +13,7 @@ import requests
 import tomllib as toml
 import uuid
 
-from indra_event import IndraEvent
+from indralib.indra_event import IndraEvent
 import io
 
 # Requires: pandas, lxml, openpyxl

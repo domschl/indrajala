@@ -13,7 +13,7 @@ import os
 import time
 import sys
 
-from indra_event import IndraEvent
+from indralib.indra_event import IndraEvent
 
 
 class IndraClient:

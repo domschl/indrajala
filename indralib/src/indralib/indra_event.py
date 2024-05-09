@@ -1,7 +1,7 @@
 import json
 import datetime
 import uuid
-from indra_time import IndraTime  # type: ignore
+from indralib.indra_time import IndraTime  # type: ignore
 
 
 # XXX  https://en.wikipedia.org/wiki/Decimal_time
