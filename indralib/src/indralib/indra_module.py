@@ -3,7 +3,7 @@ import threading
 import time
 from queue import Queue
 
-from indra_event import IndraEvent
+from indralib.indra_event import IndraEvent
 
 
 class IndraModule:
