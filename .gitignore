@@ -15,3 +15,6 @@ pyvenv.cfg
 share/
 .DS_Store
 data_sources/data_cache/
+dist/
+indralib.egg-info/
+
