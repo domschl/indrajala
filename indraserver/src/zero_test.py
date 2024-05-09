@@ -1,15 +1,11 @@
 import json
-import time
-
-# XXX dev only
 import sys
-import os
 
-path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "indralib/src",
-)
-sys.path.append(path)
+# path = os.path.join(
+#     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+#     "indralib/src",
+# )
+# sys.path.append(path)
 from indra_event import IndraEvent  # type: ignore
 from indra_serverlib import IndraProcessCore
 
