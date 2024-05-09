@@ -41,6 +41,7 @@ class IndraClient:
         self.recv_queue = asyncio.Queue()
         self.recv_task = None
         self.initialized = False
+        self.error_shown = False
         if profile is not None and profile.lower() in ["default", "none"]:
             profile = None
         if config_file is not None and config_file != "":
@@ -209,6 +210,7 @@ class IndraClient:
         self.recv_task = asyncio.create_task(self.fn_recv_task())
         self.session_id = None
         self.username = None
+        self.error_shown = False
         return self.websocket
 
     async def fn_recv_task(self):
@@ -248,7 +250,11 @@ class IndraClient:
     async def send_event(self, event):
         """Send event"""
         if self.initialized is False:
-            self.log.error("Indrajala send_event(): connection data not initialized!")
+            if self.error_shown is False:
+                self.error_shown = True
+                self.log.error(
+                    "Indrajala send_event(): connection data not initialized!"
+                )
             return False
         if self.websocket is None:
             self.log.error(
@@ -268,7 +274,11 @@ class IndraClient:
             self.log.debug("Future: ", replyEventFuture)
         else:
             replyEventFuture = None
-        await self.websocket.send(event.to_json())
+        try:
+            await self.websocket.send(event.to_json())
+        except Exception as e:
+            self.log.error(f"Could not send message: {e}, uninitialized.")
+            self.initialized = False
         return replyEventFuture
 
     async def recv_event(self, timeout=None):

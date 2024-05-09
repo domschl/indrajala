@@ -1,17 +1,8 @@
 import logging
 import getpass
-import os
 
-# Add the parent directory to the path so we can import the client
-import sys
-
-path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "indralib/src"
-)
-# print(path)
-sys.path.append(path)
-from indra_event import IndraEvent  # type: ignore
-from indra_client import IndraClient  # type: ignore
+from indralib.indra_event import IndraEvent  # type: ignore
+from indralib.indra_client import IndraClient  # type: ignore
 
 
 async def interactive_login(
