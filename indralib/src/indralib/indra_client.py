@@ -85,8 +85,6 @@ class IndraClient:
                 cfg_path = os.path.expanduser(cfg_path)
             prfs = IndraClient.get_profiles()
 
-            print(f"Profiles: {prfs}")
-
             if len(prfs) > 0:
                 self.initialized = self.get_config(
                     os.path.join(cfg_path, prfs[0] + ".toml"), verbose=self.verbose
@@ -277,7 +275,7 @@ class IndraClient:
         try:
             await self.websocket.send(event.to_json())
         except Exception as e:
-            self.log.error(f"Could not send message: {e}, uninitialized.")
+            self.log.error(f"Could not send message: {e}")
             self.initialized = False
         return replyEventFuture
 
@@ -483,7 +481,7 @@ class IndraClient:
 
     async def update_recs(self, recs):
         if isinstance(recs, list) is False:
-            print("Not a list")
+            self.log.error("Not a list")
             recs = [recs]
         cmd = recs
         ie = IndraEvent()
@@ -535,14 +533,12 @@ class IndraClient:
         ie.data_type = "kvread"
         ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
-        print("Sending kv_read")
+        self.log.debug("Sending kv_read")
         return await self.send_event(ie)
 
     async def kv_read_wait(self, key):
         future = await self.kv_read(key)
-        print("Waiting for kv_read")
         result = await future
-        print("Got kv_read result")
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
             return None
@@ -593,7 +589,7 @@ class IndraClient:
             self.username = None
             return None
         else:
-            print(
+            self.log.debug(
                 f"Login result: {result.data}, {result.data_type}, {result.auth_hash}"
             )
             self.session_id = result.auth_hash
