@@ -6,6 +6,7 @@ import datetime
 import uuid
 import bcrypt
 import os
+import logging
 
 from indralib.indra_event import IndraEvent  # type: ignore
 from indralib.indra_time import IndraTime  # type: ignore
@@ -167,8 +168,7 @@ class IndraProcess(IndraProcessCore):
         hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
         return hashed_password.decode("utf-8")
 
-    @staticmethod
-    def check_password(plain_password: str, hashed_password: str):
+    def check_password(self, plain_password: str, hashed_password: str):
         """
         Check if a plain password matches a hashed password.
 
@@ -179,9 +179,14 @@ class IndraProcess(IndraProcessCore):
         Returns:
             bool: True if the plain password matches the hashed password, False otherwise.
         """
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"), hashed_password.encode("utf-8")
-        )
+        try:
+            checked = bcrypt.checkpw(
+                plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+            )
+        except Exception as e:
+            self.log.error(f"Failed to check password: {e}")
+            return False
+        return checked
 
     def _create_session(self, key, from_id):
         user_template = "entity/indrajala/user/+/password"
