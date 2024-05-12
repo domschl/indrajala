@@ -3,29 +3,18 @@ import websockets
 import logging
 import ssl
 import json
-
-try:
-    import tomllib as toml
-except ImportError:
-    import tomli as toml
-
-import os
 import time
-import sys
 
 from indralib.indra_event import IndraEvent
+from indralib.server_config import Profiles
 
 
 class IndraClient:
     def __init__(
         self,
-        uri=None,
-        ca_authority=None,
-        auth_token=None,
-        config_file=None,
+        profile,
         verbose=False,
         module_name=None,
-        profile="default",
         log_handler=None,
     ):
         self.log = logging.getLogger("IndraClient")
@@ -42,143 +31,21 @@ class IndraClient:
         self.recv_task = None
         self.initialized = False
         self.error_shown = False
-        if profile is not None and profile.lower() in ["default", "none"]:
-            profile = None
-        if config_file is not None and config_file != "":
-            self.initialized = self.get_config(config_file, verbose=self.verbose)
-        elif uri is not None and uri != "":
-            self.initialized = True
-            self.uri = uri
-            if ca_authority is not None and ca_authority != "":
-                self.ca_authority = ca_authority
-            else:
-                self.ca_authority = None
-            if auth_token is not None and auth_token != "":
-                self.auth_token = auth_token
-            else:
-                self.auth_token = None
-            if self.uri.startswith("wss://"):
-                self.use_ssl = True
-            else:
-                self.use_ssl = False
-        elif profile is not None:
-            if os.path.exists("/var/lib/indrajala/config") is True:
-                cfg_path = "/var/lib/indrajala/config"
-            else:
-                cfg_path = "~/.config/indrajala/server_profiles"
-                cfg_path = os.path.expanduser(cfg_path)
-            config_file = os.path.join(cfg_path, profile + ".toml")
-            if os.path.exists(config_file) is True:
-                self.initialized = self.get_config(config_file, verbose=self.verbose)
-            else:
-                self.initialized = False
-                if verbose is True:
-                    self.log.error(
-                        f"Profile {profile} not found in {cfg_path}, alternatively please provide a valid uri, starting with ws:// or wss://, e.g. wss://localhost:8082, or config_file=..."
-                    )
-                return
-        else:
-            if os.path.exists("/var/lib/indrajala/config/server_profiles") is True:
-                cfg_path = "/var/lib/indrajala/config/server_profiles"
-            else:
-                cfg_path = "~/.config/indrajala/server_profiles"
-                cfg_path = os.path.expanduser(cfg_path)
-            prfs = IndraClient.get_profiles()
-
-            if len(prfs) > 0:
-                self.initialized = self.get_config(
-                    os.path.join(cfg_path, prfs[0] + ".toml"), verbose=self.verbose
-                )
-            else:
-                self.initialized = False
-                if verbose is True:
-                    self.log.error(f"No valid profiles found in {cfg_path}")
-                return
-
-    @staticmethod
-    def get_profiles(prefer_ssl=None):
-        """Get profiles"""
-        if os.path.exists("/var/lib/indrajala/config/server_profiles") is True:
-            cfg_path = "/var/lib/indrajala/config/server_profiles"
-        else:
-            cfg_path = "~/.config/indrajala/server_profiles"
-            cfg_path = os.path.expanduser(cfg_path)
-        if os.path.exists(cfg_path) is False:
-            return []
-        profiles = []
-        for f in os.listdir(cfg_path):
-            if f.endswith(".toml"):
-                if prefer_ssl is None:
-                    profiles.append(f[:-5])
-                else:
-                    try:
-                        with open(os.path.join(cfg_path, f), "rb") as f:
-                            config = toml.load(f)
-                        if "uri" in config:
-                            if prefer_ssl is True and config["uri"].startswith(
-                                "wss://"
-                            ):
-                                profiles.append(f[:-5])
-                            elif prefer_ssl is False and config["uri"].startswith(
-                                "ws://"
-                            ):
-                                profiles.append(f[:-5])
-                    except Exception as e:
-                        pass
-        return profiles
-
-    def get_config(self, config_file, verbose=True):
-        """Get config from file"""
-        self.initialized = False
-        try:
-            with open(config_file, "rb") as f:
-                config = toml.load(f)
-            if verbose is True:
-                self.log.debug(f"Loaded config from {config_file}: {config}f")
-        except Exception as e:
-            if verbose is True:
-                self.log.error(f"{config_file} config file not found: {e}")
-            return False
-        if "uri" not in config:
-            if verbose is True:
-                self.log.error(
-                    f"Please provide an uri=ws[s]://host:port in {config_file}"
-                )
-            return False
-        self.uri = config["uri"]
-        if "ca_authority" in config and config["ca_authority"] != "":
-            cert_auth = os.path.expanduser(config["ca_authority"])
-            if os.path.exists(cert_auth) is False:
-                if verbose is True:
-                    self.log.error(f"CA authority file {cert_auth} not found!")
-                return False
-            self.ca_authority = cert_auth
-        else:
-            self.ca_authority = None
-        if "auth_token" in config and config["auth_token"] != "":
-            self.auth_token = config["auth_token"]
-        else:
-            self.auth_token = None
-        if self.uri.startswith("wss://"):
-            self.use_ssl = True
-        else:
-            self.use_ssl = False
-        if verbose is True:
-            self.log.info(
-                f"Initialized IndraClient with uri={self.uri}, ca_authority={self.ca_authority}, auth_token={self.auth_token}"
-            )
+        if Profiles.check_profile(profile) is False:
+            self.log.error("Invalid profile {profile}")
+            self.profile = None
+            return
+        self.profile = profile
         self.initialized = True
-        return True
 
     async def init_connection(self, verbose=False):
         """Initialize connection"""
         if self.initialized is False:
             self.trx = {}
             self.websocket = None
-            if verbose is True:
-                self.log.error(
-                    "Indrajala init_connection(): connection data not initialized!"
-                )
+            self.log.error(
+                "Indrajala init_connection(): connection profile data not initialized!"
+            )
             return None
         if self.websocket is not None:
             if verbose is True:
@@ -187,14 +54,15 @@ class IndraClient:
                 )
             return self.websocket
         self.trx = {}
-        if self.use_ssl is True:
+        self.uri = Profiles.get_uri(self.profile)
+        if self.profile["TLS"] is True:
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            if self.ca_authority is not None:
+            if self.profile["ca_authority"] is not None:
                 try:
-                    ssl_ctx.load_verify_locations(cafile=self.ca_authority)
+                    ssl_ctx.load_verify_locations(cafile=self.profile["ca_authority"])
                 except Exception as e:
                     self.log.error(
-                        f"Could not load CA authority file {self.ca_authority}: {e}"
+                        f"Could not load CA authority file {self.profile['ca_authority']}: {e}"
                     )
                     self.websocket = None
                     return None
