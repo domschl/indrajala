@@ -10,12 +10,29 @@ from indralib.server_config import Profiles
 
     # ------------------ GUI ------------------
 
-class AdminGui:
+class AdminGuiOld:
     def __init__(self):
         self.profiles = Profiles()
         self.profile = None
-        self.profile_name = None
-        self.username = "admin"
+        self.profile_name = self.profiles.default_profile
+        if self.profile_name is None or self.profile_name == "":
+            if len(self.profiles.profiles) > 0:
+                self.profile = self.profiles.profiles[0]
+                self.profile_name = self.profile["name"]
+            else:
+                self.profile_name = None
+        else:
+            for p in self.profiles.profiles:
+                if p["name"] == self.profile_name:
+                    self.profile = p
+                    break
+            if self.profile is None:
+                if len(self.profiles.profiles) > 0:
+                    self.profile = self.profiles.profiles[0]
+                    self.profile_name = self.profile["name"]
+                else:
+                    self.profile_name = None
+        self.username = self.profiles.default_username
         self.password = None
         self.cl = None
         self.session_id = None
@@ -49,6 +66,9 @@ class AdminGui:
             if server["name"] == server_name:
                 self.profiles.profiles.pop(i)
                 break
+        if self.profiles.default_profile == server_name:
+            self.profiles.default_profile = ""
+            self.profile_name = ""
         self.profiles.save_profiles()
         ui.notify(f"Server profile {server_name} deleted", type="info")
         self.server_grid.update()
@@ -221,56 +241,63 @@ class AdminGui:
         ui.notify("Logged out")
 
     async def user_list(self):
+        self.user_list_gui()
+        self.user_grid.update()
+
         if self.cl is None or self.session_id is None:
             ui.notify("Not logged in", type="error")
             return
         repl = await self.cl.kv_read_wait("entity/indrajala/user/%")
         print(repl)
-        users = []
+        self.users = []
         for r in repl:
             usertoks = r[0].split("/")
             value = r[1]
             if len(usertoks) == 5:
                 user = usertoks[3]
                 prop = usertoks[4]
-                if user not in users:
-                    users.append({'username': user, prop: value})
+                if user not in self.users:
+                    self.users.append({'username': user, prop: value})
                 else:
-                    for u in users:
+                    for u in self.users:
                         if u['username'] == user:
-                            u[prop] = value
-        print(users)
+                            self.users[user][prop] = value
+        print(self.users)
         await self.cl.kv_delete("entity/indrajala/user_columns")
 
-        user_columns = await self.cl.kv_read_wait("entity/indrajala/user_columns")
+        self.user_columns = await self.cl.kv_read_wait("entity/indrajala/user_columns")
         print(user_columns)
         if user_columns == []:
             user_columns = [("username", "User name"), ("roles", "Roles")]
             await self.cl.kv_write_wait("entity/indrajala/user_columns", json.dumps(user_columns))
         else:
-            user_columns = json.loads(user_columns[0][1])
+            self.user_columns = json.loads(user_columns[0][1])
         print(user_columns)
-        print(users)
-        user_column_defs = []
+        print(self.users)
+        self.user_column_defs = []
         for col in user_columns:
             if col == "username":
-                user_column_defs.append({"headerName": col[1], "field": col[0], "editable": False, "hidden": True})
+                self.user_column_defs.append({"headerName": col[1], "field": col[0], "editable": False, "hidden": True})
             else:
-                user_column_defs.append({"headerName": col[1], "field": col[0], "editable": True})
-        print(user_column_defs)
-        with ui.expansion('User list', icon='people').classes('w-full'):
-            ug = ui.aggrid(
-                {
-                    "columnDefs": user_column_defs,
-                    "rowData": users,
-                    "rowSelection": "single",
-                }
-            ).classes("max-h-40")
-            # ug.on("cellValueChanged", changed_users)
-            with ui.row():
-                ui.button("New User", on_click=self.on_new_user)
-                ui.button("Delete User", on_click=self.on_delete_user)
-                ui.button("Change password", on_click=self.on_change_password)
+                self.user_column_defs.append({"headerName": col[1], "field": col[0], "editable": True})
+        print(self.user_column_defs)
+
+        self.user_grid.update()
+
+    def user_list_gui(self):
+        ui.label("Users").classes("text-h4")
+        self.user_grid = ui.aggrid(
+            {
+                "columnDefs": self.user_column_defs,
+                "rowData": self.users,
+                "rowSelection": "single",
+            }
+        ).classes("max-h-40")
+        # ug.on("cellValueChanged", changed_users)
+        with ui.row():
+            ui.button("New User", on_click=self.on_new_user)
+            ui.button("Delete User", on_click=self.on_delete_user)
+            ui.button("Change password", on_click=self.on_change_password)
 
     def server_list(self):
         server_column_defs = [
@@ -289,42 +316,246 @@ class AdminGui:
                 "editable": True,
             },
         ]
-        with ui.expansion('Server profiles', icon='computer').classes('w-full'):
-            self.server_grid = ui.aggrid(
-                {
-                    "columnDefs": server_column_defs,
-                    "rowData": self.profiles.profiles,
-                    "rowSelection": "single",
-                }
-            ).classes("max-h-40")
-            self.server_grid.on("cellValueChanged", self.on_changed_servers)
-            with ui.row():
-                ui.button(
-                    "New Server",
-                    on_click=self.on_new_server,
-                )
-                ui.button("Delete Server", on_click=self.on_delete_server)
-                ui.button("Default Server", on_click=self.on_default_server)
-                ui.button("Test Server", on_click=self.on_test_server)
+        # with ui.expansion('Server profiles', icon='computer').classes('w-full'):
+        self.server_grid = ui.aggrid(
+            {
+                "columnDefs": server_column_defs,
+                "rowData": self.profiles.profiles,
+                "rowSelection": "single",
+            }
+        ).classes("max-h-40")
+        self.server_grid.on("cellValueChanged", self.on_changed_servers)
+        with ui.row():
+            ui.button(
+                "New Server",
+                on_click=self.on_new_server,
+            )
+            ui.button("Delete Server", on_click=self.on_delete_server)
+            ui.button("Default Server", on_click=self.on_default_server)
+            ui.button("Test Server", on_click=self.on_test_server)
 
     def login_state(self):
-        ui.separator()
         with ui.row():
             ui.button("Login", on_click=self.on_login)
             ui.button("Logout", on_click=self.on_logout)
 
-    def user_state(self):
-        ui.separator()
-        ui.button("User list", on_click=self.user_list)
-
     def run(self):
         # ui.title("Indrajala Admin")
-        self.server_list()
         self.login_state()
-        self.user_state()
-        # self.server_grid
+        ui.separator()
+        with ui.splitter(value=10).classes('w-full h-full') as splitter:
+            with splitter.before:
+                with ui.tabs().props('vertical').classes('w-full') as tabs:
+                    self.servers_tab = ui.tab('Servers', icon='computer')
+                    self.users_tab = ui.tab('Users', icon='group')
+            with splitter.after:
+                with ui.tab_panels(tabs, value=self.servers_tab) \
+                        .props('vertical').classes('w-full h-full'):
+                    with ui.tab_panel(self.servers_tab):
+                        ui.label('Servers').classes('text-h4')
+                        self.server_list()
+                    with ui.tab_panel(self.users_tab):
+                        ui.label('Users').classes('text-h4')
+                        self.user_list()
 
-        ui.run(port=8081, host="localhost")
+class ServerEditorGui:
+    def __init__(self):
+        self.profiles = Profiles()
+        self.profile_name = self.profiles.default_profile
+        if self.profile_name is None or self.profile_name == "":
+            if len(self.profiles.profiles) > 0:
+                self.profile_name = self.profiles.profiles[0]["name"]
+            else:
+                self.profile_name = None
+        else:
+            found = False
+            for p in self.profiles.profiles:
+                if p["name"] == self.profile_name:
+                    found = True
+                    break
+            if not found:
+                self.profile_name = None
+            if self.profile_name is None:
+                if len(self.profiles.profiles) > 0:
+                    self.profile_name = self.profiles.profiles[0]["name"]
+                else:
+                    self.profile_name = None
+        self.cl = None
+        self.session_id = None
+        self.new_server_index = 1
+
+        self.server_gui_list = None
+
+    def get_current_profile(self):
+        for p in self.profiles.profiles:
+            if p["name"] == self.profile_name:
+                return p
+        return None
+
+    def get_server_list(self):
+        return [p["name"] for p in self.profiles.profiles]
+    
+    def add_change_server(self, name, host, port, tls, ca_authority):
+        new_server = {
+            "name": name,
+            "host": host,
+            "port": port,
+            "TLS": tls,
+            "ca_authority": ca_authority,
+        }
+        # Check if server already exists
+        for i, server in enumerate(self.profiles.profiles):
+            if server["name"] == name:
+                self.profiles.profiles[i] = new_server
+                self.profiles.save_profiles()
+                return new_server
+        self.profiles.profiles.append(new_server)
+        self.profiles.save_profiles()
+        return new_server
+    
+    def delete_server(self, name):
+        for i, server in enumerate(self.profiles.profiles):
+            if server["name"] == name:
+                self.profiles.profiles.pop(i)
+                break
+        if self.profiles.default_profile == name:
+            self.profiles.default_profile = ""
+            self.profile_name = ""
+        self.profiles.save_profiles()
+
+    def set_default_server(self, name):
+        for i, server in enumerate(self.profiles.profiles):
+            if server["name"] == name:
+                self.profiles.default_profile = name
+                self.profiles.save_profiles()
+                return True
+        return False
+
+    async def check_server(self, name):
+        profile = self.profiles.get_profile(name)
+        if profile is None:
+            return False
+        cl = IndraClient(profile=profile, verbose=True)
+        ws = await cl.init_connection()
+        if ws is not None:
+            await cl.close_connection()
+            return True
+        return False
+    
+    async def on_new_server(self):
+        with ui.dialog() as dialog, ui.card():
+            ui.label("New server profile")
+            ns_name = ui.input(label="Name", value=f"New Server {self.new_server_index}")
+            ns_host = ui.input(label="Host", value="localhost")
+            ns_port = ui.input(label="Port", value=8080)
+            ns_tls = ui.checkbox("TLS", value=True)
+            ns_ca = ui.input(label="CA Authority", value="")
+            with ui.row():
+                ui.button("Cancel", on_click=lambda: dialog.submit(None))
+                ui.button("Create", on_click=lambda: dialog.submit((ns_name.value, ns_host.value, ns_port.value, ns_tls.value, ns_ca.value)))
+            res = await dialog
+            if res is not None:
+                name = res[0]
+                host = res[1]
+                port = res[2]
+                tls = res[3]
+                ca_authority = res[4]
+                self.add_change_server(name, host, port, tls, ca_authority)
+                self.server_gui_list.update()
+                self.new_server_index += 1
+
+    async def on_edit_server(self):
+        if self.profile_name is None:
+            ui.notify("No server selected", type="error")
+            return
+        server = self.profiles.get_profile(self.profile_name)
+        with ui.dialog() as dialog, ui.card():
+            ui.label("Edit profile")
+            ns_name = ui.input(label="Name", value=server['name'])
+            ns_host = ui.input(label="Host", value=server['host'])
+            ns_port = ui.input(label="Port", value=server['port'])
+            ns_tls = ui.checkbox("TLS", value=server['TLS'])
+            ns_ca = ui.input(label="CA Authority", value=server['ca_authority'])
+            with ui.row():
+                ui.button("Cancel", on_click=lambda: dialog.submit(None))
+                ui.button("Save", on_click=lambda: dialog.submit((server['name'], ns_name.value, ns_host.value, ns_port.value, ns_tls.value, ns_ca.value)))
+            res = await dialog
+            if res is not None:
+                old_name = res[0]
+                name = res[1]
+                host = res[2]
+                port = res[3]
+                tls = res[4]
+                ca_authority = res[5]
+                if old_name != name:
+                    self.delete_server(old_name)
+                    ui.notify(f"Server profile {old_name} deleted", type="info")
+                self.add_change_server(name, host, port, tls, ca_authority)
+                ui.notify(f"Server profile {name} updated", type="info")
+                self.server_gui_list.update()
+
+    async def on_delete_server(self):
+        if self.profile_name is None:
+            ui.notify("No server selected", type="error")
+            return
+        server_name = self.profile_name
+        
+        with ui.dialog() as dialog, ui.card():
+            ui.label(f"Delete server profile {server_name}")
+            ui.label(f"Are you sure you want to delete the server profile {server_name}?")
+            with ui.row():
+                ui.button("Cancel", on_click=lambda: dialog.submit(False))
+                ui.button("Delete", on_click=lambda: dialog.submit(True))
+            res = await dialog
+            if res is True:
+                ui.notify(f"Server profile {server_name} deleted", type="info")
+                self.delete_server(server_name)
+                self.server_gui_list.update()
+            else:
+                ui.notify(f"Server profile {server_name} not deleted", type="info")
+
+    async def on_check_server(self):
+        pass
+
+    async def on_server_selected(self):
+        row = await self.server_gui_list.get_selected_row()
+        if row is None:
+            self.profile_name = None
+            return
+        self.profile_name = row['name']
+        ui.notify(f'Selected server {row['name']}')
+
+    async def first_stuff(self):
+        # self.server_gui_list.run_row_method(self.profile_name, 'setDataValue', 'checkboxSelection', True)
+        print("First!")
+
+    def server_list_gui(self):
+        self.profile_name = None  ### XXX
+        columnDefs = [
+            {'headerName': 'Server Name', 'field': 'name', 'checkboxSelection': True},
+            {'headerName': 'Host', 'field': 'host'},
+            {'headerName': 'Port', 'field': 'port'},
+            {'headerName': 'TLS', 'field': 'TLS'},
+            # {'headerName': 'CA Authority', 'field': 'ca_authority'},
+        ]
+        self.server_gui_list = ui.aggrid({'columnDefs': columnDefs, 'rowData': self.profiles.profiles, 'selection': 'single'}) # , on_select=self.on_server_selected)
+        self.server_gui_list.on('selectionChanged', self.on_server_selected)
+
+        self.server_buttons = ui.row()
+        with self.server_buttons:
+            ui.button(icon='add', on_click=self.on_new_server)
+            ui.button(icon='edit', on_click=self.on_edit_server)
+            ui.button(icon='check', on_click=self.on_check_server)
+            ui.button(icon='delete', on_click=self.on_delete_server)
+
+
+class AdminGui:
+    def __init__(self):
+        self.server_editor = ServerEditorGui()
+        self.server_editor.server_list_gui()
+
+    def run(self):
+        ui.run(port=8090, host="localhost")
 
 
 if __name__ == "__main__" or __name__ == "__mp_main__":
