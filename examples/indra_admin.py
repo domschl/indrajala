@@ -439,6 +439,8 @@ class ServerEditorGui:
         ws = await cl.init_connection()
         if ws is not None:
             await cl.close_connection()
+            self.profile_name = name
+            self.profiles.save_profiles()
             return True
         return False
     
@@ -465,10 +467,10 @@ class ServerEditorGui:
                 self.new_server_index += 1
 
     async def on_edit_server(self):
-        if self.profile_name is None:
+        if self.current_profile is None:
             ui.notify("No server selected", type="error")
             return
-        server = self.profiles.get_profile(self.profile_name)
+        server = self.profiles.get_profile(self.current_profile)
         with ui.dialog() as dialog, ui.card():
             ui.label("Edit profile")
             ns_name = ui.input(label="Name", value=server['name'])
@@ -495,10 +497,10 @@ class ServerEditorGui:
                 self.server_gui_list.update()
 
     async def on_delete_server(self):
-        if self.profile_name is None:
+        if self.current_profile is None:
             ui.notify("No server selected", type="error")
             return
-        server_name = self.profile_name
+        server_name = self.current_profile
         
         with ui.dialog() as dialog, ui.card():
             ui.label(f"Delete server profile {server_name}")
@@ -515,22 +517,26 @@ class ServerEditorGui:
                 ui.notify(f"Server profile {server_name} not deleted", type="info")
 
     async def on_check_server(self):
-        pass
+        if self.current_profile is None:
+            ui.notify("No server selected", type="error")
+            return
+        if await self.check_server(self.current_profile):
+            ui.notify(f"Connected to server {self.profile_name} OK - Set as default", type="info")
+            return
+        else:
+            ui.notify(f"Failed to connect to server {self.current_profile}", type="error")
+            return
 
     async def on_server_selected(self):
         row = await self.server_gui_list.get_selected_row()
         if row is None:
-            self.profile_name = None
+            self.current_profile = None
             return
-        self.profile_name = row['name']
-        ui.notify(f'Selected server {row['name']}')
-
-    async def first_stuff(self):
-        # self.server_gui_list.run_row_method(self.profile_name, 'setDataValue', 'checkboxSelection', True)
-        print("First!")
+        self.current_profile = row['name']
+        ui.notify(f'Selected server {row['name']}', type='info')
 
     def server_list_gui(self):
-        self.profile_name = None  ### XXX
+        self.current_profile = None  ### XXX
         columnDefs = [
             {'headerName': 'Server Name', 'field': 'name', 'checkboxSelection': True},
             {'headerName': 'Host', 'field': 'host'},
@@ -543,16 +549,103 @@ class ServerEditorGui:
 
         self.server_buttons = ui.row()
         with self.server_buttons:
-            ui.button(icon='add', on_click=self.on_new_server)
-            ui.button(icon='edit', on_click=self.on_edit_server)
-            ui.button(icon='check', on_click=self.on_check_server)
-            ui.button(icon='delete', on_click=self.on_delete_server)
+            self.add_button = ui.button(icon='add', on_click=self.on_new_server)
+            self.edit_button = ui.button(icon='edit', on_click=self.on_edit_server)
+            self.edit_button.bind_enabled_from(self, 'current_profile')
+            self.check_button = ui.button(icon='check', on_click=self.on_check_server)
+            self.check_button.bind_enabled_from(self, 'current_profile')
+            self.delete_button = ui.button(icon='delete', on_click=self.on_delete_server)
+            self.delete_button.bind_enabled_from(self, 'current_profile')
+
+
+class UserEditorGui:
+    def __init__(self):
+        self.users = []
+        self.current_user = None
+        self.cl = None
+        self.session_id = None
+
+    async def on_new_user(self):
+        pass
+
+    async def on_edit_user(self):
+        pass
+
+    async def on_delete_user(self):
+        pass
+
+    async def on_password_user(self):
+        pass
+
+    async def on_login(self):
+        pass
+
+    async def on_logout(self):
+        pass
+
+    async def on_user_selected(self):
+        pass
+
+    def user_list_gui(self):
+        self.current_user = None  ### XXX
+        columnDefs = [
+            {'headerName': 'User Name', 'field': 'name', 'checkboxSelection': True},
+            {'headerName': 'Role', 'field': 'role'},
+        ]
+        self.users = []
+        self.user_gui_list = ui.aggrid({'columnDefs': columnDefs, 'rowData': self.users, 'selection': 'single'}) # , on_select=self.on_user_selected)
+        self.user_buttons = ui.row()
+        with self.user_buttons:
+            self.add_button = ui.button(icon='add', on_click=self.on_new_user)
+            self.add_button.bind_enabled_from(self, 'session_id')
+            self.edit_button = ui.button(icon='edit', on_click=self.on_edit_user)
+            self.edit_button.bind_enabled_from(self, 'current_user')
+            self.password_button = ui.button(icon='password', on_click=self.on_password_user)
+            self.password_button.bind_enabled_from(self, 'current_user')
+            self.delete_button = ui.button(icon='delete', on_click=self.on_delete_user)
+            self.delete_button.bind_enabled_from(self, 'current_user')
 
 
 class AdminGui:
     def __init__(self):
         self.server_editor = ServerEditorGui()
-        self.server_editor.server_list_gui()
+        self.user_editor = UserEditorGui()
+        self.header_status = ui.row()
+        with self.header_status:
+            with ui.splitter() as splitter:
+                with splitter.before:
+                    ui.label("Indrajala Admin").classes('text-h4')
+                with splitter.after:
+                    with ui.column().classes('ml-2'):
+                        with ui.row():
+                            ui.label("Server: ")
+                            self.label = ui.label().classes('text-bold')
+                            self.label.bind_text_from(self.server_editor, 'profile_name')
+                        # with ui.row():
+                            ui.label("User: ")
+                            self.label = ui.label().classes('text-bold')
+                            self.label.bind_text_from(self.server_editor, 'username')
+                        with ui.row():
+                            self.login_button = ui.button(icon="login", on_click=self.user_editor.on_login)
+                            self.login_button.bind_enabled_from(self.server_editor, 'profile_name')
+                            self.logout_button = ui.button(icon="logout", on_click=self.user_editor.on_logout)
+                            self.logout_button.bind_enabled_from(self.user_editor, 'session_id')
+        with ui.splitter(value=10).classes('w-full h-full') as splitter:
+            with splitter.before:
+                with ui.tabs().props('vertical').classes('w-full') as tabs:
+                    self.servers_tab = ui.tab('Servers', icon='computer')
+                    self.users_tab = ui.tab('Users', icon='group')
+            with splitter.after:
+                with ui.tab_panels(tabs, value=self.servers_tab) \
+                        .props('vertical').classes('w-full h-full'):
+                    with ui.tab_panel(self.servers_tab):
+                        ui.label('Servers').classes('text-h4')
+                        self.server_editor.server_list_gui()
+                    with ui.tab_panel(self.users_tab):
+                        ui.label('Users').classes('text-h4')
+                        self.user_editor.user_list_gui()
+
+        
 
     def run(self):
         ui.run(port=8090, host="localhost")
