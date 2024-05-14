@@ -1,5 +1,5 @@
 import logging
-from nicegui import ui
+from nicegui import app, ui
 import os
 import asyncio
 import json
@@ -361,6 +361,7 @@ class AdminGuiOld:
 class ServerEditorGui:
     def __init__(self):
         self.profiles = Profiles()
+        self.ca = None
         self.profile_name = self.profiles.default_profile
         if self.profile_name is None or self.profile_name == "":
             if len(self.profiles.profiles) > 0:
@@ -382,6 +383,7 @@ class ServerEditorGui:
                     self.profile_name = None
         self.cl = None
         self.session_id = None
+        self.username = None
         self.new_server_index = 1
 
         self.server_gui_list = None
@@ -443,7 +445,12 @@ class ServerEditorGui:
             self.profiles.save_profiles()
             return True
         return False
-    
+
+    async def browse_ca(self):
+        file = await app.native.main_window.create_file_dialog(allow_multiple=False) # , file_types=[ "*.pem"])
+        if file is not None:
+            self.ca = file[0]
+
     async def on_new_server(self):
         with ui.dialog() as dialog, ui.card():
             ui.label("New server profile")
@@ -451,7 +458,12 @@ class ServerEditorGui:
             ns_host = ui.input(label="Host", value="localhost")
             ns_port = ui.input(label="Port", value=8080)
             ns_tls = ui.checkbox("TLS", value=True)
-            ns_ca = ui.input(label="CA Authority", value="")
+            if app.native is True:
+                with ui.row():
+                    ns_ca = ui.input(label="CA Authority", value="").bind_value(self, "ca")
+                    ui.button("Browse", on_click=self.browse_ca)
+            else:
+                ns_ca = ui.input(label="CA Authority", value="")
             with ui.row():
                 ui.button("Cancel", on_click=lambda: dialog.submit(None))
                 ui.button("Create", on_click=lambda: dialog.submit((ns_name.value, ns_host.value, ns_port.value, ns_tls.value, ns_ca.value)))
@@ -535,6 +547,96 @@ class ServerEditorGui:
         self.current_profile = row['name']
         ui.notify(f'Selected server {row['name']}', type='info')
 
+    async def do_login(self, username, password, profile_name=None, remember=False, dialog=None):
+        print(f"Logging in as {username} with to server {profile_name}")
+        if profile_name is None:
+            profile = self.profiles.get_default_profile()
+        else:
+            profile = self.profiles.get_profile(profile_name)
+        self.profile_name = profile['name']
+        print(f"Profile: {profile}")
+        self.cl = IndraClient(profile, verbose=True)
+        ws = await self.cl.init_connection()
+        if ws is not None:
+            ui.notify(f"Connected to server {profile_name} OK", type="info")
+            self.session_id = await self.cl.login_wait(username, password)
+            if self.session_id is not None:
+                self.profile_name = profile_name
+                self.profile = profile
+                ui.notify(f"Logged in to server {profile_name} as user {username}, OK", type="info")
+                if dialog is not None:
+                    self.username = username
+                    self.profiles.default_profile = profile_name
+                    self.profiles.default_username = username
+                    if remember is True:
+                        self.profiles.default_password = password
+                        self.profiles.auto_login = True
+                    else:
+                        self.profiles.default_password = None
+                        self.profiles.auto_login = False
+                    self.profiles.save_profiles()
+                    dialog.submit(True)
+                return
+            else:
+                self.username = None
+                ui.notify(f"Failed to login to server {profile_name}", type="error")
+        else:
+            self.username = None
+            ui.notify(f"Failed to connect to server {profile_name}", type="error")
+
+    def login_gui(self, servers, default_server, default_username, default_password, remember_pwd=False):
+        username = default_username
+        password = default_password
+
+        with ui.dialog() as dialog, ui.card():
+            ui.label("Login to Indrajala server")
+            print(f"Default server: {default_server} in login_gui")
+            server_ui = ui.select(servers, value=default_server, label="Server") # , on_change=lambda e: set_server(e))
+            uname = ui.input(
+                label="Username",
+                value=username,
+                # on_change=lambda e: set_username(e),
+            )
+            pwd = ui.input(
+                label="Password",
+                value=password,
+                password=True,
+                password_toggle_button=True,
+                # on_change=lambda e: set_password(e),
+            ).on('keydown.enter', lambda: self.do_login(uname.value, pwd.value, server_ui.value, remember_box.value, dialog))
+            remember_box = ui.checkbox("Remember (unsafe)", value=remember_pwd)
+            with ui.row():
+                ui.button("Cancel", on_click=lambda: dialog.submit(None))
+                ui.button("Login", on_click=lambda: self.do_login(uname.value, pwd.value, server_ui.value, remember_box.value, dialog))
+            if default_server is None:
+                ui.server_ui.props('autofocus')
+            elif default_username is None:
+                uname.props('autofocus')
+            else:
+                pwd.props('autofocus')
+            return dialog
+    
+    async def on_login(self, username="admin", password=None):
+        servers = [p['name'] for p in self.profiles.profiles]
+        profile_name = self.profile_name
+        print(servers, profile_name)
+        dialog = self.login_gui(servers, profile_name, username, password)
+        result = await dialog
+        print(f"Dialog result: {result}")
+        return result
+
+    async def on_logout(self):
+        if self.session_id is None:
+            ui.notify("Not logged in", type="error")
+            return
+        if self.cl is not None:
+            await self.cl.logout()
+            await self.cl.close_connection()
+        self.username = None
+        self.session_id = None
+        self.cl = None
+        ui.notify("Logged out")
+
     def server_list_gui(self):
         self.current_profile = None  ### XXX
         columnDefs = [
@@ -544,7 +646,7 @@ class ServerEditorGui:
             {'headerName': 'TLS', 'field': 'TLS'},
             # {'headerName': 'CA Authority', 'field': 'ca_authority'},
         ]
-        self.server_gui_list = ui.aggrid({'columnDefs': columnDefs, 'rowData': self.profiles.profiles, 'selection': 'single'}) # , on_select=self.on_server_selected)
+        self.server_gui_list = ui.aggrid({'columnDefs': columnDefs, 'rowData': self.profiles.profiles, 'rowSelection': 'single'}) # , on_select=self.on_server_selected)
         self.server_gui_list.on('selectionChanged', self.on_server_selected)
 
         self.server_buttons = ui.row()
@@ -560,15 +662,127 @@ class ServerEditorGui:
 
 class UserEditorGui:
     def __init__(self):
-        self.users = []
         self.current_user = None
+        self.users = []
         self.cl = None
-        self.session_id = None
+        self.user_gui_list = None
 
-    async def on_new_user(self):
-        pass
+    async def user_list(self):
+        if self.cl is None or self.cl.session_id is None:
+            if self.cl is not None:
+                ui.notify(f"Not logged in {self.cl.session_id}", type="error")
+            else:
+                ui.notify("Not logged in cl=None", type="error")
+            return
+        repl = await self.cl.kv_read_wait("entity/indrajala/user/%")
+        self.users = []
+        for r in repl:
+            usertoks = r[0].split("/")
+            value = r[1]
+            if len(usertoks) == 5:
+                user = usertoks[3]
+                prop = usertoks[4]
+                found = False
+                for i, u in enumerate(self.users):
+                    if u['name'] == user:
+                        self.users[i][prop] = value
+                        found = True
+                        break
+                if not found:
+                    self.users.append({'name': user, prop: value})
+
+        # That is some really strange workaround for aggrid failing to update rowData:    
+        if self.user_gui_list is not None:
+            for i, user in enumerate(self.users):
+                if i < len(self.user_gui_list.options['rowData']):
+                    self.user_gui_list.options['rowData'][i] = user
+                else:
+                    self.user_gui_list.options['rowData'].append(user)
+                    print(f"{i} {user}")
+            self.user_gui_list.update()
+        else:
+            print("Can't update user list")
+
+    async def set_connection(self, cl):
+        if cl is None:
+            return
+        print(f"Setting connection {cl.session_id}")
+        self.cl = cl
+        if self.cl is not None and self.cl.session_id is not None:
+            await self.user_list()
+            # self.user_list_gui()
+
+    async def do_new_user(self, dialog, uname, role, full_name, email, pwd1, pwd2):
+        # Check if user exists
+        repl = await self.cl.kv_read_wait(f"entity/indrajala/user/{uname}/password")
+        if repl != []:
+            ui.notify(f"User {uname} already exists", type="error")
+            return
+        if pwd1 != pwd2:
+            ui.notify("Passwords do not match", type="error")
+            return
+        if uname=="" or pwd1=="":
+            ui.notify("Username and password must not be empty", type="error")
+            return
+        print(f"Creating user {uname} with password {pwd1}")
+        repl = await self.cl.kv_write_wait(f"entity/indrajala/user/{uname}/password", pwd1)
+        print(repl)
+        if role == "":
+            await self.cl.kv_delete(f"entity/indrajala/user/{uname}/roles")
+        else:
+            repl = await self.cl.kv_write_wait(f"entity/indrajala/user/{uname}/roles", [role])
+        if full_name == "":
+            await self.cl.kv_delete(f"entity/indrajala/user/{uname}/full_name")
+        else:
+            repl = await self.cl.kv_write_wait(f"entity/indrajala/user/{uname}/full_name", full_name)
+        if email == "":
+            await self.cl.kv_delete(f"entity/indrajala/user/{uname}/email")
+        else:
+            repl = await self.cl.kv_write_wait(f"entity/indrajala/user/{uname}/email", email)
+
+        print(repl)
+        ui.notify(f"User {uname} created", type="info")
+        dialog.submit(True)
+
+    async def on_new_user(self, usr_list):
+        print("New user")
+        roles_list = ["user", "admin", "app"]
+        with ui.dialog() as dialog, ui.card():
+            ui.label("New Indrajala server user")
+            new_usr_inp = ui.input(
+                label="Username",
+            )
+            role_sel = ui.select(roles_list, label="Roles", value="user")
+            full_name_inp = ui.input(
+                label="Full name",
+            )
+            email_inp = ui.input(
+                label="Email",
+            )
+            pwd1_inp = ui.input(
+                label="Password",
+                password=True,
+                password_toggle_button=True,
+            )
+            pwd2_inp = ui.input(
+                label="Password (repeat)",
+                password=True,
+                password_toggle_button=True,
+            )
+            with ui.row():
+                ui.button("Cancel", on_click=lambda: dialog.submit(None))
+                ui.button("Create", on_click=lambda: self.do_new_user(dialog, new_usr_inp.value, role_sel.value, full_name_inp.value, email_inp.value, pwd1_inp.value, pwd2_inp.value))
+
+            result = await dialog
+            print(f"Dialog result: {result}")
 
     async def on_edit_user(self):
+        if self.current_user is None:
+            ui.notify("No user selected", type="error")
+            return
+
+    async def on_user_changed(self, e):
+        print(f"User changed: {e.args['data']}")
         pass
 
     async def on_delete_user(self):
@@ -577,27 +791,34 @@ class UserEditorGui:
     async def on_password_user(self):
         pass
 
-    async def on_login(self):
-        pass
-
-    async def on_logout(self):
-        pass
-
-    async def on_user_selected(self):
-        pass
+    async def on_user_selected(self, e):
+        print(e)
+        row = await self.user_gui_list.get_selected_row()
+        print(f"User selected: {row}")
+        # if row is None:
+        #     self.current_user = None
+        #     return
+        # self.current_user = row['name']
 
     def user_list_gui(self):
         self.current_user = None  ### XXX
-        columnDefs = [
-            {'headerName': 'User Name', 'field': 'name', 'checkboxSelection': True},
-            {'headerName': 'Role', 'field': 'role'},
-        ]
         self.users = []
-        self.user_gui_list = ui.aggrid({'columnDefs': columnDefs, 'rowData': self.users, 'selection': 'single'}) # , on_select=self.on_user_selected)
+        self.columnDefs = [
+            {'headerName': 'User Name', 'field': 'name', 'checkboxSelection': True, 'editable': True},
+            {'headerName': 'Roles', 'field': 'roles', 'editable': True},
+            {'headerName': 'Full Name', 'field': 'full_name', 'editable': True},
+            {'headerName': 'Email', 'field': 'email', 'editable': True},
+            {'headerName': 'Password', 'field': 'password', 'editable': True},
+        ]
+        # self.users=[{"name": "admin", "roles": "admin", "password": "admin"}]
+        self.user_gui_list = ui.aggrid({'columnDefs': self.columnDefs, 'rowData': self.users, 'rowSelection': 'single'}) # , ':getRowId': '(params) => params.data.name',})
+        self.user_gui_list.on('selectionChanged', self.on_user_selected)
+        self.user_gui_list.on('cellValueChanged', self.on_user_changed)
+
         self.user_buttons = ui.row()
         with self.user_buttons:
             self.add_button = ui.button(icon='add', on_click=self.on_new_user)
-            self.add_button.bind_enabled_from(self, 'session_id')
+            self.add_button.bind_enabled_from(self.cl, 'session_id')
             self.edit_button = ui.button(icon='edit', on_click=self.on_edit_user)
             self.edit_button.bind_enabled_from(self, 'current_user')
             self.password_button = ui.button(icon='password', on_click=self.on_password_user)
@@ -610,47 +831,62 @@ class AdminGui:
     def __init__(self):
         self.server_editor = ServerEditorGui()
         self.user_editor = UserEditorGui()
-        self.header_status = ui.row()
+        self.header_status = ui.row().classes('w-full')
         with self.header_status:
-            with ui.splitter() as splitter:
+            with ui.splitter(limits=(15,15), value=15 ).classes('w-full') as splitter:
                 with splitter.before:
-                    ui.label("Indrajala Admin").classes('text-h4')
+                    with ui.row().classes('ml-2'):
+                        ui.icon('hub').classes('text-h5')
+                        with ui.column():
+                            ui.label("Indrajala").classes('text-h5')
+                            ui.label("Admin").classes('text-h6')
                 with splitter.after:
                     with ui.column().classes('ml-2'):
                         with ui.row():
                             ui.label("Server: ")
                             self.label = ui.label().classes('text-bold')
                             self.label.bind_text_from(self.server_editor, 'profile_name')
-                        # with ui.row():
+                        with ui.row():
                             ui.label("User: ")
                             self.label = ui.label().classes('text-bold')
                             self.label.bind_text_from(self.server_editor, 'username')
                         with ui.row():
-                            self.login_button = ui.button(icon="login", on_click=self.user_editor.on_login)
+                            self.login_button = ui.button("Login", icon="login", on_click=self.server_editor.on_login)
                             self.login_button.bind_enabled_from(self.server_editor, 'profile_name')
-                            self.logout_button = ui.button(icon="logout", on_click=self.user_editor.on_logout)
-                            self.logout_button.bind_enabled_from(self.user_editor, 'session_id')
-        with ui.splitter(value=10).classes('w-full h-full') as splitter:
+                            self.logout_button = ui.button(icon="logout", on_click=self.on_logout)
+                            self.logout_button.bind_enabled_from(self.server_editor, 'session_id')
+        with ui.splitter(value=10, limits=(10,10)).classes('w-full h-full') as splitter:
             with splitter.before:
                 with ui.tabs().props('vertical').classes('w-full') as tabs:
                     self.servers_tab = ui.tab('Servers', icon='computer')
                     self.users_tab = ui.tab('Users', icon='group')
             with splitter.after:
-                with ui.tab_panels(tabs, value=self.servers_tab) \
-                        .props('vertical').classes('w-full h-full'):
+                self.ui_tabs = ui.tab_panels(tabs, value=self.servers_tab).props('vertical').classes('w-full h-full').on_value_change(self.tab_changed)
+                with self.ui_tabs:
                     with ui.tab_panel(self.servers_tab):
                         ui.label('Servers').classes('text-h4')
                         self.server_editor.server_list_gui()
-                    with ui.tab_panel(self.users_tab):
+                    with ui.tab_panel(self.users_tab).bind_enabled_from(self.server_editor, 'session_id'):
                         ui.label('Users').classes('text-h4')
                         self.user_editor.user_list_gui()
 
-        
+    async def tab_changed(self, e):
+        print(f"Tab changed: {e}")
+        if e.value == "Servers":
+            pass
+        elif e.value == "Users":
+            await self.user_editor.set_connection(self.server_editor.cl)
+            # self.user_editor.users = [{"name": "admin", "roles": "admin", "password": "admin"}]
+            self.user_editor.user_gui_list.update()
 
-    def run(self):
-        ui.run(port=8090, host="localhost")
+    async def on_logout(self):
+        await self.server_editor.on_logout()
+        self.ui_tabs.set_value(self.servers_tab)
+        
+    def run(self, native=False):
+        ui.run(port=8090, host="localhost", native=native)
 
 
 if __name__ == "__main__" or __name__ == "__mp_main__":
     admin_gui = AdminGui()
-    admin_gui.run()
+    admin_gui.run(native=False)
