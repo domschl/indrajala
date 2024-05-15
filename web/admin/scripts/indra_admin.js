@@ -4,9 +4,8 @@
 // python -m http.server
 // point browser to http://localhost:8000/
 
-import { helloWorld } from './shared/indralib.js';
+import { IndraEvent, uuidv4 } from './shared/indralib.js';
 import { indra_styles } from './shared/indra_styles.js';
-//import { indra_custom_styles } from './shared/indra_styles.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
@@ -17,7 +16,36 @@ document.addEventListener('DOMContentLoaded', function () {
 function main() {
   // Create a new div element
   indra_styles();
+  connection();
   login();
+}
+
+let socket;
+
+function connection() {
+  const serverHost = window.location.hostname;
+  const serverPort = window.location.port;
+
+  const websocketUrl = `wss://${serverHost}:${serverPort}/ws`;
+  console.log('WebSocket URL:', websocketUrl);
+
+  socket = new WebSocket(websocketUrl);
+
+  socket.addEventListener('open', function (event) {
+    console.log('Connected to WebSocket server');
+  });
+
+  socket.addEventListener('message', function (event) {
+    console.log('Message from server:', event.data);
+  });
+
+  socket.addEventListener('close', function (event) {
+    console.log('Disconnected from WebSocket server');
+  });
+
+  socket.addEventListener('error', function (event) {
+    console.error('WebSocket error:', event);
+  });
 }
 
 function login() {
@@ -96,11 +124,24 @@ function login() {
     const password = passwordInput.value;
 
     // You can perform authentication logic here
-    console.log('Username:', username);
-    console.log('Password:', password);
+    //console.log('Username:', username);
+    //console.log('Password:', password);
+
+    const cmd = {
+      key: `entity/indrajala/user/${username}/password`,
+      value: password,
+    };
 
     // For demonstration purposes, just alert that login is successful
-    alert('Login successful!');
+    //alert('Login successful!');
+    let ie = new IndraEvent();
+    ie.domain = "$trx/kv/req/login";
+    ie.form_id = "ws/js";
+    ie.data_type = "kvverify";
+    ie.auth_hash = "";
+    ie.data = JSON.stringify(cmd);
+    socket.send(ie.to_json());
+    console.log('Sent message to server:', ie.to_json());
   }
 
   // Add event listener to login button
