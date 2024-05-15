@@ -41,7 +41,6 @@ const indraStyleDict = {
         'padding': '10px',
         'border-radius': '3px',
         'font-size': '16px',  // This prevents iOS from zooming in on input fields 
-        'autocapitalize': 'none', // Prevent iOS from capitalizing input fields
         'border': '1px solid #ccc',
         'box-sizing': 'border-box'
     },

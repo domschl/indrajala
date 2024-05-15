@@ -6,7 +6,7 @@
 
 import { indra_styles } from './shared/indra_styles.js';
 import { IndraEvent } from './shared/indralib.js';
-import { connection, indraLoginWait } from './shared/indra_client.js';
+import { connection, indraLoginWait, indraLogoutWait } from './shared/indra_client.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 let containerDiv;
+let logoutButton;
 
 function main() {
   // Create a new div element
@@ -158,9 +159,45 @@ function loginPageOpen() {
   //}, 500);
 }
 
+function mainGui() {
+  // Create login button
+  logoutButton = document.createElement('button');
+  logoutButton.textContent = 'Logout';
+  logoutButton.classList.add('button-style');
+
+  // Add hover effect to login button
+  logoutButton.addEventListener('mouseenter', function () {
+    this.style.backgroundColor = '#0056b3';
+  });
+  logoutButton.addEventListener('mouseleave', function () {
+    this.style.backgroundColor = '#007bff';
+  });
+
+  document.body.appendChild(logoutButton);
+
+  // Function to handle login button click
+  function handleLogout() {
+    console.log('Logging out...');
+    indraLogoutWait(indraLogoutResult);
+  }
+
+  // Add event listener to login button
+  logoutButton.addEventListener('click', handleLogout);
+
+  // Function to handle keydown event on input fields
+  function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+      // Trigger click event on the login button
+      logoutButton.click();
+    }
+  }
+
+}
+
 export function indraLoginPageClose() {
   // Remove container div
   containerDiv.remove();
+  mainGui();
 }
 
 function indraLoginResult(result) {
@@ -174,5 +211,24 @@ function indraLoginResult(result) {
     showNotification('Login failed. Please try again.');
     passwordInput.value = '';
     passwordInput.focus();
+  }
+}
+
+function indraMainGuiClose() {
+  // Remove container div
+  logoutButton.remove();
+  loginPageOpen();
+
+}
+function indraLogoutResult(result) {
+  console.log('Logout result:', result);
+  if (result === true) {
+    console.log('Logout successful!');
+    showNotification('Logout successful!');
+    indraMainGuiClose();
+  } else {
+    console.log('Logout failed!');
+    showNotification('Logout failed.');
+    indraMainGuiClose();
   }
 }
