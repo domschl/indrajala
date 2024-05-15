@@ -25,6 +25,9 @@ const indraStyleDict = {
         'border-radius': '5px',
         'box-shadow': '0 0 10px rgba(0, 0, 0, 0.1)'
     },
+    '.margin-top': {
+        'margin-top': '20px'
+    },
     '.margin-bottom': {
         'margin-bottom': '20px'
     },
