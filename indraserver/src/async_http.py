@@ -54,6 +54,7 @@ class IndraProcess(IndraProcessCore):
                 self.tls = True
         self.app = web.Application(debug=True)
         self.app.add_routes([web.get("/", self.web_root_handler)])
+        self.app.add_routes([web.get("/favicon.ico", self.web_root_handler)])
         for static_app in self.static_apps:
             prefix = static_app[0]
             path = static_app[1]
@@ -102,7 +103,11 @@ class IndraProcess(IndraProcessCore):
         self.log.info("Web server stopped")
 
     def web_root_handler(self, request):
-        return web.FileResponse(os.path.join(self.web_root, "index.html"))
+        # Serve index.html or favicon.ico
+        if request.path == "/favicon.ico":
+            return web.FileResponse(os.path.join(self.web_root, "favicon.ico"))
+        else:
+            return web.FileResponse(os.path.join(self.web_root, "index.html"))
 
     async def websocket_handler(self, request):
         ws = web.WebSocketResponse()

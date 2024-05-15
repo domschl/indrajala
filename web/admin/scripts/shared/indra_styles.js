@@ -1,6 +1,62 @@
 
 "use strict";
 
+export function generateCssText(styles, selector) {
+    let cssText = '';
+    if (styles.hasOwnProperty(selector)) {
+        cssText += `${selector} {`;
+        for (const property in styles[selector]) {
+            if (styles[selector].hasOwnProperty(property)) {
+                const value = styles[selector][property];
+                cssText += `${property}: ${value};`;
+            }
+        }
+        cssText += `}`;
+    }
+    return cssText;
+}
+
+const indraStyleDict = {
+    '.container-style': {
+        'max-width': '400px',
+        'margin': '0 auto',
+        'padding': '20px',
+        'border': '1px solid #ccc',
+        'border-radius': '5px',
+        'box-shadow': '0 0 10px rgba(0, 0, 0, 0.1)'
+    },
+    '.margin-bottom': {
+        'margin-bottom': '20px'
+    },
+    '.label-style': {
+        'display': 'block',
+        'font-weight': 'bold',
+        'margin-bottom': '5px'
+    },
+    '.input-style': {
+        'width': '100%',
+        'padding': '10px',
+        'border-radius': '3px',
+        'border': '1px solid #ccc',
+        'box-sizing': 'border-box'
+    },
+    '.button-style': {
+        'display': 'block',
+        'width': '100%',
+        'padding': '10px',
+        'border': 'none',
+        'border-radius': '3px',
+        'background-color': '#007bff',
+        'color': '#fff',
+        'font-size': '16px',
+        'cursor': 'pointer',
+        'transition': 'background-color 0.3s'
+    },
+    'button:hover': {
+        'background-color': '#0056b3'
+    }
+};
+
 export function indra_styles() {
     // Select the elements to normalize
     const elementsToNormalize = ['html', 'body', 'div', 'span', 'iframe'];
@@ -17,86 +73,13 @@ export function indra_styles() {
             element.style.verticalAlign = 'baseline';
         });
     });
-}
 
-export function indra_custom_styles() {
-    //    const cssText = `
-    //  .custom-class {
-    //    background-color: blue;
-    //    color: white;
-    //    padding: 10px;
-    //    border: 1px solid black;
-    //  }
-    //  `;
-
-    // Create a new style element
-    //const styleElement = document.createElement('style');
-
-    // Set the CSS text content of the style element
-    //styleElement.textContent = cssText;
-
-    // Append the style element to the head of the document
-    //document.head.appendChild(styleElement);
-
-    const containerStyle = document.createElement('style');
-    containerStyle.textContent = `
-  .container-style {
-    max-width: 400px;
-    margin: 50px auto;
-    padding: 20px;
-    border: 1px solid #ccc;
-    borderRadius: 5px;
-    boxShadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  }
-`;
-    document.head.appendChild(containerStyle);
-
-    const marginBottomStyle = document.createElement('style');
-    marginBottomStyle.textContent = `
-    .margin-bottom {
-        margin-bottom: 20px;
-        }
-    `;
-    document.head.appendChild(marginBottomStyle);
-
-    const labelStyle = document.createElement('style');
-    labelStyle.textContent = `
-    .label-style {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 5px;
+    // Generate styles from dictionary and append to the document head
+    for (const selector in indraStyleDict) {
+        const cssText = generateCssText(indraStyleDict, selector);
+        const styleElement = document.createElement('style');
+        styleElement.textContent = cssText;
+        document.head.appendChild(styleElement);
     }
-    `;
-    document.head.appendChild(labelStyle);
-
-    const inputStyle = document.createElement('style');
-    inputStyle.textContent = `
-    .input-style {
-        width: 100%;
-        padding: 10px;
-        border-radius: 3px;
-        border: 1px solid #ccc;
-        box-sizing: border-box;
-    }
-    `;
-    document.head.appendChild(inputStyle);
-
-    const buttonStyle = document.createElement('style');
-    buttonStyle.textContent = `
-    .button-style {
-        display: block;
-        width: 100%;
-        padding: 10px;
-        border: none;
-        border-radius: 3px;
-        background-color: #007bff;
-        color: #fff;
-        font-size: 16px;
-        cursor: pointer;
-        transition: background-color 0.3s;
-    }
-    `;
-    document.head.appendChild(buttonStyle);
-
     console.log('Styles appended to the document head.');
 }
