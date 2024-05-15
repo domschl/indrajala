@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', function () {
   main();
 });
 
+let containerDiv;
+
 function main() {
   // Create a new div element
   indra_styles();
@@ -37,6 +39,17 @@ function connection() {
 
   socket.addEventListener('message', function (event) {
     console.log('Message from server:', event.data);
+    // convert event.data from JSON-string to object
+    let status = JSON.parse(JSON.parse(event.data).data);
+    console.log('Status:', status);
+    if (status === 'OK') {
+      console.log('Login successful!');
+      if (containerDiv) {
+        containerDiv.remove();
+      }
+    } else {
+      console.log('Login failed!');
+    }
   });
 
   socket.addEventListener('close', function (event) {
@@ -50,12 +63,13 @@ function connection() {
 
 function login() {
   // Create container div
-  const containerDiv = document.createElement('div');
-  containerDiv.classList.add('container-style');
+  containerDiv = document.createElement('div');
+  containerDiv.classList.add('container-style')
+  containerDiv.classList.add('margin-top');
 
   // Create title heading
   const titleHeading = document.createElement('h2');
-  titleHeading.textContent = 'Login';
+  titleHeading.textContent = 'Indrajāla Login';
   titleHeading.classList.add('margin-bottom');
 
   // Create input group for username
@@ -65,6 +79,7 @@ function login() {
   // Create label for username
   const usernameLabel = document.createElement('label');
   usernameLabel.textContent = 'Username:';
+  usernameLabel.setAttribute('for', 'username'); // Add 'for' attribute
   usernameLabel.classList.add('label-style');
 
   // Create input field for username
@@ -72,6 +87,8 @@ function login() {
   usernameInput.setAttribute('type', 'text');
   usernameInput.setAttribute('placeholder', 'Enter your username');
   usernameInput.classList.add('input-style');
+  usernameInput.id = 'username';
+  usernameInput.autocomplete = 'username';
 
   // Append label and input to username input group
   usernameInputGroup.appendChild(usernameLabel);
@@ -84,6 +101,7 @@ function login() {
   // Create label for password
   const passwordLabel = document.createElement('label');
   passwordLabel.textContent = 'Password:';
+  passwordLabel.setAttribute('for', 'password'); // Add 'for' attribute
   passwordLabel.classList.add('label-style');
 
   // Create input field for password
@@ -91,6 +109,8 @@ function login() {
   passwordInput.setAttribute('type', 'password');
   passwordInput.setAttribute('placeholder', 'Enter your password');
   passwordInput.classList.add('input-style');
+  passwordInput.id = 'password';
+  passwordInput.autocomplete = 'current-password';
 
   // Append label and input to password input group
   passwordInputGroup.appendChild(passwordLabel);
@@ -142,8 +162,28 @@ function login() {
     ie.data = JSON.stringify(cmd);
     socket.send(ie.to_json());
     console.log('Sent message to server:', ie.to_json());
+    //return containerDiv;
   }
 
   // Add event listener to login button
   loginButton.addEventListener('click', handleLogin);
+
+  // Function to handle keydown event on input fields
+  function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+      // Trigger click event on the login button
+      loginButton.click();
+    }
+  }
+
+  // Add event listeners to input fields
+  usernameInput.addEventListener('keydown', handleKeyPress);
+  passwordInput.addEventListener('keydown', handleKeyPress);
+
+  usernameInput.focus();
+  //setTimeout(() => {
+  // Select the content of the username input field
+  //  usernameInput.select();
+  //}, 500);
+
 }
