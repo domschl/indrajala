@@ -40,6 +40,8 @@ const indraStyleDict = {
         'width': '100%',
         'padding': '10px',
         'border-radius': '3px',
+        'font-size': '16px',  // This prevents iOS from zooming in on input fields 
+        'autocapitalize': 'none', // Prevent iOS from capitalizing input fields
         'border': '1px solid #ccc',
         'box-sizing': 'border-box'
     },
@@ -57,6 +59,18 @@ const indraStyleDict = {
     },
     'button:hover': {
         'background-color': '#0056b3'
+    },
+    '.notification': {
+        'position': 'fixed',
+        'bottom': '10px',  /* Adjust bottom distance as needed */
+        'left': '50%',
+        'transform': 'translateX(-50%)',
+        'background-color': '#333',
+        'color': '#fff',
+        'padding': '10px 20px',
+        'border-radius': '5px',
+        'opacity': '0',
+        'transition': 'opacity 0.5s ease-in-out'
     }
 };
 

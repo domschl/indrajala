@@ -23,6 +23,27 @@ function main() {
   loginPageOpen();
 }
 
+let passwordInput;
+
+function showNotification(text) {
+  const notification = document.createElement('div');
+  notification.classList.add('notification');
+  notification.textContent = text;
+  document.body.appendChild(notification);
+
+  // Fade in notification
+  setTimeout(() => {
+    notification.style.opacity = 1;
+  }, 100);
+
+  // Fade out and remove notification after 2 seconds
+  setTimeout(() => {
+    notification.style.opacity = 0;
+    setTimeout(() => {
+      document.body.removeChild(notification);
+    }, 500); // 0.5s for fade-out transition
+  }, 2000);
+}
 
 function loginPageOpen() {
   // Create container div
@@ -48,6 +69,7 @@ function loginPageOpen() {
   // Create input field for username
   const usernameInput = document.createElement('input');
   usernameInput.setAttribute('type', 'text');
+  usernameInput.setAttribute('autocapitalize', 'none');
   usernameInput.setAttribute('placeholder', 'Enter your username');
   usernameInput.classList.add('input-style');
   usernameInput.id = 'username';
@@ -68,7 +90,7 @@ function loginPageOpen() {
   passwordLabel.classList.add('label-style');
 
   // Create input field for password
-  const passwordInput = document.createElement('input');
+  passwordInput = document.createElement('input');
   passwordInput.setAttribute('type', 'password');
   passwordInput.setAttribute('placeholder', 'Enter your password');
   passwordInput.classList.add('input-style');
@@ -145,8 +167,12 @@ function indraLoginResult(result) {
   console.log('Login result:', result);
   if (result === true) {
     console.log('Login successful!');
+    showNotification('Login to Indrajāla successful!');
     indraLoginPageClose();
   } else {
     console.log('Login failed!');
+    showNotification('Login failed. Please try again.');
+    passwordInput.value = '';
+    passwordInput.focus();
   }
 }
