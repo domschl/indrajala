@@ -1,0 +1,17 @@
+{
+    "name": "indralib",
+    "version": "0.0.1",
+    "description": "Indralib ES6 Library",
+    "main": "dist/index.js",
+    "module": "src/index.js",
+    "type": "module",
+    "scripts": {
+      "build": "your-build-script",
+      "test": "your-test-script"
+    },
+    "keywords": ["indrajala"],
+    "author": "Dominik Schlösser",
+    "license": "MIT",
+    "dependencies": {},
+    "devDependencies": {}
+  }
