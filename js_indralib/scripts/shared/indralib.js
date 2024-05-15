@@ -1,6 +1,7 @@
 "use strict";
 // Indralib shared ES6 module
 
+
 function helloWorld() {
   if (typeof window === 'undefined') {
     console.log('Shared module is running in node');
@@ -119,3 +120,4 @@ export class IndraEvent {
     return false;
   }
 }
+
