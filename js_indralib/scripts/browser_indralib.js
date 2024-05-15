@@ -7,7 +7,7 @@
 import { helloWorld } from './shared/indralib.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
-document.addEventListener('DOMContentLoaded', function() {
-    // Code that relies on the DOM being fully loaded
-    console.log(helloWorld());
-  });
+document.addEventListener('DOMContentLoaded', function () {
+  // Code that relies on the DOM being fully loaded
+  console.log(helloWorld());
+});
