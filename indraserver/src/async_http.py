@@ -33,6 +33,7 @@ class IndraProcess(IndraProcessCore):
         self.port = self.config_data["port"]
         self.bind_addresses = self.config_data["bind_addresses"]
         self.web_root = os.path.expanduser(self.config_data["web_root"])
+        self.static_apps = self.config_data["static_apps"]
         self.private_key = None
         self.public_key = None
         self.ws_clients = {}
@@ -53,6 +54,11 @@ class IndraProcess(IndraProcessCore):
                 self.tls = True
         self.app = web.Application(debug=True)
         self.app.add_routes([web.get("/", self.web_root_handler)])
+        for static_app in self.static_apps:
+            prefix = static_app[0]
+            path = static_app[1]
+            self.log.info(f"Adding static app: {prefix} -> {path}")
+            self.app.add_routes([web.static(prefix, path)])
         # if self.tls is True:
         #     self.app.add_routes([web.get('/wss', self.websocket_handler)])
         # else:
