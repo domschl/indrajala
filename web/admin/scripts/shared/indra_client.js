@@ -106,3 +106,38 @@ export function indraLoginWait(username, password, loginResult) {
         }
     );
 }
+
+export function indraLogoutWait(logoutResult) {
+    let ie = new IndraEvent();
+    ie.domain = "$trx/kv/req/logout";
+    ie.from_id = "ws/js";
+    ie.auth_hash = session_id;
+    ie.data_type = "";
+    ie.data = "";
+    let pr = sendTransaction(ie);
+    if (pr === null) {
+        console.log('Didn\'t get promise!');
+        return false;
+    }
+    console.log('Sent message to server:', ie.to_json());
+    // Wait for the promise to resolve
+    pr.then((ie) => {
+        console.log('Promise: Received response from server:', ie);
+        let value = JSON.parse(ie.data);
+        if (value === 'OK') {
+            session_id = '';
+            console.log('Logout successful:', value, session_id);
+            logoutResult(true);
+        } else {
+            session_id = '';  // XXX?
+            console.log('Logout failed:', value);
+            logoutResult(false);
+        }
+    },
+        (error) => {
+            console.log('Promise: Error:', error);
+            session_id = '';  // XXX?
+            logoutResult(false);
+        }
+    );
+}
