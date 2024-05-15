@@ -110,7 +110,7 @@ function loginPageOpen() {
     //console.log('Username:', username);
     //console.log('Password:', password);
     console.log('Logging in...');
-    indraLoginWait(username, password);
+    indraLoginWait(username, password, indraLoginResult);
   }
 
   // Add event listener to login button
@@ -139,4 +139,14 @@ function loginPageOpen() {
 export function indraLoginPageClose() {
   // Remove container div
   containerDiv.remove();
+}
+
+function indraLoginResult(result) {
+  console.log('Login result:', result);
+  if (result === true) {
+    console.log('Login successful!');
+    indraLoginPageClose();
+  } else {
+    console.log('Login failed!');
+  }
 }
