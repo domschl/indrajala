@@ -97,8 +97,53 @@ const indraStyleDict = {
         'height': '100%',
         'background-color': 'rgba(0, 0, 0, 0.3)',
         'z-index': '999'
+    },
+    '.portal-container': {
+        'display': 'flex',
+        'flex-direction': 'column',
+        'align-items': 'center'
+    },
+    '.portal-link': {
+        'display': 'flex',
+        'align-items': 'center',
+        'width': '400px',
+        'padding': '10px 20px',
+        'margin': '5px',
+        'background-color': '#3498db',
+        'color': '#fff',
+        'text-decoration': 'none',
+        'border-radius': '5px',
+        'transition': 'background-color 0.3s ease'
+    },
+    '.portal-link i': {
+        'margin-right': '10px' /* Spacing between icon and text */
+    },
+    '.portal-link:hover': {
+        'background-color': '#2980b9'
     }
 };
+
+function loadMaterialIcons() {
+    // Define font file path (replace 'fonts/material-icons.woff2' with the actual path)
+    const fontUrl = 'fonts/MaterialSymbolsOutlined.woff2';
+
+    // Create @font-face rule
+    const fontFaceRule = `
+      @font-face {
+        font-family: 'Material Icons';
+        font-style: normal;
+        font-weight: 400;
+        src: url(${fontUrl}) format('woff2');
+      }
+    `;
+
+    // Create a style element
+    const styleElement = document.createElement('style');
+    styleElement.textContent = fontFaceRule;
+
+    // Append the style element to the document head
+    document.head.appendChild(styleElement);
+}
 
 export function indra_styles() {
     // Select the elements to normalize
@@ -124,5 +169,7 @@ export function indra_styles() {
         styleElement.textContent = cssText;
         document.head.appendChild(styleElement);
     }
+
+    loadMaterialIcons();
     console.log('Styles appended to the document head.');
 }
