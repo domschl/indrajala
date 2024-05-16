@@ -151,7 +151,7 @@ class IndraProcess(IndraProcessCore):
                             rev.domain = ev.from_id
                             rev.uuid4 = ev.uuid4
                             rev.data_type = "error/access"
-                            rev.data = "Not logged in"
+                            rev.data = json.dumps("Not logged in")
                             await ws.send_str(rev.to_json())
                             continue
                         elif (
@@ -167,7 +167,7 @@ class IndraProcess(IndraProcessCore):
                             rev.domain = ev.from_id
                             rev.uuid4 = ev.uuid4
                             rev.data_type = "error/access"
-                            rev.data = "Session mismatch"
+                            rev.data = json.dumps("Session mismatch")
                             await ws.send_str(rev.to_json())
                             continue
                     self.ws_clients[client_address]["old_from_id"] = ev.from_id

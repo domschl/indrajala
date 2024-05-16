@@ -6,7 +6,7 @@
 
 import { indra_styles } from './shared/indra_styles.js';
 import { IndraEvent } from './shared/indralib.js';
-import { connection, indraLoginWait, indraLogoutWait } from './shared/indra_client.js';
+import { connection, indraLoginWait, indraLogoutWait, showNotification, changeMainElement, enableElement, disableElement } from './shared/indra_client.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
   main();
 });
 
-let containerDiv;
+let containerDiv = null;
 let logoutButton;
 
 function main() {
@@ -25,26 +25,6 @@ function main() {
 }
 
 let passwordInput;
-
-function showNotification(text) {
-  const notification = document.createElement('div');
-  notification.classList.add('notification');
-  notification.textContent = text;
-  document.body.appendChild(notification);
-
-  // Fade in notification
-  setTimeout(() => {
-    notification.style.opacity = 1;
-  }, 100);
-
-  // Fade out and remove notification after 2 seconds
-  setTimeout(() => {
-    notification.style.opacity = 0;
-    setTimeout(() => {
-      document.body.removeChild(notification);
-    }, 500); // 0.5s for fade-out transition
-  }, 2000);
-}
 
 function loginPageOpen() {
   // Create container div
@@ -122,7 +102,8 @@ function loginPageOpen() {
   containerDiv.appendChild(loginButton);
 
   // Append container div to body
-  document.body.appendChild(containerDiv);
+  changeMainElement(containerDiv);
+  //document.body.appendChild(containerDiv);
 
   // Function to handle login button click
   function handleLogin() {
@@ -133,6 +114,7 @@ function loginPageOpen() {
     //console.log('Username:', username);
     //console.log('Password:', password);
     console.log('Logging in...');
+    disableElement(containerDiv);
     indraLoginWait(username, password, indraLoginResult);
   }
 
@@ -173,7 +155,8 @@ function mainGui() {
     this.style.backgroundColor = '#007bff';
   });
 
-  document.body.appendChild(logoutButton);
+  changeMainElement(logoutButton);
+  //document.body.appendChild(logoutButton);
 
   // Function to handle login button click
   function handleLogout() {
@@ -197,11 +180,13 @@ function mainGui() {
 export function indraLoginPageClose() {
   // Remove container div
   containerDiv.remove();
+  containerDiv = null;
   mainGui();
 }
 
 function indraLoginResult(result) {
   console.log('Login result:', result);
+  enableElement(containerDiv);
   if (result === true) {
     console.log('Login successful!');
     showNotification('Login to Indrajāla successful!');
