@@ -4,7 +4,7 @@
 // python -m http.server
 // point browser to http://localhost:8000/
 
-import { indra_styles } from './../../indralib/scripts/indra_styles.js';
+import { indra_styles, color_scheme } from './../../indralib/scripts/indra_styles.js';
 import { IndraEvent } from './../../indralib/scripts/indralib.js';
 import { connection, indraLoginWait, indraLogoutWait, showNotification, changeMainElement, enableElement, disableElement, removeMainElement } from './../../indralib/scripts/indra_client.js';
 
@@ -98,16 +98,16 @@ function loginPageOpen() {
 
   // Add hover effect to login button
   loginButton.addEventListener('mouseenter', function () {
-    this.style.backgroundColor = '#0056b3';
+    this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
   });
   loginButton.addEventListener('mouseleave', function () {
-    this.style.backgroundColor = '#007bff';
+    this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
   });
   exitButton.addEventListener('mouseenter', function () {
-    this.style.backgroundColor = '#0056b3';
+    this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
   });
   exitButton.addEventListener('mouseleave', function () {
-    this.style.backgroundColor = '#007bff';
+    this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
   });
 
   // Append all elements to container div
@@ -180,10 +180,10 @@ function mainGui() {
 
   // Add hover effect to login button
   exitButton.addEventListener('mouseenter', function () {
-    this.style.backgroundColor = '#0056b3';
+    this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
   });
   exitButton.addEventListener('mouseleave', function () {
-    this.style.backgroundColor = '#007bff';
+    this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
   });
 
   changeMainElement(main_div);
@@ -197,10 +197,10 @@ function mainGui() {
 
   // Add hover effect to login button
   logoutButton.addEventListener('mouseenter', function () {
-    this.style.backgroundColor = '#0056b3';
+    this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
   });
   logoutButton.addEventListener('mouseleave', function () {
-    this.style.backgroundColor = '#007bff';
+    this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
   });
 
   // Add event listener to login button
