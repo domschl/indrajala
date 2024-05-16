@@ -4,9 +4,9 @@
 // python -m http.server
 // point browser to http://localhost:8000/
 
-import { indra_styles } from '../indralib/scripts/indra_styles.js';
-import { IndraEvent } from '../indralib/scripts/indralib.js';
-import { connection, indraLoginWait, indraLogoutWait, showNotification, changeMainElement, enableElement, disableElement } from '../indralib/scripts/indra_client.js';
+import { indra_styles } from './../../indralib/scripts/indra_styles.js';
+import { IndraEvent } from './../../indralib/scripts/indralib.js';
+import { connection, indraLoginWait, indraLogoutWait, showNotification, changeMainElement, enableElement, disableElement } from './../../indralib/scripts/indra_client.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
