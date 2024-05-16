@@ -70,6 +70,33 @@ const indraStyleDict = {
         'border-radius': '5px',
         'opacity': '0',
         'transition': 'opacity 0.5s ease-in-out'
+    },
+    '.status-line': {
+        'position': 'fixed',
+        'bottom': '10px',
+        'width': '100%',
+        //'left': '50%',
+        //'transform': 'translateX(-50%)',
+        'background-color': '#0056b3',
+        'color': '#fff',
+        'padding': '10px 20px',
+        //'border-radius': '5px',
+        'opacity': '0',
+        'transition': 'opacity 0.5s ease-in-out'
+    },
+    '.overlay': {
+        'position': 'relative',
+        'pointer-events': 'none'
+    },
+    '.overlay::before': {
+        'content': '""',
+        'position': 'absolute',
+        'top': '0',
+        'left': '0',
+        'width': '100%',
+        'height': '100%',
+        'background-color': 'rgba(0, 0, 0, 0.3)',
+        'z-index': '999'
     }
 };
 

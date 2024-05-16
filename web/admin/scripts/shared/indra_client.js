@@ -6,46 +6,151 @@ let socket;
 let trx = {};
 var session_id = '';
 
+export var server_state = false;
+export var websocketUrl = '';
+
+let statusLine = null;
+
+export let currentMainElement = null;
+
+export function removeMainElement() {
+    if (currentMainElement !== null) {
+        document.body.removeChild(currentMainElement);
+        currentMainElement = null;
+    }
+}
+
+export function changeMainElement(newMainElement) {
+    removeMainElement
+    currentMainElement = newMainElement;
+    document.body.appendChild(currentMainElement);
+}
+
+export function disableElement(element = null) {
+    let curElement;
+    if (element === null) {
+        curElement = currentMainElement;
+    } else {
+        curElement = element;
+    }
+    if (curElement === null) {
+        return;
+    }
+    curElement.classList.add('overlay');
+}
+
+export function enableElement(element = null) {
+    let curElement;
+    if (element === null) {
+        curElement = currentMainElement;
+    } else {
+        curElement = element;
+    }
+    if (curElement === null) {
+        return;
+    }
+    curElement.classList.remove('overlay');
+}
+
+export function showNotification(text) {
+    const notification = document.createElement('div');
+    notification.classList.add('notification');
+    notification.textContent = text;
+    document.body.appendChild(notification);
+
+    // Fade in notification
+    setTimeout(() => {
+        notification.style.opacity = 1;
+    }, 100);
+
+    // Fade out and remove notification after 2 seconds
+    setTimeout(() => {
+        notification.style.opacity = 0;
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 500); // 0.5s for fade-out transition
+    }, 2000);
+}
+
+export function showStatusLine(statusText, timeout = 0) {
+    removeStatusLine(); // Remove any existing status line
+    statusLine = document.createElement('div');
+    statusLine.classList.add('status-line');
+    statusLine.textContent = statusText;
+    document.body.appendChild(statusLine);
+    console.log('Showing status line:', statusLine);
+
+    // Fade in status line
+    setTimeout(() => {
+        statusLine.style.opacity = 1;
+    }, 500);
+
+    if (timeout > 0) {
+        // Remove status line after timeout
+        setTimeout(() => {
+            statusLine.style.opacity = 0;
+            setTimeout(() => {
+                document.body.removeChild(statusLine);
+                statusLine = null;
+            }, 500); // 0.5s for fade-out transition
+        }, timeout);
+    }
+}
+
+export function removeStatusLine() {
+    if (statusLine !== null) {
+        console.log('Removing status line', statusLine);
+        // Fade out status line
+        statusLine.style.opacity = 0;
+        setTimeout(() => {
+            document.body.removeChild(statusLine);
+            statusLine = null;
+        }, 500); // 0.5s for fade-out transition
+    } else {
+        console.log('No status line to remove!');
+    }
+}
 
 export function connection() {
     const serverHost = window.location.hostname;
     const serverPort = window.location.port;
 
-    const websocketUrl = `wss://${serverHost}:${serverPort}/ws`;
+    websocketUrl = `wss://${serverHost}:${serverPort}/ws`;
     console.log('WebSocket URL:', websocketUrl);
 
     socket = new WebSocket(websocketUrl);
 
     socket.addEventListener('open', function (event) {
-        console.log('Connected to WebSocket server');
+        console.log('Connected to WebSocket server at', websocketUrl);
+        removeStatusLine();
+        server_state = true;
+        enableElement(currentMainElement);
+        showNotification('Connected to server at ' + websocketUrl);
     });
 
     socket.addEventListener('message', function (event) {
         console.log('Message from server:', event.data);
-        // convert event.data from JSON-string to object
-        //let status = JSON.parse(JSON.parse(event.data).data);
-        //console.log('Status:', status);
-        // enumerate trx and search for uuid4 matching event.data.uuid4
         for (const [key, value] of Object.entries(trx)) {
             if (key === JSON.parse(event.data).uuid4) {
                 value.resolve(JSON.parse(event.data));
                 delete trx[key];
             }
         }
-        //if (status === 'OK') {
-        //    console.log('Login successful!');
-        //    tempResult();
-        //} else {
-        //    console.log('Login failed!');
-        //}
     });
 
     socket.addEventListener('close', function (event) {
         console.log('Disconnected from WebSocket server');
+        server_state = false;
+        // retry connect
+        disableElement(currentMainElement);
+        showStatusLine('Reconnecting to server at ' + websocketUrl + '...', 0);
+        setTimeout(connection, 1000);
     });
 
     socket.addEventListener('error', function (event) {
         console.error('WebSocket error:', event);
+        // disconnect
+        socket.close();
     });
 }
 
