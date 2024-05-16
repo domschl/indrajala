@@ -16,6 +16,16 @@ export function generateCssText(styles, selector) {
     return cssText;
 }
 
+export const color_scheme = {
+    'light': {
+        'button-bg': '#007bff', 'button-fg': '#fff', 'button-hover': '#0056b3',
+        'status-bg': '#0056b3', 'status-fg': '#fff', 'status-hover': '#007bff', 'status-error': '#dc3545', 'status-success': '#28a745',
+        'edit-mouse-enter': '#0056b3', 'edit-mouse-leave': '#007bff',
+        'notification-bg': '#333', 'notification-fg': '#fff', 'notification-hover': '#007bff'
+    },
+}
+
+
 const indraStyleDict = {
     '.container-style': {
         'max-width': '400px',
@@ -50,8 +60,8 @@ const indraStyleDict = {
         'padding': '10px',
         'border': 'none',
         'border-radius': '3px',
-        'background-color': '#007bff',
-        'color': '#fff',
+        'background-color': color_scheme['light']['button-bg'],
+        'color': color_scheme['light']['button-fg'],
         'font-size': '16px',
         'cursor': 'pointer',
         'transition': 'background-color 0.3s'
@@ -62,8 +72,8 @@ const indraStyleDict = {
         'padding': '10px',
         'border': 'none',
         'border-radius': '3px',
-        'background-color': '#007bff',
-        'color': '#fff',
+        'background-color': color_scheme['light']['button-bg'],
+        'color': color_scheme['light']['button-fg'],
         'font-size': '16px',
         'cursor': 'pointer',
         'transition': 'background-color 0.3s'
@@ -73,15 +83,15 @@ const indraStyleDict = {
         'justify-content': 'space-between' /* Adjust as needed */
     },
     'button:hover': {
-        'background-color': '#0056b3'
+        'background-color': color_scheme['light']['button-hover']
     },
     '.notification': {
         'position': 'fixed',
         'bottom': '10px',  /* Adjust bottom distance as needed */
         'left': '50%',
         'transform': 'translateX(-50%)',
-        'background-color': '#333',
-        'color': '#fff',
+        'background-color': color_scheme['light']['notification-bg'],
+        'color': color_scheme['light']['notification-fg'],
         'padding': '10px 20px',
         'border-radius': '5px',
         'opacity': '0',
@@ -93,8 +103,8 @@ const indraStyleDict = {
         'width': '100%',
         //'left': '50%',
         //'transform': 'translateX(-50%)',
-        'background-color': '#0056b3',
-        'color': '#fff',
+        'background-color': color_scheme['light']['status-bg'],
+        'color': color_scheme['light']['status-fg'],
         'padding': '10px 20px',
         //'border-radius': '5px',
         'opacity': '0',
@@ -125,8 +135,8 @@ const indraStyleDict = {
         'width': '400px',
         'padding': '10px 20px',
         'margin': '5px',
-        'background-color': '#3498db',
-        'color': '#fff',
+        'background-color': color_scheme['light']['button-bg'],
+        'color': color_scheme['light']['button-fg'],
         'text-decoration': 'none',
         'border-radius': '5px',
         'transition': 'background-color 0.3s ease'
@@ -135,7 +145,7 @@ const indraStyleDict = {
         'margin-right': '10px' /* Spacing between icon and text */
     },
     '.portal-link:hover': {
-        'background-color': '#2980b9'
+        'background-color': color_scheme['light']['button-hover']
     },
     '.material-icons': {
         'font-family': 'Material Icons',
