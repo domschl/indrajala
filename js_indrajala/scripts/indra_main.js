@@ -25,9 +25,15 @@ function createPortal(links) {
     linkElement.textContent = link.description;
     linkElement.classList.add('portal-link');
 
-    // Create an icon element
     const iconElement = document.createElement('i');
-    iconElement.classList.add('fas', link.icon); // Assuming link.icon contains the Font Awesome icon class
+    // Set the HTML content to the Unicode code point
+    iconElement.innerHTML = `&#x${link.iconCodePoint};`;
+    iconElement.classList.add('material-icons');
+
+    // Create an icon element
+    //const iconElement = document.createElement('i');
+    //iconElement.classList.add('material-icons');
+    //iconElement.textContent = link.icon;
 
     // Append the icon to the link
     linkElement.prepend(iconElement);
@@ -42,8 +48,8 @@ function createPortal(links) {
 
 function main() {
   const links = [
-    { url: 'https://www.google.com', description: 'Google', icon: 'search' },
-    { url: 'admin/index.html', description: 'Admin Portal', icon: 'admin_panel_settings' },
+    { url: 'https://www.google.com', description: 'Google', iconCodePoint: 'e8b6' },  // 'search'
+    { url: 'admin/index.html', description: 'Admin Portal', iconCodePoint: 'ef3d' },  // 'admin_panel_settings'
   ];
   indra_styles();
   const portal = createPortal(links);

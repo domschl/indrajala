@@ -120,12 +120,26 @@ const indraStyleDict = {
     },
     '.portal-link:hover': {
         'background-color': '#2980b9'
+    },
+    '.material-icons': {
+        'font-family': 'Material Icons',
+        'font-weight': 'normal',
+        'font-style': 'normal',
+        'font-size': '24px',  // Preferred icon size
+        'display': 'inline-block',
+        'line-height': '1',
+        'text-transform': 'none',
+        'letter-spacing': 'normal',
+        'word-wrap': 'normal',
+        'white-space': 'nowrap',
+        'direction': 'ltr',
+        'font-feature-settings': 'liga'
     }
 };
 
 function loadMaterialIcons() {
     // Define font file path (replace 'fonts/material-icons.woff2' with the actual path)
-    const fontUrl = 'fonts/MaterialSymbolsOutlined.woff2';
+    const fontUrl = 'fonts/MaterialIcons-Regular.ttf';
 
     // Create @font-face rule
     const fontFaceRule = `
@@ -133,7 +147,7 @@ function loadMaterialIcons() {
         font-family: 'Material Icons';
         font-style: normal;
         font-weight: 400;
-        src: url(${fontUrl}) format('woff2');
+        src: local('Material Icons'), local('MaterialIcons-Regular'), url(${fontUrl}) format('truetype');
       }
     `;
 
