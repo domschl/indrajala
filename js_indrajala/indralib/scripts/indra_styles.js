@@ -163,12 +163,51 @@ const indraStyleDict = {
         'white-space': 'nowrap',
         'direction': 'ltr',
         'font-feature-settings': 'liga'
+    },
+    '.userList': {
+        'list-style-type': 'none',
+        'width': '100%',
+        'padding': '0',
+        'margin': '0',
+        'max-height': '300px', /* Adjust the maximum height as needed */
+        'overflow-y': 'auto' /* Enable vertical scrolling */
+    },
+    '.userListItem': {
+        'display': 'flex',
+        'align-items': 'center',
+        'margin-bottom': '-1px',
+        'border': '1px solid #ddd', /* Add a light gray border */
+        'padding': '10px', /* Add padding for spacing */
+        'cursor': 'pointer', /* Change cursor to pointer on hover */
+    },
+    '.userListItem:hover': {
+        'background-color': '#f9f9f9' /* Change background color on hover */
+    },
+    '.userListItem.selected': {
+        'background-color': '#f0f0f0' /* Change background color when selected */
+    },
+    '.iconContainer': {
+        'margin-right': '10px'
+    },
+    '.textContainer': {
+        'display': 'flex',
+        'flex-direction': 'column'
+    },
+    '.userIcon': {
+        'margin-right': '10px'
+    },
+    '.username': {
+        'font-weight': 'bold'
+    },
+    '.fullname': {
+        'font-size': 'smaller',
+        'color': 'gray'
     }
 };
 
 function loadMaterialIcons() {
-    // Define font file path (replace 'fonts/material-icons.woff2' with the actual path)
-    const fontUrl = 'fonts/MaterialIcons-Regular.ttf';
+    // Define font file path (replace '/fonts/material-icons.woff2' with the actual path)
+    const fontUrl = '/fonts/MaterialIcons-Regular.ttf';
 
     // Create @font-face rule
     const fontFaceRule = `
