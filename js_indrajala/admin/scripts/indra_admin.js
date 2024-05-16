@@ -9,7 +9,7 @@ import { IndraEvent } from './../../indralib/scripts/indralib.js';
 import {
   connection, indraLogin, indraLogout, showNotification,
   changeMainElement, enableElement, disableElement, removeMainElement,
-  indraKVRead
+  indraKVRead, indraKVWrite, indraKVDelete
 } from './../../indralib/scripts/indra_client.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
@@ -186,6 +186,68 @@ function userGui() {
 
 let selectedUser = null;
 
+let editButton = null;
+let deleteButton = null;
+
+
+function addUser() {
+  console.log('Adding user...');
+  // Create a new user
+}
+
+function editUser() {
+  if (selectedUser === null) {
+    console.log('No user selected.');
+    showNotification('No user selected.');
+  } else {
+    console.log('Editing user:', selectedUser);
+    // Edit the selected user
+  }
+}
+
+function deleteUser() {
+  if (selectedUser === null) {
+    console.log('No user selected.');
+    showNotification('No user selected.');
+  } else {
+    console.log('Deleting user:', selectedUser);
+    const confirmDelete = confirm(`Are you sure you want to delete user ${selectedUser}?`);
+
+    // Check user response
+    if (confirmDelete) {
+      // User confirmed deletion, proceed with deletion action
+      indraKVDelete(`entity/indrajala/user/${selectedUser}/%`, function (result) {
+        if (result.startsWith('OK')) {
+          console.log(`Deletion of user ${selectedUser} successful!`);
+          showNotification(`User ${selectedUser} deleted successfully.`);
+          // remove selectedUser from list .userListItem list
+          const allItems = document.querySelectorAll('.userListItem');
+          allItems.forEach(item => {
+            if (item.getAttribute('data-id') === selectedUser) {
+              item.remove();
+            }
+          });
+          //const userItem = document.querySelector(`[data-id="${selectedUser}"]`);
+          //if (userItem) {
+          //  userItem.remove();
+          //  console.log(`User item ${selectedUser} removed from list.`);
+          //} else {
+          //  console.log(`User item ${selectedUser} not found in list.`);
+          //}
+          selectedUser = null;
+        } else {
+          console.log(`Deletion of user ${selectedUser} failed!`);
+          showNotification(`User ${selectedUser} deletion failed.`);
+        }
+      });
+    } else {
+      // User canceled deletion, do nothing
+      console.log('Deletion canceled');
+      showNotification(`User ${selectedUser} deletion canceled.`)
+    }
+  }
+}
+
 // Function to handle item selection
 function handleUserSelection(event) {
   const selectedItem = event.currentTarget;
@@ -225,11 +287,22 @@ function userListReadResult(result) {
       users[username] = {};
       users[username][attribute] = value;
     }
+    if (attribute === 'roles') {
+      // json string to array of strings, is string of type '["role1", "role2", ...]'
+      // save-guard against JSON.parse error:
+      try {
+        users[username][attribute] = JSON.parse(value);
+      } catch (error) {
+        console.log('Error parsing JSON: ' + value, error);
+      }
+    }
   }
+
   for (let username in users) {
     // Create list item for user
     let userItem = document.createElement('div');
     userItem.classList.add('userListItem');
+    userItem.setAttribute('data-id', username);
 
     // Add event listener for item selection
     userItem.addEventListener('click', handleUserSelection);
@@ -239,6 +312,17 @@ function userListReadResult(result) {
     iconContainer.classList.add('iconContainer');
 
     let accountIcon = 'e7fd'; // 'person' icon
+    if ('roles' in users[username]) {
+      if (users[username]['roles'].includes('admin')) {
+        accountIcon = 'ef3d'; // 'admin' icon
+      } else {
+        if (users[username]['roles'].includes('app')) {
+          // cog icon
+          accountIcon = 'e8b8'; // cog icon
+        }
+      }
+    }
+
     const iconElement = document.createElement('i');
     // Set the HTML content to the Unicode code point
     iconElement.innerHTML = `&#x${accountIcon};`;
@@ -285,24 +369,50 @@ function mainGui() {
   let button_line = document.createElement('div');
   button_line.classList.add('button-line');
 
-  logoutButton = document.createElement('button');
-  logoutButton.textContent = 'Logout';
-  logoutButton.classList.add('half-button-style');
+  let addButton = document.createElement('button');
+  addButton.classList.add('icon-button-style');
+  let addIcon = 'e7fe'; // 'add person' icon
+  addButton.innerHTML = `&#x${addIcon};`;
+
+  editButton = document.createElement('button');
+  editButton.classList.add('icon-button-style');
+  let editIcon = 'e3c9'; // 'edit' icon
+  editButton.innerHTML = `&#x${editIcon};`;
+
+  deleteButton = document.createElement('button');
+  deleteButton.classList.add('icon-button-style');
+  let deleteIcon = 'e872'; // 'delete' icon
+  deleteButton.innerHTML = `&#x${deleteIcon};`;
+
+  let logoutButton = document.createElement('button');
+  logoutButton.classList.add('icon-button-style');
+  let accountIcon = 'e9ba'; // 'logout' icon
+  logoutButton.innerHTML = `&#x${accountIcon};`;
 
   let exitButton = document.createElement('button');
-  exitButton.textContent = 'Exit';
-  exitButton.classList.add('half-button-style');
+  exitButton.classList.add('icon-button-style');
+  let exitIcon = 'e5cd'; // 'exit' icon
+  exitButton.innerHTML = `&#x${exitIcon};`;
 
+  let sep1 = document.createElement('div');
+  sep1.classList.add('separator');
+  main_div.appendChild(sep1);
+
+  button_line.appendChild(addButton);
+  button_line.appendChild(editButton);
+  button_line.appendChild(deleteButton);
   button_line.appendChild(logoutButton);
   button_line.appendChild(exitButton);
 
-  // Add hover effect to login button
-  exitButton.addEventListener('mouseenter', function () {
-    this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
-  });
-  exitButton.addEventListener('mouseleave', function () {
-    this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
-  });
+  let buttons = [addButton, editButton, deleteButton, logoutButton, exitButton];
+  for (let i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener('mouseenter', function () {
+      this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
+    });
+    buttons[i].addEventListener('mouseleave', function () {
+      this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
+    });
+  }
 
   changeMainElement(main_div);
   //document.body.appendChild(logoutButton);
@@ -313,27 +423,23 @@ function mainGui() {
     indraLogout(indraLogoutResult);
   }
 
-  // Add hover effect to login button
-  logoutButton.addEventListener('mouseenter', function () {
-    this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
-  });
-  logoutButton.addEventListener('mouseleave', function () {
-    this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
-  });
+  // Add event listeners
+  addButton.addEventListener('click', addUser);
+  editButton.addEventListener('click', editUser);
+  deleteButton.addEventListener('click', deleteUser);
 
-  // Add event listener to login button
   logoutButton.addEventListener('click', handleLogout);
-
-  // Function to handle keydown event on input fields
-  function handleKeyPress(event) {
-    if (event.key === 'Enter') {
-      // Trigger click event on the login button
-      logoutButton.click();
-    }
-  }
-
   // Exit button, got to main page
   exitButton.addEventListener('click', indraPortal);
+
+  // Function to handle keydown event on input fields
+  //function handleKeyPress(event) {
+  //  if (event.key === 'Enter') {
+  //    // Trigger click event on the login button
+  //    logoutButton.click();
+  //  }
+  //}
+
 
   // Append all elements to container div
   main_div.appendChild(button_line);
