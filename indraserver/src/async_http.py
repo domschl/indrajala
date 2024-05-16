@@ -40,6 +40,7 @@ class IndraProcess(IndraProcessCore):
         )
         self.static_apps.append(("/scripts", os.path.join(self.web_root, "scripts")))
         self.static_apps.append(("/fonts", os.path.join(self.web_root, "fonts")))
+        self.static_apps.append(("/config", os.path.join(self.web_root, "config")))
         self.private_key = None
         self.public_key = None
         self.ws_clients = {}

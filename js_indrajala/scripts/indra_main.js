@@ -15,7 +15,23 @@ document.addEventListener('DOMContentLoaded', function () {
 function createPortal(links) {
   // Create a container for the portal
   const portalContainer = document.createElement('div');
-  portalContainer.classList.add('portal-container');
+  portalContainer.classList.add('container-style')
+  portalContainer.classList.add('margin-top');
+
+  // Create title heading
+  const titleHeading = document.createElement('h2');
+  titleHeading.textContent = 'Indrajāla Portal';
+  titleHeading.classList.add('margin-bottom');
+
+  // Create Subtitle
+  const appLabel = document.createElement('label');
+  appLabel.textContent = 'Applications:';
+  appLabel.classList.add('label-style');
+  //appLabel.classList.add('margin-bottom-40');
+
+  // Append the title to the portal container
+  portalContainer.appendChild(titleHeading);
+  portalContainer.appendChild(appLabel);
 
   // Iterate over the array of links
   links.forEach(link => {
@@ -48,11 +64,35 @@ function createPortal(links) {
 
 function main() {
   const links = [
-    { url: 'https://www.google.com', description: 'Google', iconCodePoint: 'e8b6' },  // 'search'
-    { url: 'admin/index.html', description: 'Admin Portal', iconCodePoint: 'ef3d' },  // 'admin_panel_settings'
+    { url: 'admin/index.html', description: 'Indrajāla Administrator', iconCodePoint: 'ef3d' },  // 'admin_panel_settings'
   ];
   indra_styles();
-  const portal = createPortal(links);
-  document.body.appendChild(portal);
+  // load more links from a JSON file at /config/portal_apps.json:
+
+  fetch('/config/portal_apps.json')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Data contains the parsed JSON
+      console.log(data);
+
+      // Here you can process the data as needed
+      // For example, iterate over the array of dictionaries
+      // appending the links to the links array
+      data.forEach(item => {
+        links.push(item);
+      });
+
+      // Create the portal with the links
+      const portal = createPortal(links);
+      document.body.appendChild(portal);
+    })
+    .catch(error => {
+      console.error('There was a problem fetching /config/portal_apps.json:', error);
+    });
 }
 

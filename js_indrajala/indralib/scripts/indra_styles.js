@@ -41,6 +41,9 @@ const indraStyleDict = {
     '.margin-bottom': {
         'margin-bottom': '20px'
     },
+    '.margin-bottom-40': {
+        'margin-bottom': '40px'
+    },
     '.label-style': {
         'display': 'block',
         'font-weight': 'bold',
@@ -132,9 +135,9 @@ const indraStyleDict = {
     '.portal-link': {
         'display': 'flex',
         'align-items': 'center',
-        'width': '400px',
-        'padding': '10px 20px',
-        'margin': '5px',
+        'width': '90%',
+        'padding': '10px 10px',
+        'margin': '10px 10px',
         'background-color': color_scheme['light']['button-bg'],
         'color': color_scheme['light']['button-fg'],
         'text-decoration': 'none',

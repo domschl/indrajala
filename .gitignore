@@ -18,4 +18,5 @@ data_sources/data_cache/
 dist/
 indralib.egg-info/
 web/
+portal_apps.json
 

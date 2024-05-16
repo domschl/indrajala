@@ -60,6 +60,7 @@ tls = true
 private_key = "{{data_directory}}/certs/my-key.pem"
 public_key = "{{data_directory}}/certs/my-cert.pem"
 web_root = "{{data_directory}}/web"
+static_apps = [["/admin", "{{data_directory}}/web/admin"]]
 
 [[indra_dispatch]]
 active = true
