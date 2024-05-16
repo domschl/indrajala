@@ -6,7 +6,7 @@
 
 import { indra_styles } from './../../indralib/scripts/indra_styles.js';
 import { IndraEvent } from './../../indralib/scripts/indralib.js';
-import { connection, indraLoginWait, indraLogoutWait, showNotification, changeMainElement, enableElement, disableElement } from './../../indralib/scripts/indra_client.js';
+import { connection, indraLoginWait, indraLogoutWait, showNotification, changeMainElement, enableElement, disableElement, removeMainElement } from './../../indralib/scripts/indra_client.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
@@ -82,10 +82,19 @@ function loginPageOpen() {
   passwordInputGroup.appendChild(passwordLabel);
   passwordInputGroup.appendChild(passwordInput);
 
+  // Create button line
+  const buttonLine = document.createElement('div');
+  buttonLine.classList.add('button-line');
+
+  // Create Exit button
+  const exitButton = document.createElement('button');
+  exitButton.textContent = 'Exit';
+  exitButton.classList.add('half-button-style');
+
   // Create login button
   const loginButton = document.createElement('button');
   loginButton.textContent = 'Login';
-  loginButton.classList.add('button-style');
+  loginButton.classList.add('half-button-style');
 
   // Add hover effect to login button
   loginButton.addEventListener('mouseenter', function () {
@@ -94,12 +103,20 @@ function loginPageOpen() {
   loginButton.addEventListener('mouseleave', function () {
     this.style.backgroundColor = '#007bff';
   });
+  exitButton.addEventListener('mouseenter', function () {
+    this.style.backgroundColor = '#0056b3';
+  });
+  exitButton.addEventListener('mouseleave', function () {
+    this.style.backgroundColor = '#007bff';
+  });
 
   // Append all elements to container div
   containerDiv.appendChild(titleHeading);
   containerDiv.appendChild(usernameInputGroup);
   containerDiv.appendChild(passwordInputGroup);
-  containerDiv.appendChild(loginButton);
+  buttonLine.appendChild(exitButton);
+  buttonLine.appendChild(loginButton);
+  containerDiv.appendChild(buttonLine);
 
   // Append container div to body
   changeMainElement(containerDiv);
@@ -120,6 +137,7 @@ function loginPageOpen() {
 
   // Add event listener to login button
   loginButton.addEventListener('click', handleLogin);
+  exitButton.addEventListener('click', indraPortal);
 
   // Function to handle keydown event on input fields
   function handleKeyPress(event) {
@@ -143,9 +161,39 @@ function loginPageOpen() {
 
 function mainGui() {
   // Create login button
+  let main_div = document.createElement('div');
+  main_div.classList.add('container-style');
+
+  let button_line = document.createElement('div');
+  button_line.classList.add('button-line');
+
   logoutButton = document.createElement('button');
   logoutButton.textContent = 'Logout';
-  logoutButton.classList.add('button-style');
+  logoutButton.classList.add('half-button-style');
+
+  let exitButton = document.createElement('button');
+  exitButton.textContent = 'Exit';
+  exitButton.classList.add('half-button-style');
+
+  button_line.appendChild(logoutButton);
+  button_line.appendChild(exitButton);
+
+  // Add hover effect to login button
+  exitButton.addEventListener('mouseenter', function () {
+    this.style.backgroundColor = '#0056b3';
+  });
+  exitButton.addEventListener('mouseleave', function () {
+    this.style.backgroundColor = '#007bff';
+  });
+
+  changeMainElement(main_div);
+  //document.body.appendChild(logoutButton);
+
+  // Function to handle login button click
+  function handleLogout() {
+    console.log('Logging out...');
+    indraLogoutWait(indraLogoutResult);
+  }
 
   // Add hover effect to login button
   logoutButton.addEventListener('mouseenter', function () {
@@ -154,15 +202,6 @@ function mainGui() {
   logoutButton.addEventListener('mouseleave', function () {
     this.style.backgroundColor = '#007bff';
   });
-
-  changeMainElement(logoutButton);
-  //document.body.appendChild(logoutButton);
-
-  // Function to handle login button click
-  function handleLogout() {
-    console.log('Logging out...');
-    indraLogoutWait(indraLogoutResult);
-  }
 
   // Add event listener to login button
   logoutButton.addEventListener('click', handleLogout);
@@ -175,6 +214,11 @@ function mainGui() {
     }
   }
 
+  // Exit button, got to main page
+  exitButton.addEventListener('click', indraPortal);
+
+  // Append all elements to container div
+  main_div.appendChild(button_line);
 }
 
 export function indraLoginPageClose() {
@@ -201,10 +245,16 @@ function indraLoginResult(result) {
 
 function indraMainGuiClose() {
   // Remove container div
-  logoutButton.remove();
+  removeMainElement();
   loginPageOpen();
-
 }
+
+function indraPortal() {
+  // go to portal at /index.html
+  removeMainElement();
+  window.location.href = '/index.html';
+}
+
 function indraLogoutResult(result) {
   console.log('Logout result:', result);
   if (result === true) {

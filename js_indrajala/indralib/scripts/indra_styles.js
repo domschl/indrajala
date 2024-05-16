@@ -56,6 +56,22 @@ const indraStyleDict = {
         'cursor': 'pointer',
         'transition': 'background-color 0.3s'
     },
+    '.half-button-style': {
+        'display': 'block',
+        'width': '47.5%',
+        'padding': '10px',
+        'border': 'none',
+        'border-radius': '3px',
+        'background-color': '#007bff',
+        'color': '#fff',
+        'font-size': '16px',
+        'cursor': 'pointer',
+        'transition': 'background-color 0.3s'
+    },
+    '.button-line': {
+        'display': 'flex',
+        'justify-content': 'space-between' /* Adjust as needed */
+    },
     'button:hover': {
         'background-color': '#0056b3'
     },
