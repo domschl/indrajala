@@ -60,6 +60,7 @@ class IndraProcess(IndraProcessCore):
                 self.tls = True
         self.app = web.Application(debug=True)
         self.app.add_routes([web.get("/", self.web_root_handler)])
+        self.app.add_routes([web.get("/index.html", self.web_root_handler)])
         self.app.add_routes([web.get("/favicon.ico", self.web_root_handler)])
         for static_app in self.static_apps:
             prefix = static_app[0]
