@@ -277,3 +277,66 @@ export function indraKVRead(key, readResult) {
     );
 
 }
+
+export function indraKVWrite(key, value, writeResult) {
+    let cmd = {
+        key: key,
+        value: value,
+    };
+    let ie = new IndraEvent();
+    ie.domain = "$trx/kv/req/write";
+    ie.from_id = "ws/js";
+    ie.auth_hash = session_id;
+    ie.data_type = "kvwrite";
+    ie.data = JSON.stringify(cmd);
+    let pr = sendTransaction(ie);
+    if (pr === null) {
+        console.log('Didn\'t get promise!');
+        return null;
+    }
+    console.log('Sent message to server:', ie.to_json());
+    // Wait for the promise to resolve
+    pr.then((ie) => {
+        console.log('Promise: Received response from server:', ie);
+        let value = JSON.parse(ie.data);
+        console.log('Value:', value);
+        writeResult(value);
+    },
+        (error) => {
+            console.log('Promise: Error:', error);
+            writeResult(null);
+        }
+    );
+
+}
+
+export function indraKVDelete(key, deleteResult) {
+    let cmd = {
+        key: key,
+    };
+    let ie = new IndraEvent();
+    ie.domain = "$trx/kv/req/delete";
+    ie.from_id = "ws/js";
+    ie.auth_hash = session_id;
+    ie.data_type = "kvdelete";
+    ie.data = JSON.stringify(cmd);
+    let pr = sendTransaction(ie);
+    if (pr === null) {
+        console.log('Didn\'t get promise!');
+        return null;
+    }
+    console.log('Sent message to server:', ie.to_json());
+    // Wait for the promise to resolve
+    pr.then((ie) => {
+        console.log('Promise: Received response from server:', ie);
+        let value = JSON.parse(ie.data);
+        console.log('Value:', value);
+        deleteResult(value);
+    },
+        (error) => {
+            console.log('Promise: Error:', error);
+            deleteResult(null);
+        }
+    );
+
+}

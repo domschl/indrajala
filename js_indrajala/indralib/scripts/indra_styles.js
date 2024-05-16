@@ -18,7 +18,7 @@ export function generateCssText(styles, selector) {
 
 export const color_scheme = {
     'light': {
-        'button-bg': '#007bff', 'button-fg': '#fff', 'button-hover': '#0056b3',
+        'button-bg': '#007bff', 'button-fg': '#fff', 'button-hover': '#0056b3', 'button-disabled': '#ccc',
         'status-bg': '#0056b3', 'status-fg': '#fff', 'status-hover': '#007bff', 'status-error': '#dc3545', 'status-success': '#28a745',
         'edit-mouse-enter': '#0056b3', 'edit-mouse-leave': '#007bff',
         'notification-bg': '#333', 'notification-fg': '#fff', 'notification-hover': '#007bff'
@@ -80,6 +80,30 @@ const indraStyleDict = {
         'font-size': '16px',
         'cursor': 'pointer',
         'transition': 'background-color 0.3s'
+    },
+    '.icon-button-style': {
+        'display': 'block',
+        'padding': '10px',
+        'width': '70px',
+        'border': 'none',
+        'border-radius': '3px',
+        'background-color': color_scheme['light']['button-bg'],
+        'color': color_scheme['light']['button-fg'],
+        'cursor': 'pointer',
+        'transition': 'background-color 0.3s',
+
+        'font-family': 'Material Icons',
+        'font-weight': 'normal',
+        'font-style': 'normal',
+        'font-size': '24px',  // Preferred icon size
+        'display': 'inline-block',
+        'line-height': '1',
+        'text-transform': 'none',
+        'letter-spacing': 'normal',
+        'word-wrap': 'normal',
+        'white-space': 'nowrap',
+        'direction': 'ltr',
+        'font-feature-settings': 'liga'
     },
     '.button-line': {
         'display': 'flex',
@@ -202,6 +226,13 @@ const indraStyleDict = {
     '.fullname': {
         'font-size': 'smaller',
         'color': 'gray'
+    },
+    '.separator': {
+        'width': '100%',
+        'height': '1px',
+        'background-color': '#ddd', /* Gray color */
+        'margin-top': '10px',
+        'margin-bottom': '10px'
     }
 };
 

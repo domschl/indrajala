@@ -497,14 +497,14 @@ class IndraProcess(IndraProcessCore):
         ]
         def_test_users = [
             ("test", "test", "Test User", "test@localhost", '["user"]'),
-            ("test2", "test2", "Test User 2", "test2@localhost", '["user"]'),
+            ("test2", "test2", "Test User 2", "test2@localhost", '["admin"]'),
             ("test3", "test3", "Test User 3", "test3@localhost", '["user"]'),
-            ("test4", "test4", "Test User 4", "test4@localhost", '["user"]'),
+            ("test4", "test4", "Test User 4", "test4@localhost", '["app"]'),
             ("test5", "test5", "Test User 5", "test5@localhost", '["user"]'),
             ("test6", "test6", "Test User 6", "test6@localhost", '["user"]'),
-            ("test7", "test7", "Test User 7", "test7@localhost", '["user"]'),
-            ("test8", "test8", "Test User 8", "test8@localhost", '["user"]'),
-            ("test9", "test9", "Test User 9", "test9@localhost", '["user"]'),
+            ("test7", "test7", "Test User 7", "test7@localhost", '["app"]'),
+            ("test8", "test8", "Test User 8", "test8@localhost", '["app"]'),
+            ("test9", "test9", "Test User 9", "test9@localhost", '["admin"]'),
             ("test10", "test10", "Test User 10", "test10@localhost", '["user"]'),
         ]
         cur_pwd = self._read_kv(admin_key)
