@@ -59,6 +59,11 @@ class IndraProcess(IndraProcessCore):
         for static_app in self.static_apps:
             prefix = static_app[0]
             path = static_app[1]
+            if os.path.exists(path) is False:
+                self.log.error(
+                    f"Static app path does not exist: {path}, did you deploy_web.sh?"
+                )
+                continue
             self.log.info(f"Adding static app: {prefix} -> {path}")
             self.app.add_routes([web.static(prefix, path)])
         # if self.tls is True:
