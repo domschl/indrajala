@@ -34,6 +34,7 @@ class IndraProcess(IndraProcessCore):
         self.bind_addresses = self.config_data["bind_addresses"]
         self.web_root = os.path.expanduser(self.config_data["web_root"])
         self.static_apps = self.config_data["static_apps"]
+        self.static_apps.append(("/indralib", os.path.join(self.web_root, "indralib")))
         self.private_key = None
         self.public_key = None
         self.ws_clients = {}
