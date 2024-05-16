@@ -175,7 +175,7 @@ function sendTransaction(ie) {
     }
 }
 
-export function indraLoginWait(username, password, loginResult) {
+export function indraLogin(username, password, loginResult) {
     const cmd = {
         key: `entity/indrajala/user/${username}/password`,
         value: password,
@@ -212,7 +212,7 @@ export function indraLoginWait(username, password, loginResult) {
     );
 }
 
-export function indraLogoutWait(logoutResult) {
+export function indraLogout(logoutResult) {
     let ie = new IndraEvent();
     ie.domain = "$trx/kv/req/logout";
     ie.from_id = "ws/js";
@@ -245,4 +245,35 @@ export function indraLogoutWait(logoutResult) {
             logoutResult(false);
         }
     );
+}
+
+export function indraKVRead(key, readResult) {
+    let cmd = {
+        key: key,
+    };
+    let ie = new IndraEvent();
+    ie.domain = "$trx/kv/req/read";
+    ie.from_id = "ws/js";
+    ie.auth_hash = session_id;
+    ie.data_type = "kvread";
+    ie.data = JSON.stringify(cmd);
+    let pr = sendTransaction(ie);
+    if (pr === null) {
+        console.log('Didn\'t get promise!');
+        return null;
+    }
+    console.log('Sent message to server:', ie.to_json());
+    // Wait for the promise to resolve
+    pr.then((ie) => {
+        console.log('Promise: Received response from server:', ie);
+        let value = JSON.parse(ie.data);
+        console.log('Value:', value);
+        readResult(value);
+    },
+        (error) => {
+            console.log('Promise: Error:', error);
+            readResult(null);
+        }
+    );
+
 }

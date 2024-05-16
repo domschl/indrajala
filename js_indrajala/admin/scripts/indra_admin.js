@@ -6,7 +6,11 @@
 
 import { indra_styles, color_scheme } from './../../indralib/scripts/indra_styles.js';
 import { IndraEvent } from './../../indralib/scripts/indralib.js';
-import { connection, indraLoginWait, indraLogoutWait, showNotification, changeMainElement, enableElement, disableElement, removeMainElement } from './../../indralib/scripts/indra_client.js';
+import {
+  connection, indraLogin, indraLogout, showNotification,
+  changeMainElement, enableElement, disableElement, removeMainElement,
+  indraKVRead
+} from './../../indralib/scripts/indra_client.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
@@ -132,7 +136,7 @@ function loginPageOpen() {
     //console.log('Password:', password);
     console.log('Logging in...');
     disableElement(containerDiv);
-    indraLoginWait(username, password, indraLoginResult);
+    indraLogin(username, password, indraLoginResult);
   }
 
   // Add event listener to login button
@@ -159,10 +163,124 @@ function loginPageOpen() {
   //}, 500);
 }
 
+let userList;
+
+function userGui() {
+  // Create container div
+  let usersDiv = document.createElement('div');
+  usersDiv.classList.add('margin-top');
+  usersDiv.classList.add('margin-bottom');
+
+  // Create title heading
+  const titleHeading = document.createElement('h2');
+  titleHeading.textContent = 'Indrajāla Users';
+  titleHeading.classList.add('margin-bottom');
+
+  userList = document.createElement('ul');
+  userList.classList.add('userList');
+
+  usersDiv.appendChild(titleHeading);
+  usersDiv.appendChild(userList);
+  return usersDiv;
+}
+
+let selectedUser = null;
+
+// Function to handle item selection
+function handleUserSelection(event) {
+  const selectedItem = event.currentTarget;
+
+  // Check if the clicked item is already selected
+  const isSelected = selectedItem.classList.contains('selected');
+
+  // Remove 'selected' class from all items
+  const allItems = document.querySelectorAll('.userListItem');
+  allItems.forEach(item => item.classList.remove('selected'));
+
+  // If the clicked item was not already selected, select it
+  if (!isSelected) {
+    selectedItem.classList.add('selected');
+    // get username
+    let username = selectedItem.querySelector('.username').textContent;
+    console.log('Selected user:', username);
+    selectedUser = username;
+  } else {
+    console.log('Deselected user:', selectedUser);
+    selectedUser = null;
+  }
+}
+
+function userListReadResult(result) {
+  // format: [['entity/indrajala/user/<username>/<attribute>', 'value'], ...]
+  // convert into dictionaries of dicts {'<username>' : {'<attribute>': 'value', ...}, ...}
+  let users = {};
+  for (let i = 0; i < result.length; i++) {
+    let parts = result[i][0].split('/');
+    let username = parts[3];
+    let attribute = parts[4];
+    let value = result[i][1];
+    if (username in users) {
+      users[username][attribute] = value;
+    } else {
+      users[username] = {};
+      users[username][attribute] = value;
+    }
+  }
+  for (let username in users) {
+    // Create list item for user
+    let userItem = document.createElement('div');
+    userItem.classList.add('userListItem');
+
+    // Add event listener for item selection
+    userItem.addEventListener('click', handleUserSelection);
+
+    // Create container for icon
+    const iconContainer = document.createElement('div');
+    iconContainer.classList.add('iconContainer');
+
+    let accountIcon = 'e7fd'; // 'person' icon
+    const iconElement = document.createElement('i');
+    // Set the HTML content to the Unicode code point
+    iconElement.innerHTML = `&#x${accountIcon};`;
+    iconElement.classList.add('material-icons');
+
+    // Create container for text
+    const textContainer = document.createElement('div');
+    textContainer.classList.add('textContainer');
+
+    // Create username element
+    const usernameElement = document.createElement('div');
+    usernameElement.classList.add('username');
+    usernameElement.textContent = username;
+
+    // Create fullname element
+    const fullnameElement = document.createElement('div');
+    fullnameElement.classList.add('fullname');
+    fullnameElement.textContent = users[username]['fullname'];
+
+    // Append elements to list item
+    iconContainer.appendChild(iconElement);
+    userItem.appendChild(iconContainer);
+
+    // Append text elements to text container
+    textContainer.appendChild(usernameElement);
+    textContainer.appendChild(fullnameElement);
+    userItem.appendChild(textContainer);
+
+    userList.appendChild(userItem);
+  }
+
+  console.log('Users:', users);
+}
+
 function mainGui() {
+  indraKVRead('entity/indrajala/user/%', userListReadResult);
   // Create login button
   let main_div = document.createElement('div');
   main_div.classList.add('container-style');
+
+  let usersDiv = userGui();
+  main_div.appendChild(usersDiv);
 
   let button_line = document.createElement('div');
   button_line.classList.add('button-line');
@@ -192,7 +310,7 @@ function mainGui() {
   // Function to handle login button click
   function handleLogout() {
     console.log('Logging out...');
-    indraLogoutWait(indraLogoutResult);
+    indraLogout(indraLogoutResult);
   }
 
   // Add hover effect to login button

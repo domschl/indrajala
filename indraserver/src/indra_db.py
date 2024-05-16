@@ -488,13 +488,44 @@ class IndraProcess(IndraProcessCore):
         # create a default admin user, if kv is empty
         admin_user = "admin"
         admin_pw = "admin"
-        admin_key = f"entity/indrajala/user/{admin_user}/password"
+        admin_key_base = f"entity/indrajala/user/{admin_user}/"
+        admin_key = admin_key_base + "password"
+        def_props = [
+            ("fullname", "Administrator"),
+            ("email", "admin@localhost"),
+            ("roles", '["admin"]'),
+        ]
+        def_test_users = [
+            ("test", "test", "Test User", "test@localhost", '["user"]'),
+            ("test2", "test2", "Test User 2", "test2@localhost", '["user"]'),
+            ("test3", "test3", "Test User 3", "test3@localhost", '["user"]'),
+            ("test4", "test4", "Test User 4", "test4@localhost", '["user"]'),
+            ("test5", "test5", "Test User 5", "test5@localhost", '["user"]'),
+            ("test6", "test6", "Test User 6", "test6@localhost", '["user"]'),
+            ("test7", "test7", "Test User 7", "test7@localhost", '["user"]'),
+            ("test8", "test8", "Test User 8", "test8@localhost", '["user"]'),
+            ("test9", "test9", "Test User 9", "test9@localhost", '["user"]'),
+            ("test10", "test10", "Test User 10", "test10@localhost", '["user"]'),
+        ]
         cur_pwd = self._read_kv(admin_key)
         if cur_pwd is None or len(cur_pwd) == 0:
             self.log.info(f"Seeding database with default admin user {admin_user}")
             self._write_update_kv(
                 admin_key, admin_pw
             )  # This will hash the password automatically
+            for prop in def_props:
+                self._write_update_kv(admin_key_base + prop[0], prop[1])
+            # Seed test users   XXX to be removed
+            for user in def_test_users:
+                self.log.info(f"Seeding database with test user {user[0]}")
+                self._write_update_kv(
+                    f"entity/indrajala/user/{user[0]}/password", user[1]
+                )
+                self._write_update_kv(
+                    f"entity/indrajala/user/{user[0]}/fullname", user[2]
+                )
+                self._write_update_kv(f"entity/indrajala/user/{user[0]}/email", user[3])
+                self._write_update_kv(f"entity/indrajala/user/{user[0]}/roles", user[4])
         else:
             # Check if admin password is still default:
             if (

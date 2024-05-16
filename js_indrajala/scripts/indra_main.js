@@ -68,6 +68,8 @@ function main() {
   ];
   indra_styles();
   // load more links from a JSON file at /config/portal_apps.json:
+  // format: [{url: '...', description: '...', iconCodePoint: '...'}, ...]
+  // get iconCodePoints from https://fonts.google.com/icons (click on icon, then look for 'codepoint')
 
   fetch('/config/portal_apps.json')
     .then(response => {
