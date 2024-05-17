@@ -1,0 +1,394 @@
+[
+  {
+    "Calendar": "Julian day number",
+    "RD": -1721424.5,
+    "JulianDate": 0.0,
+    "julian_string": "-4712-01-01T12:00:00",
+    "gregorian_string": "-4713-11-24T12:00:00"
+  },
+  {
+    "Calendar": "Hebrew",
+    "RD": -1373427.0,
+    "JulianDate": 347997.5,
+    "julian_string": "-3760-10-07T00:00:00",
+    "gregorian_string": "-3760-09-07T00:00:00"
+  },
+  {
+    "Calendar": "Mayan",
+    "RD": -1137142.0,
+    "JulianDate": 584282.5,
+    "julian_string": "-3113-09-06T00:00:00",
+    "gregorian_string": "-3113-08-11T00:00:00"
+  },
+  {
+    "Calendar": "Hindu (Kali Yuga)",
+    "RD": -1132959.0,
+    "JulianDate": 588465.5,
+    "julian_string": "-3101-02-18T00:00:00",
+    "gregorian_string": "-3101-01-23T00:00:00"
+  },
+  {
+    "Calendar": "Chinese",
+    "RD": -963099.0,
+    "JulianDate": 758325.5,
+    "julian_string": "-2636-03-08T00:00:00",
+    "gregorian_string": "-2636-02-15T00:00:00"
+  },
+  {
+    "Calendar": "Samaritan",
+    "RD": -598573.0,
+    "JulianDate": 1122851.5,
+    "julian_string": "-1638-03-15T00:00:00",
+    "gregorian_string": "-1638-03-01T00:00:00"
+  },
+  {
+    "Calendar": "Egyptian",
+    "RD": -272787.0,
+    "JulianDate": 1448637.5,
+    "julian_string": "-746-02-26T00:00:00",
+    "gregorian_string": "-746-02-18T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": -214193,
+    "JulianDate": 1507231.5,
+    "julian_string": "-586-07-30T00:00:00",
+    "gregorian_string": "-586-07-24T00:00:00"
+  },
+  {
+    "Calendar": "Babylonian",
+    "RD": -113502.0,
+    "JulianDate": 1607922.5,
+    "julian_string": "-310-04-03T00:00:00",
+    "gregorian_string": "-310-03-29T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": -61387,
+    "JulianDate": 1660037.5,
+    "julian_string": "-168-12-08T00:00:00",
+    "gregorian_string": "-168-12-05T00:00:00"
+  },
+  {
+    "Calendar": "Tibetan",
+    "RD": -46410.0,
+    "JulianDate": 1675014.5,
+    "julian_string": "-127-12-10T00:00:00",
+    "gregorian_string": "-127-12-07T00:00:00"
+  },
+  {
+    "Calendar": "Julian",
+    "RD": -1.0,
+    "JulianDate": 1721423.5,
+    "julian_string": "0-01-01T00:00:00",
+    "gregorian_string": "0-12-31T00:00:00"
+  },
+  {
+    "Calendar": "Gregorian",
+    "RD": 1.0,
+    "JulianDate": 1721425.5,
+    "julian_string": "1-01-03T00:00:00",
+    "gregorian_string": "1-01-01T00:00:00"
+  },
+  {
+    "Calendar": "ISO",
+    "RD": 1.0,
+    "JulianDate": 1721425.5,
+    "julian_string": "1-01-03T00:00:00",
+    "gregorian_string": "1-01-01T00:00:00"
+  },
+  {
+    "Calendar": "Akan",
+    "RD": 37.0,
+    "JulianDate": 1721461.5,
+    "julian_string": "1-02-08T00:00:00",
+    "gregorian_string": "1-02-06T00:00:00"
+  },
+  {
+    "Calendar": "Ethiopic",
+    "RD": 2796.0,
+    "JulianDate": 1724220.5,
+    "julian_string": "8-08-29T00:00:00",
+    "gregorian_string": "8-08-27T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 25469,
+    "JulianDate": 1746893.5,
+    "julian_string": "70-09-26T00:00:00",
+    "gregorian_string": "70-09-24T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 49217,
+    "JulianDate": 1770641.5,
+    "julian_string": "135-10-03T00:00:00",
+    "gregorian_string": "135-10-02T00:00:00"
+  },
+  {
+    "Calendar": "Coptic",
+    "RD": 103605.0,
+    "JulianDate": 1825029.5,
+    "julian_string": "284-08-29T00:00:00",
+    "gregorian_string": "284-08-29T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 171307,
+    "JulianDate": 1892731.5,
+    "julian_string": "470-01-07T00:00:00",
+    "gregorian_string": "470-01-08T00:00:00"
+  },
+  {
+    "Calendar": "Armenian",
+    "RD": 201443.0,
+    "JulianDate": 1922867.5,
+    "julian_string": "552-07-11T00:00:00",
+    "gregorian_string": "552-07-13T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 210155,
+    "JulianDate": 1931579.5,
+    "julian_string": "576-05-18T00:00:00",
+    "gregorian_string": "576-05-20T00:00:00"
+  },
+  {
+    "Calendar": "Persian",
+    "RD": 226896.0,
+    "JulianDate": 1948320.5,
+    "julian_string": "622-03-19T00:00:00",
+    "gregorian_string": "622-03-22T00:00:00"
+  },
+  {
+    "Calendar": "Islamic",
+    "RD": 227015.0,
+    "JulianDate": 1948439.5,
+    "julian_string": "622-07-16T00:00:00",
+    "gregorian_string": "622-07-19T00:00:00"
+  },
+  {
+    "Calendar": "Zoroastrian",
+    "RD": 230638.0,
+    "JulianDate": 1952062.5,
+    "julian_string": "632-06-16T00:00:00",
+    "gregorian_string": "632-06-19T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 253427,
+    "JulianDate": 1974851.5,
+    "julian_string": "694-11-07T00:00:00",
+    "gregorian_string": "694-11-10T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 369740,
+    "JulianDate": 2091164.5,
+    "julian_string": "1013-04-19T00:00:00",
+    "gregorian_string": "1013-04-25T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 400085,
+    "JulianDate": 2121509.5,
+    "julian_string": "1096-05-18T00:00:00",
+    "gregorian_string": "1096-05-24T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 434355,
+    "JulianDate": 2155779.5,
+    "julian_string": "1190-03-16T00:00:00",
+    "gregorian_string": "1190-03-23T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 452605,
+    "JulianDate": 2174029.5,
+    "julian_string": "1240-03-03T00:00:00",
+    "gregorian_string": "1240-03-10T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 470160,
+    "JulianDate": 2191584.5,
+    "julian_string": "1288-03-26T00:00:00",
+    "gregorian_string": "1288-04-02T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 473837,
+    "JulianDate": 2195261.5,
+    "julian_string": "1298-04-20T00:00:00",
+    "gregorian_string": "1298-04-27T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 507850,
+    "JulianDate": 2229274.5,
+    "julian_string": "1391-06-04T00:00:00",
+    "gregorian_string": "1391-06-12T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 524156,
+    "JulianDate": 2245580.5,
+    "julian_string": "1436-01-25T00:00:00",
+    "gregorian_string": "1436-02-03T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 544676,
+    "JulianDate": 2266100.5,
+    "julian_string": "1492-03-31T00:00:00",
+    "gregorian_string": "1492-04-09T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 567118,
+    "JulianDate": 2288542.5,
+    "julian_string": "1553-09-09T00:00:00",
+    "gregorian_string": "1553-09-19T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 569477,
+    "JulianDate": 2290901.5,
+    "julian_string": "1560-02-24T00:00:00",
+    "gregorian_string": "1560-03-05T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 601716,
+    "JulianDate": 2323140.5,
+    "julian_string": "1648-05-31T00:00:00",
+    "gregorian_string": "1648-06-10T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 613424,
+    "JulianDate": 2334848.5,
+    "julian_string": "1680-06-20T00:00:00",
+    "gregorian_string": "1680-06-30T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 626596,
+    "JulianDate": 2348020.5,
+    "julian_string": "1716-07-13T00:00:00",
+    "gregorian_string": "1716-07-24T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 645554,
+    "JulianDate": 2366978.5,
+    "julian_string": "1768-06-08T00:00:00",
+    "gregorian_string": "1768-06-19T00:00:00"
+  },
+  {
+    "Calendar": "French Revolution",
+    "RD": 654415.0,
+    "JulianDate": 2375839.5,
+    "julian_string": "1792-09-11T00:00:00",
+    "gregorian_string": "1792-09-22T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 664224,
+    "JulianDate": 2385648.5,
+    "julian_string": "1819-07-21T00:00:00",
+    "gregorian_string": "1819-08-02T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 671401,
+    "JulianDate": 2392825.5,
+    "julian_string": "1839-03-15T00:00:00",
+    "gregorian_string": "1839-03-27T00:00:00"
+  },
+  {
+    "Calendar": "Bah\u00e1'\u00ed",
+    "RD": 673222.0,
+    "JulianDate": 2394646.5,
+    "julian_string": "1844-03-09T00:00:00",
+    "gregorian_string": "1844-03-21T00:00:00"
+  },
+  {
+    "Calendar": "Modified Julian Day Number",
+    "RD": 678576.0,
+    "JulianDate": 2400000.5,
+    "julian_string": "1858-11-05T00:00:00",
+    "gregorian_string": "1858-11-17T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 694799,
+    "JulianDate": 2416223.5,
+    "julian_string": "1903-04-06T00:00:00",
+    "gregorian_string": "1903-04-19T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 704424,
+    "JulianDate": 2425848.5,
+    "julian_string": "1929-08-12T00:00:00",
+    "gregorian_string": "1929-08-25T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 708842,
+    "JulianDate": 2430266.5,
+    "julian_string": "1941-09-16T00:00:00",
+    "gregorian_string": "1941-09-29T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 709409,
+    "JulianDate": 2430833.5,
+    "julian_string": "1943-04-06T00:00:00",
+    "gregorian_string": "1943-04-19T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 709580,
+    "JulianDate": 2431004.5,
+    "julian_string": "1943-09-24T00:00:00",
+    "gregorian_string": "1943-10-07T00:00:00"
+  },
+  {
+    "Calendar": "Unix",
+    "RD": 719163.0,
+    "JulianDate": 2440587.5,
+    "julian_string": "1969-12-19T00:00:00",
+    "gregorian_string": "1970-01-01T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 727274,
+    "JulianDate": 2448698.5,
+    "julian_string": "1992-03-04T00:00:00",
+    "gregorian_string": "1992-03-17T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 728714,
+    "JulianDate": 2450138.5,
+    "julian_string": "1996-02-12T00:00:00",
+    "gregorian_string": "1996-02-25T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 744313,
+    "JulianDate": 2465737.5,
+    "julian_string": "2038-10-28T00:00:00",
+    "gregorian_string": "2038-11-10T00:00:00"
+  },
+  {
+    "Calendar": "JS-Data",
+    "RD": 764652,
+    "JulianDate": 2486076.5,
+    "julian_string": "2094-07-05T00:00:00",
+    "gregorian_string": "2094-07-18T00:00:00"
+  }
+]

@@ -11,6 +11,8 @@ export var websocketUrl = '';
 
 let statusLine = null;
 
+subscriptions = {};
+
 export let currentMainElement = null;
 
 export function removeMainElement() {
@@ -129,11 +131,23 @@ export function connection() {
     });
 
     socket.addEventListener('message', function (event) {
+        try {
+            let ie = JSON.parse(event.data);
+        } catch (error) {
+            console.error('Error parsing received JSON ', event.data, error);
+            return;
+        }
         console.log('Message from server:', event.data);
         for (const [key, value] of Object.entries(trx)) {
-            if (key === JSON.parse(event.data).uuid4) {
-                value.resolve(JSON.parse(event.data));
+            if (key === ie.uuid4) {
+                value.resolve(JSON.parse(ie.data));
                 delete trx[key];
+                return;
+            }
+        }
+        for (sub in subscriptions) {
+            if (IndraEvent.mqcmp(ie.domain, sub)) {
+                subscriptions[sub](ie);
             }
         }
     });
@@ -338,5 +352,28 @@ export function indraKVDelete(key, deleteResult) {
             deleteResult(null);
         }
     );
+}
 
+export function subscribe(domain, eventHandler) {
+    let ie = new IndraEvent();
+    ie.domain = "$cmd/subs";
+    ie.from_id = "ws/js";
+    ie.auth_hash = session_id;
+    ie.data_type = "vector/string";
+    ie.data = JSON.stringify([domain]);
+    subscriptions[domain] = eventHandler;
+    socket.send(ie.to_json());
+    console.log('Sent message to server:', ie.to_json());
+}
+
+export function unsubscribe(domain) {
+    let ie = new IndraEvent();
+    ie.domain = "$cmd/unsubs";
+    ie.from_id = "ws/js";
+    ie.auth_hash = session_id;
+    ie.data_type = "vector/string";
+    ie.data = JSON.stringify([domain]);
+    delete subscriptions[domain];
+    socket.send(ie.to_json());
+    console.log('Sent message to server:', ie.to_json());
 }
