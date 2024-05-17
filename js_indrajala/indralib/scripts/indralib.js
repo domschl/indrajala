@@ -1,6 +1,6 @@
 "use strict";
 // Indralib shared ES6 module
-
+import { IndraTime } from './indratime.js';
 
 function helloWorld() {
   if (typeof window === 'undefined') {
@@ -44,7 +44,7 @@ export class IndraEvent {
     this.parent_uuid4 = "";
     this.seq_no = 0;
     this.to_scope = "";
-    this.time_jd_start = 0.0; // IndraTime.datetime2julian(new Date());
+    this.time_jd_start = IndraTime.datetime_to_julian(new Date());
     this.data_type = "";
     this.data = "";
     this.auth_hash = "";
