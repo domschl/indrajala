@@ -1,16 +1,7 @@
 "use strict";
 // Indralib shared ES6 module
-import { IndraTime } from './indratime.js';
+import { IndraTime } from './indra_time.js';
 
-function helloWorld() {
-  if (typeof window === 'undefined') {
-    console.log('Shared module is running in node');
-    return 'Hello, world in Node.js';
-  } else {
-    console.log('Shared module is running in a browser');
-    return 'Hello, world in a browser';
-  }
-}
 
 // Generate UUID v4
 export function uuidv4() {
