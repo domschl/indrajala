@@ -1,0 +1,7 @@
+[
+    {
+        "publish": "fake-failure",
+        "subscribe": "fake-failure",
+        "result": false
+    }
+]
