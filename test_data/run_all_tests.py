@@ -7,7 +7,11 @@ test_tasks = [
         "name": "js_indralib mqcmp domain tests via Node.js",
         "cmd": "node ../js_indrajala/indralib/tests/indra_tests.js --folder=domain",
         "failure_sim_cmd": "node ../js_indrajala/indralib/tests/indra_tests.js --folder=domain --include_failure_cases=true",
-    }
+    },
+    {
+        "name": "py_indralib_indra_time_tests via Python",
+        "cmd": "python ../indralib/tests/time_tests.py --folder=time",
+    },
 ]
 
 
@@ -28,7 +32,10 @@ def run_process_and_capture_output(command):
 
 def run_tests(test_tasks, simulate_failures=False):
     for task in test_tasks:
-        if simulate_failures:
+        if simulate_failures is True:
+            if "failure_sim_cmd" not in task:
+                print(f"Skipping test: {task['name']} as no failure cases are provided")
+                continue
             print(f"Running test: {task['name']} with failure cases")
             result = run_process_and_capture_output(task["failure_sim_cmd"])
         else:
@@ -41,4 +48,4 @@ def run_tests(test_tasks, simulate_failures=False):
 
 
 if __name__ == "__main__":
-    run_tests(test_tasks, simulate_failures=True)
+    run_tests(test_tasks, simulate_failures=False)
