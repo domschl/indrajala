@@ -2,7 +2,7 @@
 
 
 export class IndraTime {
-    time_to_julian_gregorian(year, month, day, hour, minute, second, microsecond) {
+    static timeToJulianGregorian(year, month, day, hour, minute, second, microsecond) {
         let a = Math.floor((14 - month) / 12);
         let y = year + 4800 - a;
         let m = month + 12 * a - 3;
@@ -11,7 +11,7 @@ export class IndraTime {
         return jd + jd_frac;
     }
 
-    julian_to_time(jd) {
+    static julianToTime(jd) {
         let z = Math.floor(jd + 0.5);
         let f = jd + 0.5 - z;
         let a = z;
@@ -35,7 +35,7 @@ export class IndraTime {
         return [year, month, Math.floor(day), hour, minute, second, microsecond];
     }
 
-    time_to_julian(year, month, day, hour, minute, second, microsecond) {
+    static timeToJulian(year, month, day, hour, minute, second, microsecond) {
         if (year == 0) {
             print("There is no year 0 in the Gregorian calendar.");
             return null;
@@ -76,13 +76,74 @@ export class IndraTime {
     }
 
     // create JS Date object from Julian date
-    julian_to_datetime(jd) {
-        let [year, month, day, hour, minute, second, microsecond] = this.julian_to_time(jd);
+    static julianToDatetime(jd) {
+        let [year, month, day, hour, minute, second, microsecond] = this.julianToTime(jd);
         return new Date(year, month - 1, day, hour, minute, second, microsecond / 1000);
     }
 
     // create Julian date from JS Date object
-    datetime_to_julian(dt) {
-        return this.time_to_julian(dt.getFullYear(), dt.getMonth() + 1, dt.getDate(), dt.getHours(), dt.getMinutes(), dt.getSeconds(), dt.getMilliseconds() * 1000);
+    static datetimeToJulian(dt) {
+        return this.timeToJulian(dt.getFullYear(), dt.getMonth() + 1, dt.getDate(), dt.getHours(), dt.getMinutes(), dt.getSeconds(), dt.getMilliseconds() * 1000);
+    }
+
+    static julianToISO(jd) {
+        let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToTime(jd);
+        return `${year}-${month}-${day}T${hour}:${minute}:${second}.${microsecond}Z`;
+    }
+
+    static ISOTojulian(iso) {
+        // Only UTC time is supported!
+        let parts = iso.split("T");
+        if (parts.length < 2) {
+            print(`Invalid ISO 8601 string: ${iso}`);
+            return null;
+        }
+        let date = parts[0]
+        let time = parts[1]
+        if (date[0] == '-') {
+            parts = date.substring(1).split("-");
+            parts[0] = "-" + parts[0];
+        } else {
+            parts = date.split("-");
+        }
+        let year = parseInt(parts[0]);
+        let month = parseInt(parts[1]);
+        let day = parseInt(parts[2]);
+        parts = time.split(":");
+        let hour = parseInt(parts[0]);
+        let minute = parseInt(parts[1]);
+        parts = parts[2].split(".");
+        let second = parseInt(parts[0]);
+        let microsecond = parseInt(parts[1].substring(0, parts[1].length - 1));
+        return this.timeToJulian(year, month, day, hour, minute, second, microsecond);
+    }
+
+    static julianToStringTime(jd) {
+        if (jd < 1721423.5) {  // 1 AD
+            if (jd > 1721423.5 - 13000 * 365.25) {
+                // BC
+                let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToTime(jd);
+                year = 1 - year;
+                return `${year} BC`;
+            } else if (jd > 1721423.5 - 100000 * 365.25) {
+                // BP
+                let bp = Math.floor((1721423.5 - jd) / 365.25);
+                return `${bp} BP`;
+            } else {
+                // kya BP
+                let kya = Math.floor((1721423.5 - jd) / (1000 * 365.25));
+                return `${kya} kya BP`;
+            }
+        } else {
+            // AD
+            let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToTime(jd);
+            if (month === 1 && day === 1 && year < 1900) {
+                return `${year}`;
+            } else if (day === 1 && year < 1900) {
+                return `${year}-${month.toString().padStart(2, '0')}`;
+            } else {
+                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+            }
+        }
     }
 }
