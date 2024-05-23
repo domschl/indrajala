@@ -66,7 +66,6 @@ for arg in sys.argv:
         folder = arg.split("=")[1]
 
 with open(os.path.join(folder, "normalized_jd_time_data.json")) as f:
-    global data
     data = json.load(f)
     result = do_tests(data)
 

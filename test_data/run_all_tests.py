@@ -1,3 +1,4 @@
+import sys
 import subprocess
 import json
 
@@ -7,6 +8,11 @@ test_tasks = [
         "name": "js_indralib mqcmp domain tests via Node.js",
         "cmd": "node ../js_indrajala/indralib/tests/indra_tests.js --folder=domain",
         "failure_sim_cmd": "node ../js_indrajala/indralib/tests/indra_tests.js --folder=domain --include_failure_cases=true",
+    },
+    {
+        "name": "py_indralib_indra_mqcmp_tests via Python",
+        "cmd": "python ../indralib/tests/mq_cmp.py --folder=domain",
+        "failure_sim_cmd": "python ../indralib/tests/mq_cmp.py --folder=domain --include_failure_cases=true",
     },
     {
         "name": "py_indralib_indra_time_tests via Python",
@@ -44,8 +50,14 @@ def run_tests(test_tasks, simulate_failures=False):
         if result is not None:
             print(json.dumps(result, indent=2))
         else:
-            print(f"No result found for test: {task['name']}")
+            print(f"FATAL: No result found for test: {task['name']}")
+            exit(-1)
 
 
 if __name__ == "__main__":
-    run_tests(test_tasks, simulate_failures=False)
+    args = sys.argv[1:]
+    simulate_failures = False
+    for arg in args:
+        if arg == "--fails":
+            simulate_failures = True
+    run_tests(test_tasks, simulate_failures=simulate_failures)
