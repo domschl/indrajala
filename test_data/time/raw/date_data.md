@@ -16,7 +16,7 @@ $jd_{epoch} = rd_{epoch} + 1721424.5$
 | Egyptian                   | -272787      | February 18, -746 (Gregorian)        | February 26, 747 B.C.E. (Julian)       |
 | Babylonian                 | -113502      | March 29, -310 (Gregorian)           | April 3, 311 B.C.E. (Julian)           |
 | Tibetan                    | -46410       | December 7, -127 (Gregorian)         | December 10, 128 B.C.E. (Julian)       |
-| Julian                     | -1           | December 31, 0 (Gregorian)           | January 1, 1 B.C.E. (Julian)           |
+| Julian                     | -1           | December 31, 0 (Gregorian)           | January 1, 1 C.E. (Julian)             |
 | Gregorian                  | 1            | January 1, 1 (Gregorian)             | January 3, 1 C.E. (Julian)             |
 | ISO                        | 1            | January 1, 1 (Gregorian)             | January 3, 1 C.E. (Julian)             |
 | Akan                       | 37           | February 6, 1 (Gregorian)            | February 8, 1 C.E. (Julian)            |
