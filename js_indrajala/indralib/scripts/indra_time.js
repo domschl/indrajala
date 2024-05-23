@@ -59,13 +59,13 @@ export class IndraTime {
             let ja = Math.floor(0.01 * jy);
             intgr += 2 - ja + Math.floor(0.25 * ja);
         }
-        let dayfrac = (hour / 24) - 0.5;
+        let dayfrac = (hour / 24.0) - 0.5;
         if (dayfrac < 0.0) {
             dayfrac += 1.0;
             --intgr;
         }
-        let frac = dayfrac + (minute + second / 60.0 + microsecond / 1.0e6) / 60.0 / 24.0;
-        let jd0 = ((intgr + frac) - 0.5) * 100000;
+        let frac = dayfrac + (minute + second / 60.0) / 60.0 / 24.0;
+        let jd0 = (intgr + frac) * 100000;
         let jd = Math.floor(jd0);
         if (jd0 - jd > 0.5) {
             jd += 1;
@@ -88,7 +88,8 @@ export class IndraTime {
 
     static julianToISO(jd) {
         let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToTime(jd);
-        return `${year}-${month}-${day}T${hour}:${minute}:${second}.${microsecond}Z`;
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}.${String(microsecond)}Z`;  // .padStart(3, '0')
+        // return `${year}-${month}-${day}T${hour}:${minute}:${second}.${microsecond}Z`;
     }
 
     static ISOTojulian(iso) {

@@ -63,7 +63,7 @@ export class IndraTests {
                 it = "-" + indra_text.substring(0, indra_text.length - 3);
             }
 
-            console.log(`cal: ${cal}, rd: ${rd}, jd: ${jd}, jds: ${jds}, gre: ${gre}, indra_text: ${indra_text}, indra_jd: ${indra_jd}, indra_human: ${indra_human}`);
+            // console.log(`cal: ${cal}, rd: ${rd}, jd: ${jd}, jds: ${jds}, gre: ${gre}, indra_text: ${indra_text}, indra_jd: ${indra_jd}, indra_human: ${indra_human}`);
             if (this.cmp_time(jds, it)) {
                 res += "[JD]";
             }
@@ -73,7 +73,7 @@ export class IndraTests {
             if (res == "") {
                 res = "Error";
                 failed += 1;
-                let err_msg = `Both {jds} and {gre} are not equal to {it}`;
+                let err_msg = `Both ${jds} and ${gre} are not equal to ${it}`;
                 errors.push(err_msg);
             } else {
                 ok += 1;
