@@ -6,13 +6,17 @@ import json
 test_tasks = [
     {
         "name": "js_indralib mqcmp domain tests via Node.js",
-        "cmd": "node ../js_indrajala/indralib/tests/indra_tests.js --folder=domain",
-        "failure_sim_cmd": "node ../js_indrajala/indralib/tests/indra_tests.js --folder=domain --include_failure_cases=true",
+        "cmd": "node ../js_indrajala/indralib/tests/indra_mqcmp_tests.js --folder=domain",
+        "failure_sim_cmd": "node ../js_indrajala/indralib/tests/indra_mqcmp_tests.js --folder=domain --include_failure_cases=true",
     },
     {
         "name": "py_indralib_indra_mqcmp_tests via Python",
         "cmd": "python ../indralib/tests/mq_cmp.py --folder=domain",
         "failure_sim_cmd": "python ../indralib/tests/mq_cmp.py --folder=domain --include_failure_cases=true",
+    },
+    {
+        "name": "js_indralib time tests via Node.js",
+        "cmd": "node ../js_indrajala/indralib/tests/indra_time_tests.js --folder=time",
     },
     {
         "name": "py_indralib_indra_time_tests via Python",
