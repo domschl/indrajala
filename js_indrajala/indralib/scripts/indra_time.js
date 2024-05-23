@@ -88,8 +88,7 @@ export class IndraTime {
 
     static julianToISO(jd) {
         let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToTime(jd);
-        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}.${String(microsecond)}Z`;  // .padStart(3, '0')
-        // return `${year}-${month}-${day}T${hour}:${minute}:${second}.${microsecond}Z`;
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}.${String(microsecond).padStart(6, '0')}Z`;
     }
 
     static ISOTojulian(iso) {
