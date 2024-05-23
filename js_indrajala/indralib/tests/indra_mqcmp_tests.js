@@ -76,7 +76,7 @@ process.argv.forEach((val, index) => {
 });
 
 let it = new IndraTests()
-let result = [it.run_all_tests(folder = folder, include_failure_cases = include_failure_cases)];
+let result = it.run_all_tests(folder = folder, include_failure_cases = include_failure_cases);
 
 console.log("#$#$# Result #$#$#")
 console.log(JSON.stringify(result, null, 2));

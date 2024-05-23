@@ -41,6 +41,12 @@ def run_process_and_capture_output(command):
 
 
 def run_tests(test_tasks, simulate_failures=False):
+    cumul = {
+        "num_ok": 0,
+        "num_failed": 0,
+        "num_skipped": 0,
+        "errors": [],
+    }
     for task in test_tasks:
         if simulate_failures is True:
             if "failure_sim_cmd" not in task:
@@ -53,9 +59,16 @@ def run_tests(test_tasks, simulate_failures=False):
             result = run_process_and_capture_output(task["cmd"])
         if result is not None:
             print(json.dumps(result, indent=2))
+            cumul["num_ok"] += result["num_ok"]
+            cumul["num_failed"] += result["num_failed"]
+            cumul["num_skipped"] += result["num_skipped"]
+            cumul["errors"].extend(result["errors"])
         else:
             print(f"FATAL: No result found for test: {task['name']}")
             exit(-1)
+    print("----------------------------------------------")
+    print("Cumulative results")
+    print(json.dumps(cumul, indent=2))
 
 
 if __name__ == "__main__":
