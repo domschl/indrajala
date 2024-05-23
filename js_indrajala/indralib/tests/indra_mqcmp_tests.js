@@ -16,7 +16,7 @@ function load_test_Data(testDataFolder = default_folder, include_failure_cases =
         const failureCases = JSON.parse(fileContent);
         jsonData.push(...failureCases);
     }
-    console.log(jsonData);
+    // console.log(jsonData);
     return jsonData;
 }
 

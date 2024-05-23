@@ -10,7 +10,7 @@ function load_test_Data(testDataFolder = default_folder) {
     const filePath = testDataFolder + "/normalized_jd_time_data.json";
     const fileContent = fs.readFileSync(filePath, 'utf-8');
     const jsonData = JSON.parse(fileContent);
-    console.log(jsonData);
+    // console.log(jsonData);
     return jsonData;
 }
 
