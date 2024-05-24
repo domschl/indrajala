@@ -190,9 +190,10 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
   usernameInput.classList.add('input-style');
   usernameInput.id = 'username';
   usernameInput.autocomplete = anti_chrome_autofill;
+  let existingUser = currentUser.username;
   if (!isNew) {
     usernameInput.readOnly = true;
-    usernameInput.value = currentUser.username;
+    usernameInput.value = existingUser;
     // Make background color light gray
     usernameInput.style.backgroundColor = color_scheme['light']['button-disabled'];
   }
@@ -365,9 +366,142 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
 
   // Add event listener to login button
   saveButton.addEventListener('click', (event) => {
-    showNotification('User saving should happen here...');
+    let username;
+    if (isNew) {
+      username = usernameInput.value;
+      if (username === '') {
+        showNotification('Username cannot be empty.');
+        usernameInput.focus();
+        return;
+      }
+      if (username in users) {
+        showNotification(`Username ${username} already exists.`);
+        usernameInput.focus();
+        return;
+      }
+    } else {
+      username = existingUser;
+    }
+    let password = '';
+    let password1 = password1Input.value;
+    let password2 = password2Input.value;
+    if (password1 != '' || password2 != '') {
+      if (password1 != password2) {
+        showNotification('Passwords do not match.');
+        password1.value = '';
+        password2.value = '';
+        password1Input.focus();
+        return;
+      } else {
+        password = password1;
+      }
+    }
+    let fullname = fullnameInput.value;
+    let roles = rolesInput.value.split(',').map(role => role.trim());
+    let valid_roles = ['admin', 'app', 'user'];
+    let valid_found = false;
+    for (var role in roles) {
+      if (role in valid_roles) {
+        valid_found = true;
+        break;
+      }
+    }
+    if (!valid_found) {
+      showNotification('Roles must be one of admin, app, user, with other roles separated by commas.');
+      rolesInput.focus();
+      return;
+    }
+    if (isNew) {
+      if (password === '') {
+        showNotification('Password cannot be empty.');
+        password1Input.focus();
+        return;
+      }
+      if (roles.length === 0) {
+        showNotification('Roles cannot be empty.');
+        rolesInput.focus();
+        return;
+      }
+    }
+
+    if (isNew) {
+      // write new user to KV store
+      let domain_root = `entity/indrajala/user/${username}/`;
+      indraKVWrite(`${domain_root}password`, password, function (result) {
+        if (result.startsWith('OK')) {
+          console.log(`Password for user ${username} written successfully.`);
+          showNotification(`User ${username} data saved.`);
+        } else {
+          console.log(`Password for user ${username} write failed.`);
+        }
+      });
+      if (fullname != '') {
+        indraKVWrite(`${domain_root}fullname`, fullname, function (result) {
+          if (result.startsWith('OK')) {
+            console.log(`Fullname for user ${username} written successfully.`);
+            showNotification(`User ${username} data saved.`);
+          } else {
+            console.log(`Fullname for user ${username} write failed.`);
+          }
+        });
+      }
+      let roles_str = JSON.stringify(roles);
+      indraKVWrite(`${domain_root}roles`, roles_str, function (result) {
+        if (result.startsWith('OK')) {
+          console.log(`Roles for user ${username} written successfully.`);
+          showNotification(`User ${username} data saved.`);
+        } else {
+          console.log(`Roles for user ${username} write failed.`);
+        }
+      });
+    } else {
+      if (password != '') {
+        indraKVWrite(`entity/indrajala/user/${username}/password`, password, function (result) {
+          if (result.startsWith('OK')) {
+            console.log(`Password for user ${username} written successfully.`);
+            showNotification(`User ${username} data saved.`);
+          } else {
+            console.log(`Password for user ${username} write failed.`);
+          }
+        });
+      }
+      if (fullname != currentUser.fullname) {
+        if (fullname === '') {
+          indraKVDelete(`entity/indrajala/user/${username}/fullname`, function (result) {
+            if (result.startsWith('OK')) {
+              console.log(`Fullname for user ${username} deleted successfully.`);
+              showNotification(`User ${username} data saved.`);
+            } else {
+              console.log(`Fullname for user ${username} delete failed.`);
+            }
+          });
+        } else {
+          indraKVWrite(`entity/indrajala/user/${username}/fullname`, fullname, function (result) {
+            if (result.startsWith('OK')) {
+              console.log(`Fullname for user ${username} written successfully.`);
+              showNotification(`User ${username} data saved.`);
+            } else {
+              console.log(`Fullname for user ${username} write failed.`);
+            }
+          });
+
+        }
+      }
+      let roles_str = JSON.stringify(roles);
+      if (roles_str != JSON.stringify(currentUser.roles)) {
+        indraKVWrite(`entity/indrajala/user/${username}/roles`, roles_str, function (result) {
+          if (result.startsWith('OK')) {
+            console.log(`Roles for user ${username} written successfully.`);
+            showNotification(`User ${username} data saved.`);
+          } else {
+            console.log(`Roles for user ${username} write failed.`);
+          }
+        });
+      }
+    }
     mainGui();
   });
+
   cancelButton.addEventListener('click', (event) => {
     if (isNew) {
       showNotification('User creation canceled.');
@@ -505,6 +639,7 @@ function addEditUser(isNew = true) {
     currentUser['password1'] = '';
     currentUser['password2'] = '';
   }
+  console.log('Current user:', currentUser);
   let curDiv = userEditorPageOpen(isNew, currentUser);
   changeMainElement(curDiv);
 }
@@ -544,10 +679,12 @@ function handleUserSelection(event, users) {
   }
 }
 
+let users;
+
 function userListReadResult(result) {
   // format: [['entity/indrajala/user/<username>/<attribute>', 'value'], ...]
   // convert into dictionaries of dicts {'<username>' : {'<attribute>': 'value', ...}, ...}
-  let users = {};
+  users = {};
   for (let i = 0; i < result.length; i++) {
     let parts = result[i][0].split('/');
     let username = parts[3];
@@ -635,6 +772,7 @@ function userListReadResult(result) {
 function mainGui() {
   selectedUser = null;
   selectedUserData = null;
+  users = null;
 
   indraKVRead('entity/indrajala/user/%', userListReadResult);
   let main_div = document.createElement('div');
@@ -693,6 +831,9 @@ function mainGui() {
 
   function handleLogout() {
     console.log('Logging out...');
+    users = null;
+    selectedUser = null;
+    selectedUserData = null;
     indraLogout(indraLogoutResult);
   }
 
