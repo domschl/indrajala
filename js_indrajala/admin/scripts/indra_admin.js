@@ -20,6 +20,12 @@ function main() {
 }
 
 
+function indraPortal() {
+  // go to portal at /index.html
+  removeMainElement();
+  window.location.href = '/index.html';
+}
+
 function userEditorPageOpen(isNew = true, currentUser = null) {
   // Create container div
   let containerDiv = document.createElement('div');
@@ -708,7 +714,18 @@ function mainGui() {
     users = null;
     selectedUser = null;
     selectedUserData = null;
-    indraLogout(indraLogoutResult);
+    indraLogout((result) => {
+      console.log('Logout result:', result);
+      if (result === true) {
+        console.log('Logout successful!');
+        showNotification('Logout successful!');
+      } else {
+        console.log('Logout failed!');
+        showNotification('Logout failed.');
+      }
+      removeMainElement();
+      loginPageOpen(mainGui, indraPortal);
+    });
   }
 
   // Add event listeners
@@ -722,37 +739,4 @@ function mainGui() {
   // Append all elements to container div
   main_div.appendChild(button_line);
   changeMainElement(main_div);
-}
-
-export function indraLoginPageClose() {
-  // Remove container div
-  //containerDiv.remove();
-  //containerDiv = null;
-  mainGui();
-}
-
-
-function indraMainGuiClose() {
-  // Remove container div
-  removeMainElement();
-  loginPageOpen(mainGui, indraPortal);
-}
-
-function indraPortal() {
-  // go to portal at /index.html
-  removeMainElement();
-  window.location.href = '/index.html';
-}
-
-function indraLogoutResult(result) {
-  console.log('Logout result:', result);
-  if (result === true) {
-    console.log('Logout successful!');
-    showNotification('Logout successful!');
-    indraMainGuiClose();
-  } else {
-    console.log('Logout failed!');
-    showNotification('Logout failed.');
-    indraMainGuiClose();
-  }
 }
