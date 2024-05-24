@@ -189,26 +189,17 @@ let editButton = null;
 let deleteButton = null;
 
 
-function addUser() {
-  console.log('Adding user...');
-  // Create a new user
-}
-
-function editUser() {
-  if (selectedUser === null) {
-    console.log('No user selected.');
-    showNotification('No user selected.');
-  } else {
-    console.log('Editing user:', selectedUser);
-    // Edit the selected user
-  }
-}
-
 function deleteUser() {
   if (selectedUser === null) {
     console.log('No user selected.');
     showNotification('No user selected.');
   } else {
+    if (selectedUser === 'admin') {
+      console.log('Cannot delete admin user.');
+      showNotification('Cannot delete admin user.');
+      return;
+    }
+
     console.log('Deleting user:', selectedUser);
     const confirmDelete = confirm(`Are you sure you want to delete user ${selectedUser}?`);
 
@@ -246,6 +237,28 @@ function deleteUser() {
     }
   }
 }
+
+function editUser(isNew = true) {
+  if (isNew) {
+    console.log('Adding user...');
+  } else {
+    if (selectedUser === null) {
+      console.log('No user selected.');
+      showNotification('No user selected.');
+      return;
+    }
+  }
+
+}
+
+function addUser() {
+  editUser(true);
+}
+
+function editUser() {
+  editUser(false);
+}
+
 
 // Function to handle item selection
 function handleUserSelection(event) {
