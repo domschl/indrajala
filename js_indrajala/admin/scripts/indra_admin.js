@@ -1,8 +1,5 @@
 
 "use strict";
-// Browser entry point for Indralib, run with:
-// python -m http.server
-// point browser to http://localhost:8000/
 
 import { indra_styles, color_scheme } from './../../indralib/scripts/indra_styles.js';
 import {
@@ -17,9 +14,6 @@ document.addEventListener('DOMContentLoaded', function () {
   main();
 });
 
-let containerDiv = null;
-let logoutButton;
-
 function main() {
   // Create a new div element
   indra_styles();
@@ -27,11 +21,9 @@ function main() {
   loginPageOpen();
 }
 
-let passwordInput;
-
 function loginPageOpen() {
   // Create container div
-  containerDiv = document.createElement('div');
+  let containerDiv = document.createElement('div');
   containerDiv.classList.add('container-style')
   containerDiv.classList.add('margin-top');
 
@@ -74,7 +66,7 @@ function loginPageOpen() {
   passwordLabel.classList.add('label-style');
 
   // Create input field for password
-  passwordInput = document.createElement('input');
+  const passwordInput = document.createElement('input');
   passwordInput.setAttribute('type', 'password');
   passwordInput.setAttribute('placeholder', 'Enter your password');
   passwordInput.classList.add('input-style');
@@ -157,10 +149,7 @@ function loginPageOpen() {
   return containerDiv;
 }
 
-
-let currentUser = null;
-
-function userEditorPageOpen(isNew = true) {
+function userEditorPageOpen(isNew = true, currentUser = null) {
   // Create container div
   let containerDiv = document.createElement('div');
   containerDiv.classList.add('container-style')
@@ -168,17 +157,25 @@ function userEditorPageOpen(isNew = true) {
 
   // Create title heading
   const titleHeading = document.createElement('h2');
-  titleHeading.textContent = 'Indrajāla User Editor';
+  if (isNew) {
+    titleHeading.textContent = 'Indrajāla User Creator';
+  } else {
+    titleHeading.textContent = 'Indrajāla User Editor';
+  }
   titleHeading.classList.add('margin-bottom');
 
   // --- Username input group ---
-  // Create input group for username
+  // Create input group for username, make it read-only if not new
   const usernameInputGroup = document.createElement('div');
   usernameInputGroup.classList.add('margin-bottom');
 
   // Create label for username
   const usernameLabel = document.createElement('label');
-  usernameLabel.textContent = 'Username:';
+  if (isNew) {
+    usernameLabel.textContent = 'New Username:';
+  } else {
+    usernameLabel.textContent = 'Existing Username:';
+  }
   usernameLabel.setAttribute('for', 'username'); // Add 'for' attribute
   usernameLabel.classList.add('label-style');
 
@@ -186,10 +183,18 @@ function userEditorPageOpen(isNew = true) {
   const usernameInput = document.createElement('input');
   usernameInput.setAttribute('type', 'text');
   usernameInput.setAttribute('autocapitalize', 'none');
-  usernameInput.setAttribute('placeholder', 'Enter your username');
+  if (isNew) {
+    usernameInput.setAttribute('placeholder', 'Enter new username');
+  }
   usernameInput.classList.add('input-style');
   usernameInput.id = 'username';
-  usernameInput.autocomplete = 'username';
+  usernameInput.autocomplete = 'off';
+  if (!isNew) {
+    usernameInput.readOnly = true;
+    usernameInput.value = currentUser.username;
+    // Make background color light gray
+    usernameInput.style.backgroundColor = color_scheme['light']['button-disabled'];
+  }
 
   // Append label and input to username input group
   usernameInputGroup.appendChild(usernameLabel);
@@ -202,18 +207,24 @@ function userEditorPageOpen(isNew = true) {
 
   // Create label for fullname
   const fullnameLabel = document.createElement('label');
-  fullnameLabel.textContent = 'Fullname:';
-  fullnameLabel.setAttribute('for', 'fullname'); // Add 'for' attribute
+  fullnameLabel.textContent = 'User\'s fullname:';
+  fullnameLabel.setAttribute('for', 'user_fullname'); // Add 'for' attribute
   fullnameLabel.classList.add('label-style');
 
   // Create input field for fullname
   const fullnameInput = document.createElement('input');
   fullnameInput.setAttribute('type', 'text');
   fullnameInput.setAttribute('autocapitalize', 'none');
-  fullnameInput.setAttribute('placeholder', 'Enter your fullname');
+  fullnameInput.setAttribute('placeholder', 'User\'s fullname');
   fullnameInput.classList.add('input-style');
-  fullnameInput.id = 'fullname';
-  fullnameInput.autocomplete = 'name';
+  fullnameInput.id = 'user_fullname';
+  fullnameInput.autocomplete = 'off';
+  if (!isNew) {
+    // set value to currentUser.fullname
+    fullnameInput.value = currentUser.fullname;
+  } else {
+    fullnameInput.value = '';
+  }
 
   // Append label and input to fullname input group
   fullnameInputGroup.appendChild(fullnameLabel);
@@ -226,17 +237,18 @@ function userEditorPageOpen(isNew = true) {
 
   // Create label for password
   const password1Label = document.createElement('label');
-  password1Label.textContent = 'Password:';
-  password1Label.setAttribute('for', 'password'); // Add 'for' attribute
+  password1Label.textContent = 'New Password:';
+  password1Label.setAttribute('for', 'password1'); // Add 'for' attribute
   password1Label.classList.add('label-style');
 
   // Create input field for password
   const password1Input = document.createElement('input');
   password1Input.setAttribute('type', 'password');
-  password1Input.setAttribute('placeholder', 'Enter your password');
+  password1Input.setAttribute('placeholder', 'User\'s password');
   password1Input.classList.add('input-style');
-  password1Input.id = 'password';
-  password1Input.autocomplete = 'current-password';
+  password1Input.id = 'new_password1';
+  password1Input.autocomplete = 'off';
+  password1Input.value = '';
 
   // Append label and input to password input group
   password1InputGroup.appendChild(password1Label);
@@ -249,17 +261,18 @@ function userEditorPageOpen(isNew = true) {
 
   // Create label for password
   const password2Label = document.createElement('label');
-  password2Label.textContent = 'Password:';
-  password2Label.setAttribute('for', 'password'); // Add 'for' attribute
+  password2Label.textContent = 'New Password (rep.):';
+  password2Label.setAttribute('for', 'password2'); // Add 'for' attribute
   password2Label.classList.add('label-style');
 
   // Create input field for password
   const password2Input = document.createElement('input');
   password2Input.setAttribute('type', 'password');
-  password2Input.setAttribute('placeholder', 'Enter your password');
+  password2Input.setAttribute('placeholder', 'User\'s password');
   password2Input.classList.add('input-style');
-  password2Input.id = 'password';
-  password2Input.autocomplete = 'current-password';
+  password2Input.id = 'password2';
+  password2Input.autocomplete = 'off';
+  password2Input.value = '';
 
   // Append label and input to password input group
   password2InputGroup.appendChild(password2Label);
@@ -272,7 +285,7 @@ function userEditorPageOpen(isNew = true) {
 
   // Create label for roles
   const rolesLabel = document.createElement('label');
-  rolesLabel.textContent = 'Roles:';
+  rolesLabel.textContent = 'Account roles:';
   rolesLabel.setAttribute('for', 'roles'); // Add 'for' attribute
   rolesLabel.classList.add('label-style');
 
@@ -280,10 +293,14 @@ function userEditorPageOpen(isNew = true) {
   const rolesInput = document.createElement('input');
   rolesInput.setAttribute('type', 'text');
   rolesInput.setAttribute('autocapitalize', 'none');
-  rolesInput.setAttribute('placeholder', 'Enter your roles');
+  rolesInput.setAttribute('placeholder', 'Enter User\'s roles');
   rolesInput.classList.add('input-style');
   rolesInput.id = 'roles';
   rolesInput.autocomplete = 'off';
+  if (!isNew) {
+    // set value to currentUser.roles
+    rolesInput.value = currentUser.roles.join(', ');
+  }
 
   // Append label and input to roles input group
   rolesInputGroup.appendChild(rolesLabel);
@@ -346,7 +363,7 @@ function userEditorPageOpen(isNew = true) {
   }
 
   // Add event listener to login button
-  saveButton.addEventListener('click', handleLogin);
+  saveButton.addEventListener('click', indraPortal);
   cancelButton.addEventListener('click', indraPortal);
 
   // Function to handle keydown event on input fields
@@ -398,6 +415,7 @@ function userGui() {
 }
 
 let selectedUser = null;
+let selectedUserData = null;
 
 let editButton = null;
 let deleteButton = null;
@@ -439,6 +457,7 @@ function deleteUser() {
           //  console.log(`User item ${selectedUser} not found in list.`);
           //}
           selectedUser = null;
+          selectedUserData = null;
         } else {
           console.log(`Deletion of user ${selectedUser} failed!`);
           showNotification(`User ${selectedUser} deletion failed.`);
@@ -462,14 +481,20 @@ function addEditUser(isNew = true) {
       return;
     }
   }
-  currentUser = {
-    'username': 'testuser',
-    'fullname': 'Der Test User',
+  let currentUser = {
+    'username': '',
+    'fullname': '',
     'password1': '',
     'password1': '',
-    'roles': ["user"]
+    'roles': []
   }
-  curDiv = userEditorPageOpen(isNew);
+  if (!isNew) {
+    currentUser = selectedUserData;
+    currentUser['username'] = selectedUser;
+    currentUser['password1'] = '';
+    currentUser['password2'] = '';
+  }
+  let curDiv = userEditorPageOpen(isNew, currentUser);
   changeMainElement(curDiv);
 }
 
@@ -483,7 +508,7 @@ function editUser() {
 
 
 // Function to handle item selection
-function handleUserSelection(event) {
+function handleUserSelection(event, users) {
   const selectedItem = event.currentTarget;
 
   // Check if the clicked item is already selected
@@ -500,9 +525,11 @@ function handleUserSelection(event) {
     let username = selectedItem.querySelector('.username').textContent;
     console.log('Selected user:', username);
     selectedUser = username;
+    selectedUserData = users[username];
   } else {
     console.log('Deselected user:', selectedUser);
     selectedUser = null;
+    selectedUserData = null;
   }
 }
 
@@ -538,8 +565,9 @@ function userListReadResult(result) {
     userItem.classList.add('userListItem');
     userItem.setAttribute('data-id', username);
 
-    // Add event listener for item selection
-    userItem.addEventListener('click', handleUserSelection);
+    // Add event listener for item selection, lambda to pass event and users list
+    userItem.addEventListener('click', (event) => { handleUserSelection(event, users); });
+    //handleUserSelection);
 
     // Create container for icon
     const iconContainer = document.createElement('div');
@@ -587,11 +615,16 @@ function userListReadResult(result) {
 
     userList.appendChild(userItem);
   }
+  selectedUser = null;
+  selectedUserData = null;
 
   console.log('Users:', users);
 }
 
 function mainGui() {
+  selectedUser = null;
+  selectedUserData = null;
+
   indraKVRead('entity/indrajala/user/%', userListReadResult);
   let main_div = document.createElement('div');
   main_div.classList.add('container-style');
@@ -674,7 +707,7 @@ export function indraLoginPageClose() {
 
 function indraLoginResult(result) {
   console.log('Login result:', result);
-  enableElement(containerDiv);
+  //enableElement(containerDiv);
   if (result === true) {
     console.log('Login successful!');
     showNotification('Login to Indrajāla successful!');
