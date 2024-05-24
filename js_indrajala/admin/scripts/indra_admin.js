@@ -3,7 +3,7 @@
 
 import { indra_styles, color_scheme } from './../../indralib/scripts/indra_styles.js';
 import {
-  connection, indraLogin, indraLogout, showNotification,
+  connection, indraLogin, indraLogout, showNotification, loginPageOpen,
   changeMainElement, enableElement, disableElement, removeMainElement,
   indraKVRead, indraKVWrite, indraKVDelete
 } from './../../indralib/scripts/indra_client.js';
@@ -15,175 +15,10 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function main() {
-  // Create a new div element
   indra_styles();
-  connection(loginPageOpen);
-  loginPageOpen();
+  connection(loginPageOpen, mainGui, indraPortal);
 }
 
-function loginPageOpen() {
-  // Create container div
-  let containerDiv = document.createElement('div');
-  containerDiv.classList.add('container-style')
-  containerDiv.classList.add('margin-top');
-
-  // Create title heading
-  const titleHeading = document.createElement('h2');
-  titleHeading.textContent = 'Indrajāla Login';
-  titleHeading.classList.add('margin-bottom');
-
-  // Create input group for username
-  const usernameInputGroup = document.createElement('div');
-  usernameInputGroup.classList.add('margin-bottom');
-
-  // Create label for username
-  const usernameLabel = document.createElement('label');
-  usernameLabel.textContent = 'Username:';
-  usernameLabel.setAttribute('for', 'username'); // Add 'for' attribute
-  usernameLabel.classList.add('label-style');
-
-  // Create input field for username
-  const usernameInput = document.createElement('input');
-  usernameInput.setAttribute('type', 'text');
-  usernameInput.setAttribute('autocapitalize', 'none');
-  usernameInput.setAttribute('placeholder', 'Enter your username');
-  usernameInput.classList.add('input-style');
-  usernameInput.id = 'username';
-  usernameInput.autocomplete = 'username';
-
-  // Append label and input to username input group
-  usernameInputGroup.appendChild(usernameLabel);
-  usernameInputGroup.appendChild(usernameInput);
-
-  // Create input group for password
-  const passwordInputGroup = document.createElement('div');
-  passwordInputGroup.classList.add('margin-bottom');
-
-  // Create label for password
-  const passwordLabel = document.createElement('label');
-  passwordLabel.textContent = 'Password:';
-  passwordLabel.setAttribute('for', 'password'); // Add 'for' attribute
-  passwordLabel.classList.add('label-style');
-
-  // Create input field for password
-  const passwordInput = document.createElement('input');
-  passwordInput.setAttribute('type', 'password');
-  passwordInput.setAttribute('placeholder', 'Enter your password');
-  passwordInput.classList.add('input-style');
-  passwordInput.id = 'password';
-  passwordInput.autocomplete = 'current-password';
-
-  // Append label and input to password input group
-  passwordInputGroup.appendChild(passwordLabel);
-  passwordInputGroup.appendChild(passwordInput);
-
-  // Create button line
-  const buttonLine = document.createElement('div');
-  buttonLine.classList.add('button-line');
-
-  // Create Exit button
-  const exitButton = document.createElement('button');
-  exitButton.textContent = 'Exit';
-  exitButton.classList.add('half-button-style');
-
-  // Create login button
-  const loginButton = document.createElement('button');
-  loginButton.textContent = 'Login';
-  loginButton.classList.add('half-button-style');
-
-  // Add hover effect to login button
-  loginButton.addEventListener('mouseenter', function () {
-    this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
-  });
-  loginButton.addEventListener('mouseleave', function () {
-    this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
-  });
-  exitButton.addEventListener('mouseenter', function () {
-    this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
-  });
-  exitButton.addEventListener('mouseleave', function () {
-    this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
-  });
-
-  // Append all elements to container div
-  containerDiv.appendChild(titleHeading);
-  containerDiv.appendChild(usernameInputGroup);
-  containerDiv.appendChild(passwordInputGroup);
-  buttonLine.appendChild(exitButton);
-  buttonLine.appendChild(loginButton);
-  containerDiv.appendChild(buttonLine);
-
-  // Function to handle login button click
-  function handleLogin() {
-    const username = usernameInput.value;
-    const password = passwordInput.value;
-
-    // You can perform authentication logic here
-    //console.log('Username:', username);
-    //console.log('Password:', password);
-    console.log('Logging in...');
-    disableElement(containerDiv);
-    indraLogin(username, password, (result) => {
-      //function indraLoginResult(result) {
-      console.log('Login result:', result);
-      //enableElement(containerDiv);
-      if (result === true) {
-        // check roles contain admin
-        indraKVRead(`entity/indrajala/user/${username}/roles`, function (result) {
-          if (result !== null) {
-            let roles = JSON.parse(result[0][1]);
-            console.log('Roles:', roles);
-            if (roles.includes('admin')) {
-              console.log('Login successful!');
-              showNotification('Login to Indrajāla successful!');
-              indraLoginPageClose();
-            } else {
-              console.log('Login failed!');
-              showNotification('Login failed. User not authorized as role admin.');
-              passwordInput.value = '';
-              usernameInput.focus();
-              enableElement(containerDiv);
-            }
-          } else {
-            console.log('Login failed!');
-            showNotification('Login failed. User not authorized, roles not defined, admin role required.');
-            passwordInput.value = '';
-            usernameInput.focus();
-            enableElement(containerDiv);
-          }
-        });
-      } else {
-        console.log('Login failed!');
-        showNotification('Login failed. Please try again.');
-        passwordInput.value = '';
-        passwordInput.focus();
-        enableElement(containerDiv);
-      }
-    });
-  }
-
-  // Add event listener to login button
-  loginButton.addEventListener('click', handleLogin);
-  exitButton.addEventListener('click', indraPortal);
-
-  // Function to handle keydown event on input fields
-  function handleKeyPress(event) {
-    if (event.key === 'Enter') {
-      // Trigger click event on the login button
-      loginButton.click();
-    }
-  }
-
-  // Add event listeners to input fields
-  usernameInput.addEventListener('keydown', handleKeyPress);
-  passwordInput.addEventListener('keydown', handleKeyPress);
-
-  usernameInput.focus();
-  usernameInput.select();
-
-  changeMainElement(containerDiv);
-  return containerDiv;
-}
 
 function userEditorPageOpen(isNew = true, currentUser = null) {
   // Create container div
@@ -900,7 +735,7 @@ export function indraLoginPageClose() {
 function indraMainGuiClose() {
   // Remove container div
   removeMainElement();
-  loginPageOpen();
+  loginPageOpen(mainGui, indraPortal);
 }
 
 function indraPortal() {
