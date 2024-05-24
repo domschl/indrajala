@@ -155,6 +155,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
   containerDiv.classList.add('container-style')
   containerDiv.classList.add('margin-top');
 
+  const anti_chrome_autofill = 'one-time-code'
   // Create title heading
   const titleHeading = document.createElement('h2');
   if (isNew) {
@@ -188,7 +189,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
   }
   usernameInput.classList.add('input-style');
   usernameInput.id = 'username';
-  usernameInput.autocomplete = 'off';
+  usernameInput.autocomplete = anti_chrome_autofill;
   if (!isNew) {
     usernameInput.readOnly = true;
     usernameInput.value = currentUser.username;
@@ -218,7 +219,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
   fullnameInput.setAttribute('placeholder', 'User\'s fullname');
   fullnameInput.classList.add('input-style');
   fullnameInput.id = 'user_fullname';
-  fullnameInput.autocomplete = 'off';
+  fullnameInput.autocomplete = anti_chrome_autofill;
   if (!isNew) {
     // set value to currentUser.fullname
     fullnameInput.value = currentUser.fullname;
@@ -247,7 +248,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
   password1Input.setAttribute('placeholder', 'User\'s password');
   password1Input.classList.add('input-style');
   password1Input.id = 'new_password1';
-  password1Input.autocomplete = 'off';
+  password1Input.autocomplete = anti_chrome_autofill;
   password1Input.value = '';
 
   // Append label and input to password input group
@@ -271,7 +272,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
   password2Input.setAttribute('placeholder', 'User\'s password');
   password2Input.classList.add('input-style');
   password2Input.id = 'password2';
-  password2Input.autocomplete = 'off';
+  password2Input.autocomplete = anti_chrome_autofill;
   password2Input.value = '';
 
   // Append label and input to password input group
@@ -296,7 +297,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
   rolesInput.setAttribute('placeholder', 'Enter User\'s roles');
   rolesInput.classList.add('input-style');
   rolesInput.id = 'roles';
-  rolesInput.autocomplete = 'off';
+  rolesInput.autocomplete = anti_chrome_autofill;
   if (!isNew) {
     // set value to currentUser.roles
     rolesInput.value = currentUser.roles.join(', ');
@@ -363,8 +364,18 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
   }
 
   // Add event listener to login button
-  saveButton.addEventListener('click', indraPortal);
-  cancelButton.addEventListener('click', indraPortal);
+  saveButton.addEventListener('click', (event) => {
+    showNotification('User saving should happen here...');
+    mainGui();
+  });
+  cancelButton.addEventListener('click', (event) => {
+    if (isNew) {
+      showNotification('User creation canceled.');
+    } else {
+      showNotification('User editing canceled.');
+    }
+    mainGui();
+  });
 
   // Function to handle keydown event on input fields
   function handleKeyPress(event) {
