@@ -11,7 +11,7 @@ export var websocketUrl = '';
 
 let statusLine = null;
 
-subscriptions = {};
+let subscriptions = {};
 
 export let currentMainElement = null;
 
@@ -131,16 +131,17 @@ export function connection() {
     });
 
     socket.addEventListener('message', function (event) {
+        let ie;
         try {
-            let ie = JSON.parse(event.data);
+            ie = JSON.parse(event.data);
         } catch (error) {
             console.error('Error parsing received JSON ', event.data, error);
             return;
         }
-        console.log('Message from server:', event.data);
+        console.log('Message from server:', ie);
         for (const [key, value] of Object.entries(trx)) {
             if (key === ie.uuid4) {
-                value.resolve(JSON.parse(ie.data));
+                value.resolve(ie);
                 delete trx[key];
                 return;
             }
