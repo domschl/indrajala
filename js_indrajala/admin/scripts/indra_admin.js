@@ -123,7 +123,43 @@ function loginPageOpen() {
     //console.log('Password:', password);
     console.log('Logging in...');
     disableElement(containerDiv);
-    indraLogin(username, password, indraLoginResult);
+    indraLogin(username, password, (result) => {
+      //function indraLoginResult(result) {
+      console.log('Login result:', result);
+      //enableElement(containerDiv);
+      if (result === true) {
+        // check roles contain admin
+        indraKVRead(`entity/indrajala/user/${username}/roles`, function (result) {
+          if (result !== null) {
+            let roles = JSON.parse(result[0][1]);
+            console.log('Roles:', roles);
+            if (roles.includes('admin')) {
+              console.log('Login successful!');
+              showNotification('Login to Indrajāla successful!');
+              indraLoginPageClose();
+            } else {
+              console.log('Login failed!');
+              showNotification('Login failed. User not authorized as role admin.');
+              passwordInput.value = '';
+              usernameInput.focus();
+              enableElement(containerDiv);
+            }
+          } else {
+            console.log('Login failed!');
+            showNotification('Login failed. User not authorized, roles not defined, admin role required.');
+            passwordInput.value = '';
+            usernameInput.focus();
+            enableElement(containerDiv);
+          }
+        });
+      } else {
+        console.log('Login failed!');
+        showNotification('Login failed. Please try again.');
+        passwordInput.value = '';
+        passwordInput.focus();
+        enableElement(containerDiv);
+      }
+    });
   }
 
   // Add event listener to login button
@@ -426,7 +462,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
 
     if (isNew) {
       // write new user to KV store
-      let domain_root = `entity/indrajala/user/${username}/`;
+      let domain_root = `entity / indrajala / user / ${username} / `;
       indraKVWrite(`${domain_root}password`, password, function (result) {
         if (result.startsWith('OK')) {
           console.log(`Password for user ${username} written successfully.`);
@@ -436,7 +472,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
         }
       });
       if (fullname != '') {
-        indraKVWrite(`${domain_root}fullname`, fullname, function (result) {
+        indraKVWrite(`${domain_root} fullname`, fullname, function (result) {
           if (result.startsWith('OK')) {
             console.log(`Fullname for user ${username} written successfully.`);
             showNotification(`User ${username} data saved.`);
@@ -446,7 +482,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
         });
       }
       let roles_str = JSON.stringify(roles);
-      indraKVWrite(`${domain_root}roles`, roles_str, function (result) {
+      indraKVWrite(`${domain_root} roles`, roles_str, function (result) {
         if (result.startsWith('OK')) {
           console.log(`Roles for user ${username} written successfully.`);
           showNotification(`User ${username} data saved.`);
@@ -456,7 +492,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
       });
     } else {
       if (password != '') {
-        indraKVWrite(`entity/indrajala/user/${username}/password`, password, function (result) {
+        indraKVWrite(`entity / indrajala / user / ${username} /password`, password, function (result) {
           if (result.startsWith('OK')) {
             console.log(`Password for user ${username} written successfully.`);
             showNotification(`User ${username} data saved.`);
@@ -857,20 +893,6 @@ export function indraLoginPageClose() {
   mainGui();
 }
 
-function indraLoginResult(result) {
-  console.log('Login result:', result);
-  //enableElement(containerDiv);
-  if (result === true) {
-    console.log('Login successful!');
-    showNotification('Login to Indrajāla successful!');
-    indraLoginPageClose();
-  } else {
-    console.log('Login failed!');
-    showNotification('Login failed. Please try again.');
-    passwordInput.value = '';
-    passwordInput.focus();
-  }
-}
 
 function indraMainGuiClose() {
   // Remove container div
