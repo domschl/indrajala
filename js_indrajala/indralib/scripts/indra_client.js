@@ -14,7 +14,9 @@ let statusLine = null;
 let subscriptions = {};
 
 let currentMainElement = null;
+let loginSessionGUI = null;
 let startSessionGUI = null;
+let abortSessionGUI = null;
 
 export function removeMainElement() {
     if (currentMainElement !== null) {
@@ -114,10 +116,15 @@ export function removeStatusLine() {
     }
 }
 
-export function connection(startGUI = null) {
+export function connection(loginGUI = null, startGUI = null, abortGUI = null) {
     const serverHost = window.location.hostname;
     const serverPort = window.location.port;
-    startSessionGUI = startGUI;
+
+    if (loginGUI !== null) {
+        loginSessionGUI = loginGUI;
+        startSessionGUI = startGUI;
+        abortSessionGUI = abortGUI;
+    }
 
     websocketUrl = `wss://${serverHost}:${serverPort}/ws`;
     console.log('WebSocket URL:', websocketUrl);
@@ -128,7 +135,11 @@ export function connection(startGUI = null) {
         console.log('Connected to WebSocket server at', websocketUrl);
         removeStatusLine();
         server_state = true;
-        enableElement(currentMainElement);
+        if (loginSessionGUI !== null) {
+            let loginDiv = loginSessionGUI(startSessionGUI, abortSessionGUI);
+            changeMainElement(loginDiv);
+            enableElement(currentMainElement);
+        }
         showNotification('Connected to server at ' + websocketUrl);
     });
 
@@ -158,10 +169,11 @@ export function connection(startGUI = null) {
     socket.addEventListener('close', function (event) {
         console.log('Disconnected from WebSocket server');
         server_state = false;
-        if (startSessionGUI !== null) {
-            let startSessionDiv = startSessionGUI();
+        if (loginSessionGUI !== null) {
+            let loginDiv = loginSessionGUI(startSessionGUI, abortSessionGUI);
+            changeMainElement(loginDiv);
+            disableElement(currentMainElement);
         }
-        disableElement(currentMainElement);
         // retry connect
         showStatusLine('Reconnecting to server at ' + websocketUrl + '...', 0);
         setTimeout(connection, 1000);
@@ -382,4 +394,171 @@ export function unsubscribe(domain) {
     delete subscriptions[domain];
     socket.send(ie.to_json());
     console.log('Sent message to server:', ie.to_json());
+}
+
+
+// -------- GUI Stuff
+
+export function loginPageOpen(appPageOpen, abortPageOpen) {
+    // Create container div
+    let containerDiv = document.createElement('div');
+    containerDiv.classList.add('container-style')
+    containerDiv.classList.add('margin-top');
+
+    // Create title heading
+    const titleHeading = document.createElement('h2');
+    titleHeading.textContent = 'Indrajāla Login';
+    titleHeading.classList.add('margin-bottom');
+
+    // Create input group for username
+    const usernameInputGroup = document.createElement('div');
+    usernameInputGroup.classList.add('margin-bottom');
+
+    // Create label for username
+    const usernameLabel = document.createElement('label');
+    usernameLabel.textContent = 'Username:';
+    usernameLabel.setAttribute('for', 'username'); // Add 'for' attribute
+    usernameLabel.classList.add('label-style');
+
+    // Create input field for username
+    const usernameInput = document.createElement('input');
+    usernameInput.setAttribute('type', 'text');
+    usernameInput.setAttribute('autocapitalize', 'none');
+    usernameInput.setAttribute('placeholder', 'Enter your username');
+    usernameInput.classList.add('input-style');
+    usernameInput.id = 'username';
+    usernameInput.autocomplete = 'username';
+
+    // Append label and input to username input group
+    usernameInputGroup.appendChild(usernameLabel);
+    usernameInputGroup.appendChild(usernameInput);
+
+    // Create input group for password
+    const passwordInputGroup = document.createElement('div');
+    passwordInputGroup.classList.add('margin-bottom');
+
+    // Create label for password
+    const passwordLabel = document.createElement('label');
+    passwordLabel.textContent = 'Password:';
+    passwordLabel.setAttribute('for', 'password'); // Add 'for' attribute
+    passwordLabel.classList.add('label-style');
+
+    // Create input field for password
+    const passwordInput = document.createElement('input');
+    passwordInput.setAttribute('type', 'password');
+    passwordInput.setAttribute('placeholder', 'Enter your password');
+    passwordInput.classList.add('input-style');
+    passwordInput.id = 'password';
+    passwordInput.autocomplete = 'current-password';
+
+    // Append label and input to password input group
+    passwordInputGroup.appendChild(passwordLabel);
+    passwordInputGroup.appendChild(passwordInput);
+
+    // Create button line
+    const buttonLine = document.createElement('div');
+    buttonLine.classList.add('button-line');
+
+    // Create Exit button
+    const exitButton = document.createElement('button');
+    exitButton.textContent = 'Exit';
+    exitButton.classList.add('half-button-style');
+
+    // Create login button
+    const loginButton = document.createElement('button');
+    loginButton.textContent = 'Login';
+    loginButton.classList.add('half-button-style');
+
+    // Add hover effect to login button
+    loginButton.addEventListener('mouseenter', function () {
+        this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
+    });
+    loginButton.addEventListener('mouseleave', function () {
+        this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
+    });
+    exitButton.addEventListener('mouseenter', function () {
+        this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
+    });
+    exitButton.addEventListener('mouseleave', function () {
+        this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
+    });
+
+    // Append all elements to container div
+    containerDiv.appendChild(titleHeading);
+    containerDiv.appendChild(usernameInputGroup);
+    containerDiv.appendChild(passwordInputGroup);
+    buttonLine.appendChild(exitButton);
+    buttonLine.appendChild(loginButton);
+    containerDiv.appendChild(buttonLine);
+
+    // Function to handle login button click
+    function handleLogin() {
+        const username = usernameInput.value;
+        const password = passwordInput.value;
+
+        // You can perform authentication logic here
+        //console.log('Username:', username);
+        //console.log('Password:', password);
+        console.log('Logging in...');
+        disableElement(containerDiv);
+        indraLogin(username, password, (result) => {
+            //function indraLoginResult(result) {
+            console.log('Login result:', result);
+            //enableElement(containerDiv);
+            if (result === true) {
+                // check roles contain admin
+                indraKVRead(`entity/indrajala/user/${username}/roles`, function (result) {
+                    if (result !== null) {
+                        let roles = JSON.parse(result[0][1]);
+                        console.log('Roles:', roles);
+                        if (roles.includes('admin')) {
+                            console.log('Login successful!');
+                            showNotification('Login to Indrajāla successful!');
+                            appPageOpen();
+                        } else {
+                            console.log('Login failed!');
+                            showNotification('Login failed. User not authorized as role admin.');
+                            passwordInput.value = '';
+                            usernameInput.focus();
+                            enableElement(containerDiv);
+                        }
+                    } else {
+                        console.log('Login failed!');
+                        showNotification('Login failed. User not authorized, roles not defined, admin role required.');
+                        passwordInput.value = '';
+                        usernameInput.focus();
+                        enableElement(containerDiv);
+                    }
+                });
+            } else {
+                console.log('Login failed!');
+                showNotification('Login failed. Please try again.');
+                passwordInput.value = '';
+                passwordInput.focus();
+                enableElement(containerDiv);
+            }
+        });
+    }
+
+    // Add event listener to login button
+    loginButton.addEventListener('click', handleLogin);
+    exitButton.addEventListener('click', abortPageOpen);
+
+    // Function to handle keydown event on input fields
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            // Trigger click event on the login button
+            loginButton.click();
+        }
+    }
+
+    // Add event listeners to input fields
+    usernameInput.addEventListener('keydown', handleKeyPress);
+    passwordInput.addEventListener('keydown', handleKeyPress);
+
+    usernameInput.focus();
+    usernameInput.select();
+
+    changeMainElement(containerDiv);
+    return containerDiv;
 }
