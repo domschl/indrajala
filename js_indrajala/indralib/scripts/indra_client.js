@@ -13,7 +13,8 @@ let statusLine = null;
 
 let subscriptions = {};
 
-export let currentMainElement = null;
+let currentMainElement = null;
+let startSessionGUI = null;
 
 export function removeMainElement() {
     if (currentMainElement !== null) {
@@ -23,7 +24,7 @@ export function removeMainElement() {
 }
 
 export function changeMainElement(newMainElement) {
-    removeMainElement
+    removeMainElement();
     currentMainElement = newMainElement;
     document.body.appendChild(currentMainElement);
 }
@@ -113,9 +114,10 @@ export function removeStatusLine() {
     }
 }
 
-export function connection() {
+export function connection(startGUI = null) {
     const serverHost = window.location.hostname;
     const serverPort = window.location.port;
+    startSessionGUI = startGUI;
 
     websocketUrl = `wss://${serverHost}:${serverPort}/ws`;
     console.log('WebSocket URL:', websocketUrl);
@@ -156,8 +158,11 @@ export function connection() {
     socket.addEventListener('close', function (event) {
         console.log('Disconnected from WebSocket server');
         server_state = false;
-        // retry connect
+        if (startSessionGUI !== null) {
+            let startSessionDiv = startSessionGUI();
+        }
         disableElement(currentMainElement);
+        // retry connect
         showStatusLine('Reconnecting to server at ' + websocketUrl + '...', 0);
         setTimeout(connection, 1000);
     });
