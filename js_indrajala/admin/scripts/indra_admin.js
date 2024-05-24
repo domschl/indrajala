@@ -434,12 +434,15 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
     }
     let fullname = fullnameInput.value;
     let roles = rolesInput.value.split(',').map(role => role.trim());
+    console.log('Roles:', roles);
     let valid_roles = ['admin', 'app', 'user'];
     let valid_found = false;
-    for (var role in roles) {
-      if (role in valid_roles) {
+    for (let role of roles) {
+      if (valid_roles.includes(role)) {
         valid_found = true;
         break;
+      } else {
+        console.log('Invalid or user-defined role:', role);
       }
     }
     if (!valid_found) {
