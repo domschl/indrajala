@@ -5,7 +5,6 @@
 // point browser to http://localhost:8000/
 
 import { indra_styles, color_scheme } from './../../indralib/scripts/indra_styles.js';
-import { IndraEvent } from './../../indralib/scripts/indralib.js';
 import {
   connection, indraLogin, indraLogout, showNotification,
   changeMainElement, enableElement, disableElement, removeMainElement,
