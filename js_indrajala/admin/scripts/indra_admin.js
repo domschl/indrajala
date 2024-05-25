@@ -16,9 +16,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function main() {
   indra_styles();
+  //         shared login,  this app, exit to portal
   connection(loginPageOpen, mainGui, indraPortal);
 }
-
 
 function indraPortal() {
   // go to portal at /index.html
@@ -306,7 +306,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
 
     if (isNew) {
       // write new user to KV store
-      let domain_root = `entity / indrajala / user / ${username} / `;
+      let domain_root = `entity/indrajala/user/${username}/`;
       indraKVWrite(`${domain_root}password`, password, function (result) {
         if (result.startsWith('OK')) {
           console.log(`Password for user ${username} written successfully.`);
@@ -316,7 +316,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
         }
       });
       if (fullname != '') {
-        indraKVWrite(`${domain_root} fullname`, fullname, function (result) {
+        indraKVWrite(`${domain_root}fullname`, fullname, function (result) {
           if (result.startsWith('OK')) {
             console.log(`Fullname for user ${username} written successfully.`);
             showNotification(`User ${username} data saved.`);
@@ -326,7 +326,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
         });
       }
       let roles_str = JSON.stringify(roles);
-      indraKVWrite(`${domain_root} roles`, roles_str, function (result) {
+      indraKVWrite(`${domain_root}roles`, roles_str, function (result) {
         if (result.startsWith('OK')) {
           console.log(`Roles for user ${username} written successfully.`);
           showNotification(`User ${username} data saved.`);
@@ -336,7 +336,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
       });
     } else {
       if (password != '') {
-        indraKVWrite(`entity / indrajala / user / ${username} /password`, password, function (result) {
+        indraKVWrite(`entity/indrajala/user/${username}/password`, password, function (result) {
           if (result.startsWith('OK')) {
             console.log(`Password for user ${username} written successfully.`);
             showNotification(`User ${username} data saved.`);
