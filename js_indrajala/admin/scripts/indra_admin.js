@@ -591,7 +591,15 @@ function userListPage() {
                 }
 
             });
-            //handleUserSelection);
+            // Handle double-click event -> edit user
+            userItem.addEventListener('dblclick', (event) => {
+                // get username
+                let username = event.currentTarget.querySelector('.username').textContent;
+                console.log('Double-clicked user:', username);
+                selectedUser = username;
+                selectedUserData = app_data.userList[username];
+                addEditUser(false);
+            });
 
             // Create container for icon
             const iconContainer = document.createElement('div');

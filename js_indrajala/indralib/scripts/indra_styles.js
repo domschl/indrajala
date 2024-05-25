@@ -233,7 +233,23 @@ const indraStyleDict = {
         'background-color': '#ddd', /* Gray color */
         'margin-top': '10px',
         'margin-bottom': '10px'
-    }
+    },
+    '.pane-container': {
+        'display': 'flex',
+        'width': '100%',
+        'height': '100%',
+    },
+    '.pane': {
+        'flex-grow': '1',
+        'overflow': 'auto',
+        'background-color': '#f9f9f9',
+        'border': '1px solid #ccc',
+    },
+    '.splitter': {
+        'width': '5px',
+        'cursor': 'col-resize',
+        'background-color': '#ddd'
+    },
 };
 
 function loadMaterialIcons() {
