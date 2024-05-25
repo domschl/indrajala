@@ -105,7 +105,7 @@ export function removeStatusLine() {
     }
 }
 
-export function loginPage(appPageOpen, abortPageOpen) {
+export function loginPage(appPageOpen, abortPageOpen, loginTitle = null, requiredRoles = []) {
     // Create container div
     let containerDiv = document.createElement('div');
     containerDiv.classList.add('container-style')
@@ -113,7 +113,11 @@ export function loginPage(appPageOpen, abortPageOpen) {
 
     // Create title heading
     const titleHeading = document.createElement('h2');
-    titleHeading.textContent = 'Indrajāla Login';
+    if (loginTitle !== null) {
+        titleHeading.textContent = loginTitle;
+    } else {
+        titleHeading.textContent = 'Indrajāla Login';
+    }
     titleHeading.classList.add('margin-bottom');
 
     // Create input group for username
@@ -213,29 +217,44 @@ export function loginPage(appPageOpen, abortPageOpen) {
             //enableElement(containerDiv);
             if (result === true) {
                 // check roles contain admin
-                indraKVRead(`entity/indrajala/user/${username}/roles`, function (result) {
-                    if (result !== null) {
-                        let roles = JSON.parse(result[0][1]);
-                        console.log('Roles:', roles);
-                        if (roles.includes('admin')) {
-                            console.log('Login successful!');
-                            showNotification(`Login to Indrajāla as ${username} successful!`);
-                            appPageOpen(username);
+                if (requiredRoles.length > 0) {
+                    indraKVRead(`entity/indrajala/user/${username}/roles`, function (result) {
+                        if (result !== null) {
+                            let roles = JSON.parse(result[0][1]);
+                            console.log('Roles:', roles);
+                            let role_check = true;
+                            for (let role of requiredRoles) {
+                                if (roles.includes(role)) {
+                                    console.log(`User has role ${role}.`);
+                                } else {
+                                    console.log('Login failed!');
+                                    showNotification(`Login failed. User not authorized as role ${role}.`);
+                                    passwordInput.value = '';
+                                    usernameInput.focus();
+                                    enableElement(containerDiv);
+                                    role_check = false;
+                                    break;
+                                }
+                            }
+                            if (role_check) {
+                                console.log('Login successful!');
+                                showNotification(`Login to Indrajāla as ${username} successful!`);
+                                appPageOpen(username);
+                            }
                         } else {
                             console.log('Login failed!');
-                            showNotification('Login failed. User not authorized as role admin.');
+                            showNotification('Login failed. User not authorized, roles not defined, admin role required.');
                             passwordInput.value = '';
                             usernameInput.focus();
                             enableElement(containerDiv);
                         }
-                    } else {
-                        console.log('Login failed!');
-                        showNotification('Login failed. User not authorized, roles not defined, admin role required.');
-                        passwordInput.value = '';
-                        usernameInput.focus();
-                        enableElement(containerDiv);
                     }
-                });
+                    );
+                } else {
+                    console.log('Login successful!');
+                    showNotification(`Login to Indrajāla as ${username} successful!`);
+                    appPageOpen(username);
+                }
             } else {
                 console.log('Login failed!');
                 showNotification('Login failed. Please try again.');

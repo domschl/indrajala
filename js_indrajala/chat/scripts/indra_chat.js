@@ -38,7 +38,7 @@ function chatApp(loggedInUser) {
             case 'connected':
                 removeStatusLine();
                 app_data
-                loginDiv = loginPage(chatPage, indraPortalApp);
+                loginDiv = loginPage(chatPage, indraPortalApp, "Indrajāla chat login", ['user', 'chat']);
                 changeMainElement(loginDiv);
                 enableElement(loginDiv);
                 showNotification('Connected to server at ' + app_data.indraServerUrl);
@@ -46,7 +46,7 @@ function chatApp(loggedInUser) {
             case 'disconnected':
                 app_data.userList = null;
                 app_data.loginState = false;
-                loginDiv = loginPage(userListPage, indraPortalApp);
+                loginDiv = loginPage(userListPage, indraPortalApp, "Indrajāla chat login", ['user', 'chat']);
                 changeMainElement(loginDiv);
                 disableElement(loginDiv);
                 break;
