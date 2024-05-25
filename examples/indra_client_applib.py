@@ -13,6 +13,7 @@ async def interactive_login(
     verbose=False,
 ):
     session_id = None
+    username = None
     cl = IndraClient(verbose=verbose, profile=server_profile)
     if cl is None:
         logging.error("Could not create Indrajala client")
@@ -21,6 +22,8 @@ async def interactive_login(
         if verbose:
             print("Connected.")
     else:
+        cl.session_id = session_id
+        cl.username = username
         return cl
     # Get user and password either by args or by prompting:
     ret_count = 0
@@ -39,7 +42,11 @@ async def interactive_login(
             if ret_count >= login_retries:
                 if verbose:
                     print("Too many retries, exiting.")
+                cl.session_id = session_id
+                cl.username = username
                 return cl
     if verbose:
         print(f"Logged in, user: {username}, session: {session_id}")
+    cl.session_id = session_id
+    cl.username = username
     return cl

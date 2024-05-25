@@ -9,16 +9,16 @@ import aioconsole
 # Add the parent directory to the path so we can import the client
 import sys
 
-path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "indralib/src"
-)
+# path = os.path.join(
+#     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "indralib/src/"
+# )
 # print(path)
-sys.path.append(path)
-from indra_event import IndraEvent  # type: ignore
-from indra_client import IndraClient  # type: ignore
+# sys.path.append(path)
+from indralib.indra_event import IndraEvent  # type: ignore
+from indralib.indra_client import IndraClient  # type: ignore
 
 from indra_client_applib import interactive_login
-
+from indralib.server_config import Profiles
 
 # Terminal control codes for formatting
 CLEAR_SCREEN = "\033[2J\033[H"  # Clear screen
@@ -122,11 +122,37 @@ def display_output():
 async def chat():
     username = None
     password = None
+    profiles = Profiles()
+    profile = None
+    profile_name = profiles.default_profile
+    if profile_name is None or profile_name == "":
+        if len(profiles.profiles) > 0:
+            profile = profiles.profiles[0]
+            profile_name = profile["name"]
+        else:
+            profile_name = None
+    else:
+        for p in profiles.profiles:
+            if p["name"] == profile_name:
+                profile = p
+                break
+        if profile is None:
+            if len(profiles.profiles) > 0:
+                profile = profiles.profiles[0]
+                profile_name = profile["name"]
+            else:
+                profile_name = None
+    if profile is None:
+        print("No profile found")
+        return
+
     if len(sys.argv) > 1:
         username = sys.argv[1]
     if len(sys.argv) > 2:
         password = sys.argv[2]
-    cl = await interactive_login(username=username, password=password)
+    cl = await interactive_login(
+        server_profile=profile, username=username, password=password
+    )
     if cl is None or cl.session_id is None:
         esc = True
     else:
@@ -163,6 +189,7 @@ async def chat():
 
 logging.basicConfig(level=logging.INFO)
 try:
-    asyncio.get_event_loop().run_until_complete(chat())
+    # asyncio.get_event_loop().run_until_complete(chat())
+    asyncio.run(chat())
 except KeyboardInterrupt:
     pass

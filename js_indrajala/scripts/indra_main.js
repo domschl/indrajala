@@ -65,6 +65,7 @@ function createPortal(links) {
 function main() {
     const links = [
         { url: 'admin/index.html', description: 'Indrajāla Administrator', iconCodePoint: 'ef3d' },  // 'admin_panel_settings'
+        { url: 'chat/index.html', description: 'Indrajāla Chat', iconCodePoint: 'e0b7' },  // 'chat'
     ];
     indra_styles();
     // load more links from a JSON file at /config/portal_apps.json:
