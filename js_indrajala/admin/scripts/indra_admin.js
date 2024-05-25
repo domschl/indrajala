@@ -19,9 +19,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
 let app_data = {};
 
-function adminApp() {
+function adminApp(loggedInUser) {
   indra_styles();
-  app_data = { connectionState: false, indraServerUrl: '', userList: {}, loggedInUser: '' };
+  app_data = { connectionState: false, indraServerUrl: '', userList: {}, loginState: false, loggedInUser: '' };
+  app_data.userList = null;
+  app_data.loggedInUser = loggedInUser;
+  app_data.loginState = true;
   connection((state, data) => {
     app_data.connectionState = data.connectionState;
     app_data.indraServerUrl = data.indraServerUrl;
@@ -29,15 +32,20 @@ function adminApp() {
     switch (state) {
       case 'connecting':
         showStatusLine('Connecting to server at ' + app_data.indraServerUrl);
+        app_data.userList = null;
+        app_data.loginState = false;
         break;
       case 'connected':
         removeStatusLine();
+        app_data
         loginDiv = loginPage(userListPage, indraPortalApp);
         changeMainElement(loginDiv);
         enableElement(loginDiv);
         showNotification('Connected to server at ' + app_data.indraServerUrl);
         break;
       case 'disconnected':
+        app_data.userList = null;
+        app_data.loginState = false;
         loginDiv = loginPage(userListPage, indraPortalApp);
         changeMainElement(loginDiv);
         disableElement(loginDiv);
@@ -693,6 +701,8 @@ function userListPage() {
   function handleLogout() {
     console.log('Logging out...');
     app_data.userList = null;
+    app_data.loggedInUser = '';
+    app_data.loginState = false;
     selectedUser = null;
     selectedUserData = null;
     indraLogout((result) => {
