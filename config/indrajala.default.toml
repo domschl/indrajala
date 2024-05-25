@@ -94,10 +94,12 @@ active = true
 name = "indra_ai.3"
 loglevel = "debug"
 subscriptions = []
-application = "chat"
+application = "conversational"
 engine = "huggingface/pipeline/conversational"
 # model = "meta-llama/Meta-Llama-3-8B-Instruct"
-model = "meta-llama/Meta-Llama-3-8B"
+# model = "meta-llama/Meta-Llama-3-8B"
+model = "google/gemma-2b-it"
+device = "cuda"
 
 [[zero_test]]
 active = true
