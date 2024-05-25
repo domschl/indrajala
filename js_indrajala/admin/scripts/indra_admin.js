@@ -6,7 +6,7 @@ import {
   connection, indraLogin, indraLogout, indraKVRead, indraKVWrite, indraKVDelete
 } from './../../indralib/scripts/indra_client.js';
 import {
-  showNotification, removeStatusLine, loginPageOpen,
+  showNotification, removeStatusLine, loginPage,
   changeMainElement, enableElement, disableElement, removeMainElement,
   showStatusLine
 } from './../../indralib/scripts/indra_client_gui_lib.js';
@@ -14,14 +14,14 @@ import {
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
   // Code that relies on the DOM being fully loaded
-  main();
+  adminApp();
 });
 
 let app_data = {};
 
-function main() {
+function adminApp() {
   indra_styles();
-  app_data = { connectionState: false, indraServerUrl: '' };
+  app_data = { connectionState: false, indraServerUrl: '', userList: {}, loggedInUser: '' };
   connection((state, data) => {
     app_data.connectionState = data.connectionState;
     app_data.indraServerUrl = data.indraServerUrl;
@@ -32,13 +32,13 @@ function main() {
         break;
       case 'connected':
         removeStatusLine();
-        loginDiv = loginPageOpen(mainGui, indraPortal);
+        loginDiv = loginPage(userListPage, indraPortalApp);
         changeMainElement(loginDiv);
         enableElement(loginDiv);
         showNotification('Connected to server at ' + app_data.indraServerUrl);
         break;
       case 'disconnected':
-        loginDiv = loginPageOpen(mainGui, indraPortal);
+        loginDiv = loginPage(userListPage, indraPortalApp);
         changeMainElement(loginDiv);
         disableElement(loginDiv);
         break;
@@ -49,13 +49,13 @@ function main() {
   });
 }
 
-function indraPortal() {
+function indraPortalApp() {
   // go to portal at /index.html
   removeMainElement();
   window.location.href = '/index.html';
 }
 
-function userEditorPageOpen(isNew = true, currentUser = null) {
+function userEditorPage(isNew = true, currentUser = null) {
   // Create container div
   let containerDiv = document.createElement('div');
   containerDiv.classList.add('container-style')
@@ -280,7 +280,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
         usernameInput.focus();
         return;
       }
-      if (username in users) {
+      if (username in app_data.userList) {
         showNotification(`Username ${username} already exists.`);
         usernameInput.focus();
         return;
@@ -408,7 +408,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
         });
       }
     }
-    mainGui();
+    userListPage();
   });
 
   cancelButton.addEventListener('click', (event) => {
@@ -417,7 +417,7 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
     } else {
       showNotification('User editing canceled.');
     }
-    mainGui();
+    userListPage();
   });
 
   // Function to handle keydown event on input fields
@@ -445,245 +445,197 @@ function userEditorPageOpen(isNew = true, currentUser = null) {
 }
 
 
+function userListPage() {
+  app_data.userList = null;
 
+  let userList;
 
-let userList;
+  let selectedUser = null;
+  let selectedUserData = null;
 
-function userGui() {
-  // Create container div
-  let usersDiv = document.createElement('div');
-  usersDiv.classList.add('margin-top');
-  usersDiv.classList.add('margin-bottom');
+  let editButton = null;
+  let deleteButton = null;
 
-  // Create title heading
-  const titleHeading = document.createElement('h2');
-  titleHeading.textContent = 'Indrajāla Users';
-  titleHeading.classList.add('margin-bottom');
+  function userGui() {
+    // Create container div
+    let usersDiv = document.createElement('div');
+    usersDiv.classList.add('margin-top');
+    usersDiv.classList.add('margin-bottom');
 
-  userList = document.createElement('ul');
-  userList.classList.add('userList');
+    // Create title heading
+    const titleHeading = document.createElement('h2');
+    titleHeading.textContent = 'Indrajāla Users';
+    titleHeading.classList.add('margin-bottom');
 
-  usersDiv.appendChild(titleHeading);
-  usersDiv.appendChild(userList);
-  return usersDiv;
-}
+    userList = document.createElement('ul');
+    userList.classList.add('userList');
 
-let selectedUser = null;
-let selectedUserData = null;
-
-let editButton = null;
-let deleteButton = null;
-
-
-function deleteUser() {
-  if (selectedUser === null) {
-    console.log('No user selected.');
-    showNotification('No user selected.');
-  } else {
-    if (selectedUser === 'admin') {
-      console.log('Cannot delete admin user.');
-      showNotification('Cannot delete admin user.');
-      return;
-    }
-
-    console.log('Deleting user:', selectedUser);
-    const confirmDelete = confirm(`Are you sure you want to delete user ${selectedUser}?`);
-
-    // Check user response
-    if (confirmDelete) {
-      // User confirmed deletion, proceed with deletion action
-      indraKVDelete(`entity/indrajala/user/${selectedUser}/%`, function (result) {
-        if (result.startsWith('OK')) {
-          console.log(`Deletion of user ${selectedUser} successful!`);
-          showNotification(`User ${selectedUser} deleted successfully.`);
-          // remove selectedUser from list .userListItem list
-          const allItems = document.querySelectorAll('.userListItem');
-          allItems.forEach(item => {
-            if (item.getAttribute('data-id') === selectedUser) {
-              item.remove();
-            }
-          });
-          //const userItem = document.querySelector(`[data-id="${selectedUser}"]`);
-          //if (userItem) {
-          //  userItem.remove();
-          //  console.log(`User item ${selectedUser} removed from list.`);
-          //} else {
-          //  console.log(`User item ${selectedUser} not found in list.`);
-          //}
-          selectedUser = null;
-          selectedUserData = null;
-        } else {
-          console.log(`Deletion of user ${selectedUser} failed!`);
-          showNotification(`User ${selectedUser} deletion failed.`);
-        }
-      });
-    } else {
-      // User canceled deletion, do nothing
-      console.log('Deletion canceled');
-      showNotification(`User ${selectedUser} deletion canceled.`)
-    }
+    usersDiv.appendChild(titleHeading);
+    usersDiv.appendChild(userList);
+    return usersDiv;
   }
-}
 
-function addEditUser(isNew = true) {
-  if (isNew) {
-    console.log('Adding user...');
-  } else {
+  function deleteUser() {
     if (selectedUser === null) {
       console.log('No user selected.');
       showNotification('No user selected.');
-      return;
-    }
-  }
-  let currentUser = {
-    'username': '',
-    'fullname': '',
-    'password1': '',
-    'password1': '',
-    'roles': []
-  }
-  if (!isNew) {
-    currentUser = selectedUserData;
-    currentUser['username'] = selectedUser;
-    currentUser['password1'] = '';
-    currentUser['password2'] = '';
-  }
-  console.log('Current user:', currentUser);
-  let curDiv = userEditorPageOpen(isNew, currentUser);
-  changeMainElement(curDiv);
-}
-
-function addUser() {
-  addEditUser(true);
-}
-
-function editUser() {
-  addEditUser(false);
-}
-
-
-// Function to handle item selection
-function handleUserSelection(event, users) {
-  const selectedItem = event.currentTarget;
-
-  // Check if the clicked item is already selected
-  const isSelected = selectedItem.classList.contains('selected');
-
-  // Remove 'selected' class from all items
-  const allItems = document.querySelectorAll('.userListItem');
-  allItems.forEach(item => item.classList.remove('selected'));
-
-  // If the clicked item was not already selected, select it
-  if (!isSelected) {
-    selectedItem.classList.add('selected');
-    // get username
-    let username = selectedItem.querySelector('.username').textContent;
-    console.log('Selected user:', username);
-    selectedUser = username;
-    selectedUserData = users[username];
-  } else {
-    console.log('Deselected user:', selectedUser);
-    selectedUser = null;
-    selectedUserData = null;
-  }
-}
-
-let users;
-
-function userListReadResult(result) {
-  // format: [['entity/indrajala/user/<username>/<attribute>', 'value'], ...]
-  // convert into dictionaries of dicts {'<username>' : {'<attribute>': 'value', ...}, ...}
-  users = {};
-  for (let i = 0; i < result.length; i++) {
-    let parts = result[i][0].split('/');
-    let username = parts[3];
-    let attribute = parts[4];
-    let value = result[i][1];
-    if (username in users) {
-      users[username][attribute] = value;
     } else {
-      users[username] = {};
-      users[username][attribute] = value;
-    }
-    if (attribute === 'roles') {
-      // json string to array of strings, is string of type '["role1", "role2", ...]'
-      // save-guard against JSON.parse error:
-      try {
-        users[username][attribute] = JSON.parse(value);
-      } catch (error) {
-        console.log('Error parsing JSON: ' + value, error);
+      if (selectedUser === 'admin') {
+        console.log('Cannot delete admin user.');
+        showNotification('Cannot delete admin user.');
+        return;
+      }
+
+      console.log('Deleting user:', selectedUser);
+      const confirmDelete = confirm(`Are you sure you want to delete user ${selectedUser}?`);
+
+      // Check user response
+      if (confirmDelete) {
+        // User confirmed deletion, proceed with deletion action
+        indraKVDelete(`entity/indrajala/user/${selectedUser}/%`, function (result) {
+          if (result.startsWith('OK')) {
+            console.log(`Deletion of user ${selectedUser} successful!`);
+            showNotification(`User ${selectedUser} deleted successfully.`);
+            // remove selectedUser from list .userListItem list
+            const allItems = document.querySelectorAll('.userListItem');
+            allItems.forEach(item => {
+              if (item.getAttribute('data-id') === selectedUser) {
+                item.remove();
+              }
+            });
+            //const userItem = document.querySelector(`[data-id="${selectedUser}"]`);
+            //if (userItem) {
+            //  userItem.remove();
+            //  console.log(`User item ${selectedUser} removed from list.`);
+            //} else {
+            //  console.log(`User item ${selectedUser} not found in list.`);
+            //}
+            selectedUser = null;
+            selectedUserData = null;
+          } else {
+            console.log(`Deletion of user ${selectedUser} failed!`);
+            showNotification(`User ${selectedUser} deletion failed.`);
+          }
+        });
+      } else {
+        // User canceled deletion, do nothing
+        console.log('Deletion canceled');
+        showNotification(`User ${selectedUser} deletion canceled.`)
       }
     }
   }
 
-  for (let username in users) {
-    // Create list item for user
-    let userItem = document.createElement('div');
-    userItem.classList.add('userListItem');
-    userItem.setAttribute('data-id', username);
-
-    // Add event listener for item selection, lambda to pass event and users list
-    userItem.addEventListener('click', (event) => { handleUserSelection(event, users); });
-    //handleUserSelection);
-
-    // Create container for icon
-    const iconContainer = document.createElement('div');
-    iconContainer.classList.add('iconContainer');
-
-    let accountIcon = 'e7fd'; // 'person' icon
-    if ('roles' in users[username]) {
-      if (users[username]['roles'].includes('admin')) {
-        accountIcon = 'ef3d'; // 'admin' icon
+  indraKVRead('entity/indrajala/user/%', (result) => {
+    // format: [['entity/indrajala/user/<username>/<attribute>', 'value'], ...]
+    // convert into dictionaries of dicts {'<username>' : {'<attribute>': 'value', ...}, ...}
+    app_data.userList = {};
+    for (let i = 0; i < result.length; i++) {
+      let parts = result[i][0].split('/');
+      let username = parts[3];
+      let attribute = parts[4];
+      let value = result[i][1];
+      if (username in app_data.userList) {
+        app_data.userList[username][attribute] = value;
       } else {
-        if (users[username]['roles'].includes('app')) {
-          // cog icon
-          accountIcon = 'e8b8'; // cog icon
+        app_data.userList[username] = {};
+        app_data.userList[username][attribute] = value;
+      }
+      if (attribute === 'roles') {
+        // json string to array of strings, is string of type '["role1", "role2", ...]'
+        // save-guard against JSON.parse error:
+        try {
+          app_data.userList[username][attribute] = JSON.parse(value);
+        } catch (error) {
+          console.log('Error parsing JSON: ' + value, error);
         }
       }
     }
 
-    const iconElement = document.createElement('i');
-    // Set the HTML content to the Unicode code point
-    iconElement.innerHTML = `&#x${accountIcon};`;
-    iconElement.classList.add('material-icons');
+    for (let username in app_data.userList) {
+      // Create list item for user
+      let userItem = document.createElement('div');
+      userItem.classList.add('userListItem');
+      userItem.setAttribute('data-id', username);
 
-    // Create container for text
-    const textContainer = document.createElement('div');
-    textContainer.classList.add('textContainer');
+      // Add event listener for item selection, lambda to pass event and users list
+      userItem.addEventListener('click', (event) => {
+        const selectedItem = event.currentTarget;
 
-    // Create username element
-    const usernameElement = document.createElement('div');
-    usernameElement.classList.add('username');
-    usernameElement.textContent = username;
+        // Check if the clicked item is already selected
+        const isSelected = selectedItem.classList.contains('selected');
 
-    // Create fullname element
-    const fullnameElement = document.createElement('div');
-    fullnameElement.classList.add('fullname');
-    fullnameElement.textContent = users[username]['fullname'];
+        // Remove 'selected' class from all items
+        const allItems = document.querySelectorAll('.userListItem');
+        allItems.forEach(item => item.classList.remove('selected'));
 
-    // Append elements to list item
-    iconContainer.appendChild(iconElement);
-    userItem.appendChild(iconContainer);
+        // If the clicked item was not already selected, select it
+        if (!isSelected) {
+          selectedItem.classList.add('selected');
+          // get username
+          let username = selectedItem.querySelector('.username').textContent;
+          console.log('Selected user:', username);
+          selectedUser = username;
+          selectedUserData = app_data.userList[username];
+        } else {
+          console.log('Deselected user:', selectedUser);
+          selectedUser = null;
+          selectedUserData = null;
+        }
 
-    // Append text elements to text container
-    textContainer.appendChild(usernameElement);
-    textContainer.appendChild(fullnameElement);
-    userItem.appendChild(textContainer);
+      });
+      //handleUserSelection);
 
-    userList.appendChild(userItem);
-  }
-  selectedUser = null;
-  selectedUserData = null;
+      // Create container for icon
+      const iconContainer = document.createElement('div');
+      iconContainer.classList.add('iconContainer');
 
-  console.log('Users:', users);
-}
+      let accountIcon = 'e7fd'; // 'person' icon
+      if ('roles' in app_data.userList[username]) {
+        if (app_data.userList[username]['roles'].includes('admin')) {
+          accountIcon = 'ef3d'; // 'admin' icon
+        } else {
+          if (app_data.userList[username]['roles'].includes('app')) {
+            // cog icon
+            accountIcon = 'e8b8'; // cog icon
+          }
+        }
+      }
 
-function mainGui() {
-  selectedUser = null;
-  selectedUserData = null;
-  users = null;
+      const iconElement = document.createElement('i');
+      // Set the HTML content to the Unicode code point
+      iconElement.innerHTML = `&#x${accountIcon};`;
+      iconElement.classList.add('material-icons');
 
-  indraKVRead('entity/indrajala/user/%', userListReadResult);
+      // Create container for text
+      const textContainer = document.createElement('div');
+      textContainer.classList.add('textContainer');
+
+      // Create username element
+      const usernameElement = document.createElement('div');
+      usernameElement.classList.add('username');
+      usernameElement.textContent = username;
+
+      // Create fullname element
+      const fullnameElement = document.createElement('div');
+      fullnameElement.classList.add('fullname');
+      fullnameElement.textContent = app_data.userList[username]['fullname'];
+
+      // Append elements to list item
+      iconContainer.appendChild(iconElement);
+      userItem.appendChild(iconContainer);
+
+      // Append text elements to text container
+      textContainer.appendChild(usernameElement);
+      textContainer.appendChild(fullnameElement);
+      userItem.appendChild(textContainer);
+
+      userList.appendChild(userItem);
+    }
+    selectedUser = null;
+    selectedUserData = null;
+
+    console.log('Users:', app_data.userList);
+  });
   let main_div = document.createElement('div');
   main_div.classList.add('container-style');
 
@@ -740,7 +692,7 @@ function mainGui() {
 
   function handleLogout() {
     console.log('Logging out...');
-    users = null;
+    app_data.userList = null;
     selectedUser = null;
     selectedUserData = null;
     indraLogout((result) => {
@@ -753,18 +705,46 @@ function mainGui() {
         showNotification('Logout failed.');
       }
       removeMainElement();
-      loginPageOpen(mainGui, indraPortal);
+      loginPage(userListPage, indraPortalApp);
     });
   }
 
+  function addEditUser(isNew = true) {
+    if (isNew) {
+      console.log('Adding user...');
+    } else {
+      if (selectedUser === null) {
+        console.log('No user selected.');
+        showNotification('No user selected.');
+        return;
+      }
+    }
+    let currentUser = {
+      'username': '',
+      'fullname': '',
+      'password1': '',
+      'password1': '',
+      'roles': []
+    }
+    if (!isNew) {
+      currentUser = selectedUserData;
+      currentUser['username'] = selectedUser;
+      currentUser['password1'] = '';
+      currentUser['password2'] = '';
+    }
+    console.log('Current user:', currentUser);
+    let curDiv = userEditorPage(isNew, currentUser);
+    changeMainElement(curDiv);
+  }
+
   // Add event listeners
-  addButton.addEventListener('click', addUser);
-  editButton.addEventListener('click', editUser);
+  addButton.addEventListener('click', () => addEditUser(true));
+  editButton.addEventListener('click', () => addEditUser(false));
   deleteButton.addEventListener('click', deleteUser);
 
   logoutButton.addEventListener('click', handleLogout);
   // Exit button, got to main page
-  exitButton.addEventListener('click', indraPortal);
+  exitButton.addEventListener('click', indraPortalApp);
   // Append all elements to container div
   main_div.appendChild(button_line);
   changeMainElement(main_div);
