@@ -2,6 +2,7 @@ import json
 import datetime
 
 from indralib.indra_event import IndraEvent  # type: ignore
+from indralib.indra_time import IndraTime  # type: ignore
 from indra_serverlib import IndraProcessCore
 
 
