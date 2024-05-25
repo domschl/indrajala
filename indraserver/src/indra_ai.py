@@ -42,6 +42,7 @@ class IndraProcess(IndraProcessCore):
                 )
                 self.sentiment_active = True
                 self.translation_active = False
+                self.chat_active = False
         elif self.application == "translation":
             # https://huggingface.co/google/madlad400-3b-mt
             if self.engine == "huggingface/accelerate/sentencepiece":
@@ -61,6 +62,68 @@ class IndraProcess(IndraProcessCore):
                 )
                 self.sentiment_active = False
                 self.translation_active = True
+                self.chat_active = False
+        elif (
+            self.application == "chat"
+        ):  # https://huggingface.co/NousResearch/Meta-Llama-3-8B-Instruct-GGUF/blob/main/README.md
+            if self.engine == "huggingface/pipeline/conversational":
+                import transformers
+                import torch
+
+                if "model" in config_data:
+                    model_id = config_data["model"]
+
+                if model_id == "meta-llama/Meta-Llama-3-8B-Instruct":
+
+                    pipeline = transformers.pipeline(
+                        "text-generation",
+                        model=model_id,
+                        model_kwargs={"torch_dtype": torch.bfloat16},
+                        # device="mps",
+                    )
+
+                    messages = [
+                        {
+                            "role": "system",
+                            "content": "You are a pirate chatbot who always responds in pirate speak!",
+                        },
+                        {"role": "user", "content": "Who are you?"},
+                    ]
+
+                    prompt = pipeline.tokenizer.apply_chat_template(
+                        messages, tokenize=False, add_generation_prompt=True
+                    )
+
+                    terminators = [
+                        pipeline.tokenizer.eos_token_id,
+                        pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>"),
+                    ]
+
+                    outputs = pipeline(
+                        prompt,
+                        max_new_tokens=256,
+                        eos_token_id=terminators,
+                        do_sample=True,
+                        temperature=0.6,
+                        top_p=0.9,
+                    )
+                    gen_text = outputs[0]["generated_text"][len(prompt) :]
+                    self.log.info(f"Chatbot response: {gen_text}")
+                elif model_id == "meta-llama/Meta-Llama-3-8B":
+                    pipeline = transformers.pipeline(
+                        "text-generation",
+                        model=model_id,
+                        model_kwargs={"torch_dtype": torch.bfloat16},
+                        device_map="mps",
+                    )
+                    gen_text = pipeline("Hello, how are you?")
+                    self.log.info(f"Chatbot response: {gen_text}")
+                self.sentiment_active = False
+                self.translation_active = False
+                self.chat_active = True
+                self.subscribe(["$trx/chat/#"])
+                self.log.info("Subscribed to $trx/chat/#")
+
         else:
             self.log.error(f"Unknown application: {self.application}")
             self.sentiment_active = False
