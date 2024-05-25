@@ -3,10 +3,13 @@
 
 import { indra_styles, color_scheme } from './../../indralib/scripts/indra_styles.js';
 import {
-  connection, indraLogin, indraLogout, showNotification, loginPageOpen,
-  changeMainElement, enableElement, disableElement, removeMainElement,
-  indraKVRead, indraKVWrite, indraKVDelete
+  connection, indraLogin, indraLogout, indraKVRead, indraKVWrite, indraKVDelete
 } from './../../indralib/scripts/indra_client.js';
+import {
+  showNotification, removeStatusLine, loginPageOpen,
+  changeMainElement, enableElement, disableElement, removeMainElement,
+  showStatusLine
+} from './../../indralib/scripts/indra_client_gui_lib.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
@@ -14,10 +17,36 @@ document.addEventListener('DOMContentLoaded', function () {
   main();
 });
 
+let app_data = {};
+
 function main() {
   indra_styles();
-  //         shared login,  this app, exit to portal
-  connection(loginPageOpen, mainGui, indraPortal);
+  app_data = { connectionState: false, indraServerUrl: '' };
+  connection((state, data) => {
+    app_data.connectionState = data.connectionState;
+    app_data.indraServerUrl = data.indraServerUrl;
+    let loginDiv;
+    switch (state) {
+      case 'connecting':
+        showStatusLine('Connecting to server at ' + app_data.indraServerUrl);
+        break;
+      case 'connected':
+        removeStatusLine();
+        loginDiv = loginPageOpen(mainGui, indraPortal);
+        changeMainElement(loginDiv);
+        enableElement(loginDiv);
+        showNotification('Connected to server at ' + app_data.indraServerUrl);
+        break;
+      case 'disconnected':
+        loginDiv = loginPageOpen(mainGui, indraPortal);
+        changeMainElement(loginDiv);
+        disableElement(loginDiv);
+        break;
+      default:
+        self.log.error("Unknown connection state: " + state);
+        break;
+    }
+  });
 }
 
 function indraPortal() {
