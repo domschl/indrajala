@@ -398,6 +398,7 @@ export function unsubscribe(domain) {
 
 
 // -------- GUI Stuff
+import { color_scheme } from './../../indralib/scripts/indra_styles.js';
 
 export function loginPageOpen(appPageOpen, abortPageOpen) {
     // Create container div
