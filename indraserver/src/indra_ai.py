@@ -42,7 +42,7 @@ class IndraProcess(IndraProcessCore):
                 )
                 self.sentiment_active = True
                 self.translation_active = False
-                self.chat_active = False
+                self.conversational_active = False
         elif self.application == "translation":
             # https://huggingface.co/google/madlad400-3b-mt
             if self.engine == "huggingface/accelerate/sentencepiece":
@@ -62,65 +62,34 @@ class IndraProcess(IndraProcessCore):
                 )
                 self.sentiment_active = False
                 self.translation_active = True
-                self.chat_active = False
-        elif (
-            self.application == "chat"
-        ):  # https://huggingface.co/NousResearch/Meta-Llama-3-8B-Instruct-GGUF/blob/main/README.md
+                self.conversational_active = False
+        elif self.application == "conversational":
             if self.engine == "huggingface/pipeline/conversational":
-                import transformers
+                self.subscribe(["$trx/conversational"])
+                from transformers import AutoTokenizer, AutoModelForCausalLM
                 import torch
 
                 if "model" in config_data:
-                    model_id = config_data["model"]
+                    self.model_id = config_data["model"]
+                if "device" in config_data:
+                    self.device = config_data["device"]
+                else:
+                    self.device = "auto"
 
-                if model_id == "meta-llama/Meta-Llama-3-8B-Instruct":
+                self.log.info(
+                    f"Subscribed to $trx/conversational/#, using huggingface/pipeline/{self.model_id} on {self.device}"
+                )
 
-                    pipeline = transformers.pipeline(
-                        "text-generation",
-                        model=model_id,
-                        model_kwargs={"torch_dtype": torch.bfloat16},
-                        # device="mps",
+                if self.model_id == "google/gemma-2b-it":
+                    self.tokenizer = AutoTokenizer.from_pretrained("google/gemma-2b-it")
+                    self.model = AutoModelForCausalLM.from_pretrained(
+                        "google/gemma-2b-it",
+                        torch_dtype=torch.bfloat16,
+                        device_map=self.device,
                     )
-
-                    messages = [
-                        {
-                            "role": "system",
-                            "content": "You are a pirate chatbot who always responds in pirate speak!",
-                        },
-                        {"role": "user", "content": "Who are you?"},
-                    ]
-
-                    prompt = pipeline.tokenizer.apply_chat_template(
-                        messages, tokenize=False, add_generation_prompt=True
-                    )
-
-                    terminators = [
-                        pipeline.tokenizer.eos_token_id,
-                        pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>"),
-                    ]
-
-                    outputs = pipeline(
-                        prompt,
-                        max_new_tokens=256,
-                        eos_token_id=terminators,
-                        do_sample=True,
-                        temperature=0.6,
-                        top_p=0.9,
-                    )
-                    gen_text = outputs[0]["generated_text"][len(prompt) :]
-                    self.log.info(f"Chatbot response: {gen_text}")
-                elif model_id == "meta-llama/Meta-Llama-3-8B":
-                    pipeline = transformers.pipeline(
-                        "text-generation",
-                        model=model_id,
-                        model_kwargs={"torch_dtype": torch.bfloat16},
-                        device_map="mps",
-                    )
-                    gen_text = pipeline("Hello, how are you?")
-                    self.log.info(f"Chatbot response: {gen_text}")
                 self.sentiment_active = False
                 self.translation_active = False
-                self.chat_active = True
+                self.conversational_active = True
                 self.subscribe(["$trx/chat/#"])
                 self.log.info("Subscribed to $trx/chat/#")
 
@@ -128,9 +97,14 @@ class IndraProcess(IndraProcessCore):
             self.log.error(f"Unknown application: {self.application}")
             self.sentiment_active = False
             self.translation_active = False
+            self.conversational_active = False
 
     def outbound_init(self):
-        if self.translation_active is True or self.sentiment_active is True:
+        if (
+            self.translation_active is True
+            or self.sentiment_active is True
+            or self.conversational_active is True
+        ):
             self.log.info(f"Indra-AI init ok, {self.application} via {self.engine}")
             return True
         else:
@@ -223,5 +197,39 @@ class IndraProcess(IndraProcessCore):
             rev.data = json.dumps(trans_data)
             self.event_send(rev)
             self.log.info(f"Translation result: {rev.data}, sent to {rev.domain}")
+        elif IndraEvent.mqcmp(ev.domain, "$trx/conversational") is True:
+            if self.conversational_active is False:
+                self._trx_err(ev, "indra_ai conversational not active")
+                return
+            self.log.info(f"Got conversational request: {ev.data}")
+            conversation_data = json.loads(ev.data)
+            req_fields = ["text", "max_length"]
+            for rf in req_fields:
+                if rf not in conversation_data:
+                    self._trx_err(ev, f"Missing required field {rf}")
+                    return
+            text = conversation_data["text"]
+            max_length = conversation_data["max_length"]
+            rev = IndraEvent()
+            rev.time_jd_start = IndraTime.datetime2julian(
+                datetime.datetime.now(tz=datetime.timezone.utc)
+            )
+            input_ids = self.tokenizer(text, return_tensors="pt").to(self.device)
+            result = self.model.generate(**input_ids, max_length=max_length)
+            rev.domain = ev.from_id
+            rev.from_id = self.name
+            rev.uuid4 = ev.uuid4
+            rev.to_scope = ev.domain
+            rev.time_jd_end = IndraTime.datetime2julian(
+                datetime.datetime.now(tz=datetime.timezone.utc)
+            )
+            rev.data_type = "chat_reply"
+            reply = self.tokenizer.decode(result[0], skip_special_tokens=True)
+            conversational_data = {
+                "reply": reply,
+            }
+            rev.data = json.dumps(conversational_data)
+            self.event_send(rev)
+            self.log.info(f"Chat reply: {rev.data}, sent to {rev.domain}")
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
