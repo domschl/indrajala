@@ -6,12 +6,12 @@
     "module": "src/index.js",
     "type": "module",
     "scripts": {
-      "build": "your-build-script",
-      "test": "your-test-script"
+        "build": "your-build-script",
+        "test": "your-test-script"
     },
     "keywords": ["indrajala"],
     "author": "Dominik Schlösser",
     "license": "MIT",
     "dependencies": {},
     "devDependencies": {}
-  }
+}
