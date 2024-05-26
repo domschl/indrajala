@@ -6,7 +6,7 @@ import threading
 import time
 import signal
 import asyncio
-import zmq
+import zmq  # pyzmq
 
 try:
     import tomllib

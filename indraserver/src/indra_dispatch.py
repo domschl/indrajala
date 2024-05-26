@@ -1,6 +1,7 @@
 import json
 import datetime
 import uuid
+import copy
 
 from indralib.indra_event import IndraEvent  # type: ignore
 from indralib.indra_time import IndraTime  # type: ignore
@@ -230,8 +231,9 @@ class IndraProcess(IndraProcessCore):
                     "session_id": chat_msg["session_id"],
                 }
                 rev.data = json.dumps(sentiment_data)
-                self.async_dist[rev.uuid4] = {
-                    "event": ev,
+                key = rev.uuid4 + "-sentiment"
+                self.async_dist[key] = {
+                    "event": copy.copy(ev),
                     "session": cur_session,
                     "participants": participants,
                 }
@@ -247,12 +249,14 @@ class IndraProcess(IndraProcessCore):
                 translation_data = {
                     "text": chat_msg["message"],
                     "lang_code": "de",
+                    "max_length": 128,
                     "user": chat_msg["user"],
                     "session_id": chat_msg["session_id"],
                 }
                 rev.data = json.dumps(translation_data)
-                self.async_dist[rev.uuid4] = {
-                    "event": ev,
+                key = rev.uuid4 + "-translation"
+                self.async_dist[key] = {
+                    "event": copy.copy(ev),
                     "session": cur_session,
                     "participants": participants,
                 }
@@ -272,8 +276,9 @@ class IndraProcess(IndraProcessCore):
                     "session_id": chat_msg["session_id"],
                 }
                 rev.data = json.dumps(chat_data)
-                self.async_dist[rev.uuid4] = {
-                    "event": ev,
+                key = rev.uuid4 + "-conversational"
+                self.async_dist[key] = {
+                    "event": copy.copy(ev),
                     "session": cur_session,
                     "participants": participants,
                 }
@@ -282,35 +287,39 @@ class IndraProcess(IndraProcessCore):
             self.distribute(ev, cur_session, participants)
         elif IndraEvent.mqcmp(ev.domain, f"{self.name}/annotate/#"):
             if ev.domain == f"{self.name}/annotate/sentiment":
-                if ev.uuid4 in self.async_dist:
+                key = ev.uuid4 + "-sentiment"
+                if key in self.async_dist:
                     self.log.info(f"Got annotation-reply sentiment, uuid={ev.uuid4}")
                     if ev.data_type == "sentiment":
                         sentiment = json.loads(ev.data)
-                    rev = self.async_dist[ev.uuid4]["event"]
-                    msg_data = json.loads(rev.data)
-                    msg_data["sentiment"] = sentiment
-                    rev.data = json.dumps(msg_data)
-                    cur_session = self.async_dist[ev.uuid4]["session"]
-                    participants = self.async_dist[ev.uuid4]["participants"]
-                    del self.async_dist[ev.uuid4]
-                    self.distribute(rev, cur_session, participants)
+                        rev = self.async_dist[key]["event"]
+                        msg_data = json.loads(rev.data)
+                        msg_data["sentiment"] = sentiment
+                        rev.data = json.dumps(msg_data)
+                        cur_session = self.async_dist[key]["session"]
+                        participants = self.async_dist[key]["participants"]
+                        del self.async_dist[key]
+                        self.distribute(rev, cur_session, participants)
+                    else:
+                        self.log.error(f"Unknown annotation data type: {ev.data_type}")
                 else:
                     self.log.warning(
                         f"Got annotation-reply, uuid={ev.uuid4}, but not found in async_dist"
                     )
             elif ev.domain == f"{self.name}/annotate/translation":
-                if ev.uuid4 in self.async_dist:
+                key = ev.uuid4 + "-translation"
+                if key in self.async_dist:
                     self.log.info(f"Got annotation-reply translation, uuid={ev.uuid4}")
                     if ev.data_type == "translation":
                         translation = json.loads(ev.data)
-                        rev = self.async_dist[ev.uuid4]["event"]
+                        rev = self.async_dist[key]["event"]
                         msg_data = json.loads(rev.data)
                         msg_data["translation"] = translation["translation"]
                         msg_data["lang_code"] = translation["lang_code"]
                         rev.data = json.dumps(msg_data)
-                        cur_session = self.async_dist[ev.uuid4]["session"]
-                        participants = self.async_dist[ev.uuid4]["participants"]
-                        del self.async_dist[ev.uuid4]
+                        cur_session = self.async_dist[key]["session"]
+                        participants = self.async_dist[key]["participants"]
+                        del self.async_dist[key]
                         self.distribute(rev, cur_session, participants)
                     else:
                         self.log.error(f"Unknown annotation data type: {ev.data_type}")
@@ -319,19 +328,21 @@ class IndraProcess(IndraProcessCore):
                         f"Got annotation-reply, uuid={ev.uuid4}, but not found in async_dist"
                     )
             elif ev.domain == f"{self.name}/annotate/conversational":
-                if ev.uuid4 in self.async_dist:
+                key = ev.uuid4 + "-conversational"
+                if key in self.async_dist:
                     self.log.info(
                         f"Got annotation-reply conversational, uuid={ev.uuid4}"
                     )
                     if ev.data_type == "chat_reply":
                         reply = json.loads(ev.data)
-                        rev = self.async_dist[ev.uuid4]["event"]
+                        rev = self.async_dist[key]["event"]
                         msg_data = json.loads(rev.data)
-                        msg_data["message"] = reply["reply"]
+                        msg_data["message"] = reply["text"]
                         rev.data = json.dumps(msg_data)
-                        cur_session = self.async_dist[ev.uuid4]["session"]
-                        participants = self.async_dist[ev.uuid4]["participants"]
-                        del self.async_dist[ev.uuid4]
+                        cur_session = self.async_dist[key]["session"]
+                        participants = self.async_dist[key]["participants"]
+                        del self.async_dist[key]
+
                         self.distribute(rev, cur_session, participants)
                     else:
                         self.log.error(f"Unknown annotation data type: {ev.data_type}")
@@ -365,6 +376,6 @@ class IndraProcess(IndraProcessCore):
                     rev.uuid4 = str(uuid.uuid4())
                     rev.domain = user_session["from_id"]
                     self.log.info(
-                        f"Sending chat message to {participant} at {rev.domain}"
+                        f"Sending chat message to {participant} at {rev.domain}: {rev.data}"
                     )
                     self.event_send(rev)

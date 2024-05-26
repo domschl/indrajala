@@ -71,7 +71,7 @@ class IndraProcess(IndraProcessCore):
                     f"Static app path does not exist: {path}, did you deploy_web.sh?"
                 )
                 continue
-            self.log.info(f"Adding static app: {prefix} -> {path}")
+            self.log.debug(f"Adding static app: {prefix} -> {path}")
             self.app.add_routes([web.static(prefix, path)])
         # if self.tls is True:
         #     self.app.add_routes([web.get('/wss', self.websocket_handler)])
