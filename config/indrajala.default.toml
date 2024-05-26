@@ -74,31 +74,30 @@ active = false
 name = "indra_ai.1"
 loglevel = "debug"
 subscriptions = []
+models_directory = "{{data_directory}}/models"
 application = "sentiment"
-engine = "huggingface/pipeline/sentiment-analysis"
-model = "distilbert-base-uncased-finetuned-sst-2-english"
-revision = "af0f99b"
+model = "bert-multilingual-sentiment"
+device = "cuda"
 
 [[indra_ai]]
 active = false
 name = "indra_ai.2"
 loglevel = "debug"
 subscriptions = []
+models_directory = "{{data_directory}}/models"
 application = "translation"
-engine = "huggingface/accelerate/sentencepiece"
-# model = "Helsinki-NLP/opus-mt-en-de"
-model = "jbochi/madlad400-3b-mt"
+model = "madlad400-3b-mt"
+target_language = "de"
+device = "cuda"
 
 [[indra_ai]]
 active = true
 name = "indra_ai.3"
 loglevel = "debug"
 subscriptions = []
+models_directory = "{{data_directory}}/models"
 application = "conversational"
-engine = "huggingface/pipeline/conversational"
-# model = "meta-llama/Meta-Llama-3-8B-Instruct"
-# model = "meta-llama/Meta-Llama-3-8B"
-model = "google/gemma-2b-it"
+model = "gemma-2b-it"
 device = "cuda"
 
 [[zero_test]]

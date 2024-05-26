@@ -1,0 +1,61 @@
+{
+    "sentiment": {
+        "models": {
+            "distilbert-sentiment-en": {
+                "engine": "huggingface/pipeline/sentiment-analysis",
+                "languages": [
+                    "en"
+                ],
+                "model_files": "distilbert-base-uncased-finetuned-sst-2-english",
+                "revision": "af0f99b"
+            },
+            "distilbert-sentiment-de": {
+                "engine": "huggingface/pipeline/sentiment-analysis",
+                "languages": [
+                    "de"
+                ],
+                "model_files": "distilbert-base-german-cased"
+            },
+            "bert-multilingual-sentiment": {
+                "engine": "huggingface/pipeline/sentiment-analysis",
+                "languages": [
+                    "en",
+                    "de",
+                    "nl",
+                    "fr",
+                    "es",
+                    "it"
+                ],
+                "model_files": "nlptown/bert-base-multilingual-uncased-sentiment"
+            }
+        }
+    },
+    "translation": {
+        "models": {
+            "madlad400-3b-mt": {
+                "engine": "huggingface/model/translate",
+                "languages": [
+                    "en",
+                    "de",
+                    "fr",
+                    "es",
+                    "it",
+                    "multi"
+                ],
+                "model_files": "jbochi/madlad400-3b-mt",
+                "source_url": "https://huggingface.co/google/madlad400-3b-mt"
+            }
+        }
+    },
+    "conversational": {
+        "models": {
+            "gemma-2b-it": {
+                "engine": "huggingface/pipeline/conversational",
+                "languages": [
+                    "en"
+                ],
+                "model_files": "google/gemma-2b-it"
+            }
+        }
+    }
+}

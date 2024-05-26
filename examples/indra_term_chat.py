@@ -43,10 +43,15 @@ async def receive_remote(cl):
             chat_msg = json.loads(ie.data)
             if "translation" in chat_msg:
                 msg = chat_msg["translation"]
+            elif "text" in chat_msg:
+                msg = chat_msg["text"]
             else:
                 msg = chat_msg["message"]
             user = chat_msg["user"]
             remote_message = "   " + user + ": " + msg.replace("###", "")
+
+            print(remote_message)
+
             if "sentiment" in chat_msg:
                 print(chat_msg["sentiment"])
                 sentiment = chat_msg["sentiment"]
@@ -55,10 +60,10 @@ async def receive_remote(cl):
                     and "score" in sentiment[0]
                     and "label" in sentiment[0]
                 ):
-                    if sentiment[0]["label"] == "POSITIVE":
-                        f = 1
-                    else:
+                    if sentiment[0]["label"] == "NEGATIVE":
                         f = -1
+                    else:
+                        f = 1
                     score = sentiment[0]["score"] * f
                     remote_message += f" [{score:.2f}]"
             if remote_message[-1] == "}":
@@ -106,7 +111,7 @@ async def receive_io(cl, chat_session_id):
 
 
 def display_output():
-    print(CLEAR_SCREEN)
+    # print(CLEAR_SCREEN)
 
     # Display remote message history
     print("Remote messages:")

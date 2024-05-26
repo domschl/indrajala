@@ -1,3 +1,5 @@
+import os
+import sys
 import json
 import datetime
 
@@ -25,90 +27,130 @@ class IndraProcess(IndraProcessCore):
             zmq_send_queue_port,
             mode="single",
         )
+        print(f"Indra-AI init {config_data["name"]}")
         self.application = config_data["application"]
-        self.engine = config_data["engine"]
+        self.model_name = config_data["model"]
+        self.engine = None
+        if "device" in config_data:
+            self.device = config_data["device"]
+        else:
+            self.device = "auto"
+        self.log.info(
+            f"Indra-AI {config_data["name"]} init: {self.application} {self.model_name} on {self.device}"
+        )
+        if not os.path.exists(config_data["models_directory"]):
+            os.makedirs(config_data["models_directory"])
+        models_file = os.path.join(config_data["models_directory"], "models.json")
+        self.valid_apps = None
+        if os.path.exists(models_file):
+            with open(models_file, "r") as f:
+                self.valid_apps = json.load(f)
+        if self.valid_apps is None:
+            self.log.error("No models file found, cannot continue")
+            return
+
+        # "translation", "conversational", "forecast"]
+        models = None
+        for app in self.valid_apps:
+            if self.application == app:
+                models = self.valid_apps[app]["models"]
+                break
+        if models is None:
+            self.log.error(f"Unknown application: {self.application}")
+            self.application = None
+            return
+        self.model_config = None
+        for model in models:
+            if self.model_name == model:
+                self.model_config = models[model]
+                break
+        if self.model_config is None:
+            self.log.error(f"Unknown model: {self.model_name}")
+            self.model = None
+            return
+
+        self.engine = self.model_config["engine"]
+        model_files = self.model_config["model_files"]
+        if "revision" in self.model_config:
+            revision = self.model_config["revision"]
+        else:
+            revision = None
+
         if self.application == "sentiment":
+            self.pipeline = None
+            self.model = None
             if self.engine == "huggingface/pipeline/sentiment-analysis":
                 from transformers import pipeline
 
-                model = config_data["model"]
-                revision = config_data["revision"]
-                self.sentiment_pipeline = pipeline(
-                    task="sentiment-analysis", model=model, revision=revision
+                self.pipeline = pipeline(
+                    task="sentiment-analysis",
+                    model=model_files,
+                    revision=revision,
+                    device_map=self.device,
                 )
                 self.subscribe(["$trx/sentiment"])
                 self.log.info(
-                    "Subscribed to $trx/sentiment/#, using huggingface/pipeline/sentiment-analysis"
+                    f"Subscribed to $trx/sentiment/#, using {self.model_name} on {self.device}"
                 )
-                self.sentiment_active = True
-                self.translation_active = False
-                self.conversational_active = False
+            else:
+                self.log.error(f"Unknown engine: {self.engine} for sentiment")
+                self.application = None
         elif self.application == "translation":
-            # https://huggingface.co/google/madlad400-3b-mt
-            if self.engine == "huggingface/accelerate/sentencepiece":
+            self.pipeline = None
+            self.model = None
+            if self.engine == "huggingface/model/translate":
                 from transformers import T5ForConditionalGeneration, T5Tokenizer
 
-                model_name = config_data[
-                    "model"
-                ]  # "jbochi/madlad400-3b-mt" "google/madlad400-3b-mt"
                 self.model = T5ForConditionalGeneration.from_pretrained(
-                    model_name,
-                    device_map="cpu",  # auto crashes multiprocessing pickle, tbr.
+                    model_files,
+                    device_map=self.device,  # auto crashes multiprocessing pickle, tbr.
                 )
-                self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+                self.tokenizer = T5Tokenizer.from_pretrained(model_files)
                 self.subscribe(["$trx/translation"])
                 self.log.info(
-                    "Subscribed to $trx/translation/#, using huggingface/accelerate/sentencepiece"
+                    f"Subscribed to $trx/translation/#, using {self.model_name} on {self.device}"
                 )
-                self.sentiment_active = False
-                self.translation_active = True
-                self.conversational_active = False
+            else:
+                self.log.error(f"Unknown engine: {self.engine} for translation")
+                self.application = None
         elif self.application == "conversational":
+            self.pipeline = None
+            self.model = None
             if self.engine == "huggingface/pipeline/conversational":
-                self.subscribe(["$trx/conversational"])
-                from transformers import AutoTokenizer, AutoModelForCausalLM
-                import torch
+                if model_files == "google/gemma-2b-it":
+                    from transformers import AutoTokenizer, AutoModelForCausalLM
+                    import torch
 
-                if "model" in config_data:
-                    self.model_id = config_data["model"]
-                if "device" in config_data:
-                    self.device = config_data["device"]
-                else:
-                    self.device = "auto"
-
-                self.log.info(
-                    f"Subscribed to $trx/conversational/#, using huggingface/pipeline/{self.model_id} on {self.device}"
-                )
-
-                if self.model_id == "google/gemma-2b-it":
                     self.tokenizer = AutoTokenizer.from_pretrained("google/gemma-2b-it")
                     self.model = AutoModelForCausalLM.from_pretrained(
                         "google/gemma-2b-it",
                         torch_dtype=torch.bfloat16,
                         device_map=self.device,
                     )
-                self.sentiment_active = False
-                self.translation_active = False
-                self.conversational_active = True
-                self.subscribe(["$trx/chat/#"])
-                self.log.info("Subscribed to $trx/chat/#")
-
+                    self.subscribe(["$trx/conversational"])
+                    self.log.info(
+                        f"Subscribed to $trx/conversational/#, using huggingface/pipeline/{self.model_name} on {self.device}"
+                    )
+                else:
+                    self.log.error(
+                        f"Unknown model: {self.model_name} for conversational"
+                    )
+            else:
+                self.log.error(f"Unknown engine: {self.engine} for conversational")
+                self.application = None
         else:
             self.log.error(f"Unknown application: {self.application}")
-            self.sentiment_active = False
-            self.translation_active = False
-            self.conversational_active = False
+            self.application = None
 
     def outbound_init(self):
-        if (
-            self.translation_active is True
-            or self.sentiment_active is True
-            or self.conversational_active is True
-        ):
+        if self.application is not None and self.engine is not None:
             self.log.info(f"Indra-AI init ok, {self.application} via {self.engine}")
             return True
         else:
-            self.log.error("Indra-AI init failed, no application active")
+            if self.application is None:
+                self.log.error("Indra-AI init failed, no application specified")
+            elif self.engine is None:
+                self.log.error(f"Indra-AI init failed, no engine active for application {self.application}")
             return False
 
     def shutdown(self):
@@ -133,8 +175,14 @@ class IndraProcess(IndraProcessCore):
 
     def outbound(self, ev: IndraEvent):
         if IndraEvent.mqcmp(ev.domain, "$trx/sentiment") is True:
-            if self.sentiment_active is False:
+            if self.application != "sentiment":
                 self._trx_err(ev, "indra_ai sentiment analysis not active")
+                return
+            if self.pipeline is None:
+                self._trx_err(
+                    ev,
+                    "indra_ai sentiment analysis not available, pipeline not initialized",
+                )
                 return
             self.log.info(f"Got sentiment request: {ev.data}")
             sentiment_data = json.loads(ev.data)
@@ -148,7 +196,7 @@ class IndraProcess(IndraProcessCore):
             rev.time_jd_start = IndraTime.datetime2julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
-            result = self.sentiment_pipeline(text)
+            result = self.pipeline(text)
             rev.domain = ev.from_id
             rev.from_id = self.name
             rev.uuid4 = ev.uuid4
@@ -161,12 +209,17 @@ class IndraProcess(IndraProcessCore):
             self.event_send(rev)
             self.log.info(f"Sentiment result: {result}, sent to {rev.domain}")
         elif IndraEvent.mqcmp(ev.domain, "$trx/translation") is True:
-            if self.translation_active is False:
+            if self.application != "translation":
                 self._trx_err(ev, "indra_ai translation not active")
+                return
+            if self.model is None:
+                self._trx_err(
+                    ev, "indra_ai translation not available, model not initialized"
+                )
                 return
             self.log.info(f"Got translation request: {ev.data}")
             translation_data = json.loads(ev.data)
-            req_fields = ["text", "lang_code"]
+            req_fields = ["text", "lang_code", "max_length"]
             for rf in req_fields:
                 if rf not in translation_data:
                     self._trx_err(ev, f"Missing required field {rf}")
@@ -176,11 +229,11 @@ class IndraProcess(IndraProcessCore):
             rev.time_jd_start = IndraTime.datetime2julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
-            inputs = self.tokenizer.encode(text, return_tensors="pt")
+            inputs = self.tokenizer.encode(text, return_tensors="pt").to(self.device)
             result = self.model.generate(
                 inputs,
-                max_length=80,
-            )  # , max_length=40, num_beams=4, early_stopping=True)
+                max_length=translation_data["max_length"],
+            )
             rev.domain = ev.from_id
             rev.from_id = self.name
             rev.uuid4 = ev.uuid4
@@ -198,8 +251,13 @@ class IndraProcess(IndraProcessCore):
             self.event_send(rev)
             self.log.info(f"Translation result: {rev.data}, sent to {rev.domain}")
         elif IndraEvent.mqcmp(ev.domain, "$trx/conversational") is True:
-            if self.conversational_active is False:
+            if self.application != "conversational":
                 self._trx_err(ev, "indra_ai conversational not active")
+                return
+            if self.model is None:
+                self._trx_err(
+                    ev, "indra_ai conversational not available, model not initialized"
+                )
                 return
             self.log.info(f"Got conversational request: {ev.data}")
             conversation_data = json.loads(ev.data)
@@ -226,10 +284,31 @@ class IndraProcess(IndraProcessCore):
             rev.data_type = "chat_reply"
             reply = self.tokenizer.decode(result[0], skip_special_tokens=True)
             conversational_data = {
-                "reply": reply,
+                "text": reply,
             }
             rev.data = json.dumps(conversational_data)
             self.event_send(rev)
             self.log.info(f"Chat reply: {rev.data}, sent to {rev.domain}")
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
+
+    def run(self):
+        self.launcher()
+
+if __name__ == "__main__":
+    print("Starting remote ZMQ indra_ai.py")
+    if len(sys.argv) != 3:
+        print("Usage: indra_ai.py <main_process_zeromq_port> <json_config_string>")
+        sys.exit(1)
+    port = int(sys.argv[1])
+    try:
+        if sys.argv[2][0] == "'" and sys.argv[2][-1] == "'":
+            config = json.loads(sys.argv[2][1:-1])
+        else:
+            config = json.loads(sys.argv[2])
+    except Exception as e:
+        print("JSON Error: ", e)
+        sys.exit(1)
+
+    ipc = IndraProcess(config, "zmq", None, None, port, config["zeromq_port"])
+    ipc.run()
