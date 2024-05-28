@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import datetime
+import uuid
 
 from indralib.indra_event import IndraEvent  # type: ignore
 from indralib.indra_time import IndraTime  # type: ignore
@@ -35,6 +36,17 @@ class IndraProcess(IndraProcessCore):
             self.device = config_data["device"]
         else:
             self.device = "auto"
+        if 'user_id' in config_data:
+            self.user_id = config_data['user_id']
+            self.session_id = uuid.uuid4().hex
+            if 'user_name' in config_data:
+                self.user_name = config_data['user_name']
+            else:
+                self.user_name = None
+        else:
+            self.user_id = None
+            self.user_name = None
+            self.session_id = None
         self.log.info(
             f"Indra-AI {config_data["name"]} init: {self.application} {self.model_name} on {self.device}"
         )
@@ -145,6 +157,18 @@ class IndraProcess(IndraProcessCore):
     def outbound_init(self):
         if self.application is not None and self.engine is not None:
             self.log.info(f"Indra-AI init ok, {self.application} via {self.engine}")
+            if self.user_id is not None:
+                ie = IndraEvent()
+                ie.domain = f"$interactive/session/start/{self.user_id}"
+                ie.from_id = self.name
+                ie.data_type = "session_data"
+                session_data = {
+                    'user': self.user_id,
+                    'session_id': self.session_id,
+                    'from_id': self.name,
+                }
+                ie.data = json.dumps(session_data)
+                self.event_send(ie)
             return True
         else:
             if self.application is None:
@@ -154,6 +178,17 @@ class IndraProcess(IndraProcessCore):
             return False
 
     def shutdown(self):
+        # XXX $interactive/session/end/{self.user_id}
+        if self.user_id is not None:
+            ie = IndraEvent()
+            ie.domain = f"$interactive/session/stop/{self.user_id}"
+            ie.from_id = self.name
+            ie.data_type = "session_data"
+            session_data = {
+                'session_id': self.session_id,
+            }
+            ie.data = json.dumps(session_data)
+            self.event_send(ie)
         self.log.info("Shutdown AI complete")
 
     def _trx_err(self, ev: IndraEvent, err_msg: str):
