@@ -178,7 +178,6 @@ class IndraProcess(IndraProcessCore):
             return False
 
     def shutdown(self):
-        # XXX $interactive/session/end/{self.user_id}
         if self.user_id is not None:
             ie = IndraEvent()
             ie.domain = f"$interactive/session/stop/{self.user_id}"
