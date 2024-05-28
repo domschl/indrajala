@@ -33,7 +33,7 @@ local_message_history = []
 async def receive_remote(cl):
     while True:
         ie = await cl.recv_event()
-        print("RECEIVE", ie)
+        # print("RECEIVE", ie)
         if ie is None:
             remote_message = ""
         else:
@@ -49,8 +49,6 @@ async def receive_remote(cl):
                 msg = chat_msg["message"]
             user = chat_msg["user"]
             remote_message = "   " + user + ": " + msg.replace("###", "")
-
-            print(remote_message)
 
             if "sentiment" in chat_msg:
                 print(chat_msg["sentiment"])
@@ -111,7 +109,7 @@ async def receive_io(cl, chat_session_id):
 
 
 def display_output():
-    # print(CLEAR_SCREEN)
+    print(CLEAR_SCREEN)
 
     # Display remote message history
     print("Remote messages:")
