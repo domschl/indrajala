@@ -169,6 +169,10 @@ class IndraProcess(IndraProcessCore):
                 }
                 ie.data = json.dumps(session_data)
                 self.event_send(ie)
+                self.subscribe(["$event/chat/#"])
+                self.log.info(
+                    f"Subscribed to $event/chat/# as user {self.user_id} with session {self.session_id}"
+                )
             return True
         else:
             if self.application is None:
@@ -322,7 +326,46 @@ class IndraProcess(IndraProcessCore):
             }
             rev.data = json.dumps(conversational_data)
             self.event_send(rev)
-            self.log.info(f"Chat reply: {rev.data}, sent to {rev.domain}")
+            self.log.info(f"Conversational annotation reply: {rev.data}, sent to {rev.domain}")
+        elif IndraEvent.mqcmp(ev.domain, "$event/chat/#") is True:
+            try:
+                chat_msg = json.loads(ev.data)
+            except json.JSONDecodeError:
+                self.log.error(
+                    f"Failed to decode chat message: {ev.data} from {ev.from_id}"
+                )
+                return
+            req_fields = ["user", "session_id", "message"]
+            for field in req_fields:
+                if field not in chat_msg:
+                    self.log.error(
+                        f"Chat message {ev.data} from {ev.from_id} missing required field: {field}"
+                    )
+                    return
+            rev = IndraEvent()
+            rev.time_jd_start = IndraTime.datetime2julian(
+                datetime.datetime.now(tz=datetime.timezone.utc)
+            )
+            message = chat_msg["message"]
+            input_ids = self.tokenizer(message, return_tensors="pt").to(self.device)
+            result = self.model.generate(**input_ids, max_length=256)
+            msg_text = self.tokenizer.decode(result[0], skip_special_tokens=True)
+            chat_repl_msg = {
+                "message": msg_text,
+                "user": chat_msg["user"],
+                "session_id": chat_msg["session_id"],
+            }
+            rev.domain = ev.from_id
+            rev.from_id = self.name
+            rev.uuid4 = ev.uuid4
+            rev.to_scope = ev.domain
+            rev.time_jd_end = IndraTime.datetime2julian(
+                datetime.datetime.now(tz=datetime.timezone.utc)
+            )
+            rev.data_type = "chat_msg"
+            rev.data = json.dumps(chat_repl_msg)
+            self.event_send(rev)
+            self.log.info(f"Chat: {rev.data}, sent to {rev.domain}")
         else:
             self.log.info(f"Got something: {ev.domain}, sent by {ev.from_id}, ignored")
 
