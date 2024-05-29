@@ -173,6 +173,7 @@ class IndraProcess(IndraProcessCore):
                 self.log.info(
                     f"Subscribed to $event/chat/# as user {self.user_id} with session {self.session_id}"
                 )
+                self.chat_histories = {}
             return True
         else:
             if self.application is None:
@@ -347,12 +348,44 @@ class IndraProcess(IndraProcessCore):
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
             message = chat_msg["message"]
-            input_ids = self.tokenizer(message, return_tensors="pt").to(self.device)
-            result = self.model.generate(**input_ids, max_length=256)
-            msg_text = self.tokenizer.decode(result[0], skip_special_tokens=True)
+            id = chat_msg["session_id"]
+            if id not in self.chat_histories:
+                self.chat_histories[id] = []
+
+            self.chat_histories[id].append({"role": "user", "content": message})
+            # XXX Overflow
+
+            # XXX Gemma specific, c.f. https://huggingface.co/google/gemma-2b-it
+            # chat = [
+            #     { "role": "user", "content": message },
+            # ]
+            # prompt = self.tokenizer.apply_chat_template(self.chat_histories[id], tokenize=False, add_generation_prompt=True)
+            prompt = "<bos>"
+            for chat in self.chat_histories[id]:
+                prompt += f"<start_of_turn>{chat['role']}\n{chat['content']}<end_of_turn>\n"
+            prompt += "<start_of_turn>model\n"
+            self.log.info(f"Prompt: {prompt}")
+            inputs = self.tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt")
+            result = self.model.generate(input_ids=inputs.to(self.model.device), max_new_tokens=150)
+        
+            # input_ids = self.tokenizer(message, return_tensors="pt").to(self.device)
+            # result = self.model.generate(input_ids=inputs.to(self.model.device), max_new_tokens=150)
+            msg_text = self.tokenizer.decode(result[0], skip_special_tokens=False)
+            self.log.info(f"Chat reply: {msg_text}")
+            tok1= "<start_of_turn>model\n"
+            p1 = msg_text.rfind(tok1)
+            if p1 >= 0:
+                msg_text = msg_text[p1+len(tok1):]
+            tok2="<eos>"
+            p2 = msg_text.find(tok2)
+            if p2 >= 0:
+                msg_text = msg_text[:p2]
+            self.log.info(f"Chat reply (cleaned): {msg_text}")
+            self.chat_histories[id].append({"role": "model", "content": msg_text})
+            # XXX Overflow
             chat_repl_msg = {
                 "message": msg_text,
-                "user": chat_msg["user"],
+                "user": self.user_id,
                 "session_id": chat_msg["session_id"],
             }
             rev.domain = ev.from_id
