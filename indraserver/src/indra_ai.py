@@ -136,7 +136,7 @@ class IndraProcess(IndraProcessCore):
                     self.tokenizer = AutoTokenizer.from_pretrained("google/gemma-2b-it")
                     self.model = AutoModelForCausalLM.from_pretrained(
                         "google/gemma-2b-it",
-                        torch_dtype=torch.bfloat16,
+                        # torch_dtype=torch.bfloat16,   # Much slower on CPU!
                         device_map=self.device,
                     )
                     self.subscribe(["$trx/conversational"])
