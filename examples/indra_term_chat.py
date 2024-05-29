@@ -83,7 +83,7 @@ async def receive_remote(cl):
             remote_message_history.pop(
                 0
             )  # Remove oldest message if history exceeds 10 lines
-        display_output()
+        await display_output()
 
 
 async def receive_io(cl, chat_session_id):
@@ -108,18 +108,20 @@ async def receive_io(cl, chat_session_id):
         display_output()
 
 
-def display_output():
+async def display_output():
     print(CLEAR_SCREEN)
 
     # Display remote message history
     print("Remote messages:")
     for message in remote_message_history[-10:]:
-        print(f"{message}")
+        await aioconsole.aprint(f"{message}")
+    # for message in remote_message_history[-10:]:
+    #     print(f"{message}")
 
     # Display local message history
     print("\nYour messages:")
     for message in local_message_history[-5:]:
-        print(f"{message}")
+        await aioconsole.aprint(f"{message}")
 
 
 async def chat():
@@ -168,7 +170,7 @@ async def chat():
     ev.data_type = "new_chat"
     new_chat = {
         "cmd": "new_chat",
-        "participants": ["dsc", "admin"],
+        "participants": ["gemma", "admin"],
         "originator_username": cl.username,
     }
     ev.data = json.dumps(new_chat)
