@@ -23,7 +23,9 @@ class IndraTime:
         minute = dt.minute
         second = dt.second
         microsecond = dt.microsecond
-        IndraTime.time_to_julian(year, month, day, hour, minute, second, microsecond)
+        return IndraTime.time_to_julian(
+            year, month, day, hour, minute, second, microsecond
+        )
 
     @staticmethod
     def time_to_julian_gregorian(year, month, day, hour, minute, second, microsecond):
