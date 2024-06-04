@@ -16,12 +16,16 @@ export function generateCssText(styles, selector) {
     return cssText;
 }
 
+const white_std = '#fff';
+const gray_std = '#ccc';
+
 export const color_scheme = {
     'light': {
-        'button-bg': '#007bff', 'button-fg': '#fff', 'button-hover': '#0056b3', 'button-disabled': '#ccc',
-        'status-bg': '#0056b3', 'status-fg': '#fff', 'status-hover': '#007bff', 'status-error': '#dc3545', 'status-success': '#28a745',
+        'button-bg': '#007bff', 'button-fg': white_std, 'button-hover': '#0056b3', 'button-disabled': gray_std,
+        'status-bg': '#0056b3', 'status-fg': white_std, 'status-hover': '#007bff', 'status-error': '#dc3545', 'status-success': '#28a745',
         'edit-mouse-enter': '#0056b3', 'edit-mouse-leave': '#007bff',
-        'notification-bg': '#333', 'notification-fg': '#fff', 'notification-hover': '#007bff'
+        'notification-bg': '#333', 'notification-fg': white_std, 'notification-hover': '#007bff',
+        'background': white_std, 'foreground': '#333', 'border': gray_std,
     },
 }
 
@@ -31,7 +35,7 @@ const indraStyleDict = {
         'max-width': '400px',
         'margin': '0 auto',
         'padding': '20px',
-        'border': '1px solid #ccc',
+        'border': '1px solid ' + gray_std,
         'border-radius': '5px',
         'box-shadow': '0 0 10px rgba(0, 0, 0, 0.1)'
     },
@@ -54,7 +58,7 @@ const indraStyleDict = {
         'padding': '10px',
         'border-radius': '3px',
         'font-size': '16px',  // This prevents iOS from zooming in on input fields 
-        'border': '1px solid #ccc',
+        'border': '1px solid ' + gray_std,
         'box-sizing': 'border-box'
     },
     '.button-style': {
@@ -200,7 +204,7 @@ const indraStyleDict = {
         'display': 'flex',
         'align-items': 'center',
         'margin-bottom': '-1px',
-        'border': '1px solid #ddd', /* Add a light gray border */
+        'border': '1px solid ' + gray_std, /* Add a light gray border */
         'padding': '10px', /* Add padding for spacing */
         'cursor': 'pointer', /* Change cursor to pointer on hover */
     },
@@ -232,7 +236,7 @@ const indraStyleDict = {
         'align-items': 'center',
         'justify-content': 'space-between',
         'padding': '10px',
-        'border': '1px solid #ddd',
+        'border': '1px solid ' + gray_std,
         'border-radius': '3px',
         'cursor': 'pointer',
         'height': '40px',
@@ -240,10 +244,13 @@ const indraStyleDict = {
         'font-size': '16px',  // This prevents iOS from zooming in on input fields 
         'appearance': 'none', // No fancy 3D gradient
     },
+    'select option': {
+        'background-color': white_std,
+    },
     '.separator': {
         'width': '100%',
         'height': '1px',
-        'background-color': '#ddd', /* Gray color */
+        'background-color': gray_std, /* Gray color */
         'margin-top': '10px',
         'margin-bottom': '10px'
     },
@@ -256,8 +263,7 @@ const indraStyleDict = {
         'display': 'flex',
         'flex-grow': '1',
         'overflow': 'auto',
-        //'background-color': '#f9f9f9',
-        'border': '1px solid #ccc',
+        'border': '1px solid ' + gray_std,
         'width': '100%',
         'height': '100%',
     },
@@ -265,9 +271,6 @@ const indraStyleDict = {
         'display': 'flex',
         'flex-grow': '1',
         'overflow': 'auto',
-        //'background-color': '#f0f0f8',
-        //'border': '2px solid #ccc',
-        //'margin': '10px',
         'width': '100%',
         'height': '100%',
     },
@@ -282,7 +285,7 @@ const indraStyleDict = {
     '.splitter': {
         'width': '5px',
         'cursor': 'col-resize',
-        'background-color': '#ddd'
+        'background-color': gray_std
     },
 };
 
