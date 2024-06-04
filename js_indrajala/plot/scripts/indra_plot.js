@@ -122,6 +122,17 @@ function plotPage(currentUser) {
     titleHeading.classList.add('margin-bottom');
     plotDiv.appendChild(titleHeading);
 
+    const plotTypeSelect = document.createElement('select');
+    plotTypeSelect.classList.add('selectBox');
+    plotTypeSelect.classList.add('margin-bottom');
+    plotTypeSelect.innerHTML = `
+        <option value="line">Line</option>
+        <option value="bar">Bar</option>
+        <option value="scatter">Scatter</option>
+        <option value="bubble">Bubble</option>
+        `;
+    plotDiv.appendChild(plotTypeSelect);
+
     const plotPane = document.createElement('div');
     plotPane.classList.add('pane');
     plotPane.classList.add('plot-pane');
