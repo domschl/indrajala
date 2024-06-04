@@ -3,7 +3,7 @@
 
 import { indra_styles, color_scheme } from '../../indralib/scripts/indra_styles.js';
 import {
-    connection, subscribe, indraLogin, indraLogout, indraKVRead, indraKVWrite, indraKVDelete
+    connection, subscribe, unsubscribe, indraLogin, indraLogout, indraKVRead, indraKVWrite, indraKVDelete
 } from '../../indralib/scripts/indra_client.js';
 import {
     showNotification, removeStatusLine, loginPage,
@@ -70,7 +70,69 @@ function indraPortalApp() {
 
 function plotPage(currentUser) {
     let plotCanvas = null;
-    subscribe('$event/ml/model/train/+/+/+/record', (data) => {
+    let plotApp = null;
+
+    function indraEvent(event) {
+        console.log('Indra event:', event);
+    }
+    /*
+        subscribe('$event/ml/model/train/+/+/+/record', (data) => {
+            // split domain:
+            let doms = data.domain.split('/');
+            if (doms.length !== 8) {
+                console.error(`Received invalid domain ${data.domain}`);
+                return;
+            }
+            let model = doms[4];
+            let variant = doms[5];
+            let run_number = doms[6];
+            let plot_desc = `${model}/${variant}/${run_number}`;
+            if (!(plot_desc in app_data.plotData)) {
+                app_data.plotData[plot_desc] = {
+                    x: [],
+                    y_l: [],
+                    y_lm: []
+                };
+            }
+            let rec = JSON.parse(data.data);
+            let xi = rec['epoch'].toFixed(6);
+            let yi = rec['loss'];
+            let ymi = rec['mean_loss'];
+            app_data.plotData[plot_desc].x.push(xi);
+            app_data.plotData[plot_desc].y_l.push(yi);
+            app_data.plotData[plot_desc].y_lm.push(ymi);
+            // update chart
+            if (plotCanvas === null) {
+                console.error('Plot canvas not found');
+                return;
+            }
+            let chart = Chart.getChart(plotCanvas);
+            chart.data.labels = app_data.plotData[plot_desc].x;
+            chart.data.datasets[0].data = app_data.plotData[plot_desc].y_l;
+            chart.data.datasets[1].data = app_data.plotData[plot_desc].y_lm;
+            chart.update();
+            console.log(`Received model train event ${data.data}`);
+        });
+    */
+    let mainDiv = document.createElement('div');
+    mainDiv.classList.add('container-style');
+
+    const plotDiv = document.createElement('div');
+    plotDiv.classList.add('margin-top');
+    plotDiv.classList.add('margin-bottom');
+    mainDiv.appendChild(plotDiv);
+
+    // Create title heading
+    const titleHeading = document.createElement('h2');
+    titleHeading.textContent = 'Indrajāla Plots';
+    titleHeading.classList.add('margin-bottom');
+    plotDiv.appendChild(titleHeading);
+
+    let chart = null;
+    let curSubscription = null;
+
+    function aiMonitorEvent(data) {
+        console.log('AI Monitor event:', data);
         // split domain:
         let doms = data.domain.split('/');
         if (doms.length !== 8) {
@@ -100,37 +162,85 @@ function plotPage(currentUser) {
             console.error('Plot canvas not found');
             return;
         }
-        let chart = Chart.getChart(plotCanvas);
+        if (chart === null) {
+            console.error('Chart not found');
+            return;
+        }
+        //let chart = Chart.getChart(plotCanvas);
         chart.data.labels = app_data.plotData[plot_desc].x;
         chart.data.datasets[0].data = app_data.plotData[plot_desc].y_l;
         chart.data.datasets[1].data = app_data.plotData[plot_desc].y_lm;
         chart.update();
         console.log(`Received model train event ${data.data}`);
-    });
+    }
 
-    let mainDiv = document.createElement('div');
-    mainDiv.classList.add('container-style');
-
-    const plotDiv = document.createElement('div');
-    plotDiv.classList.add('margin-top');
-    plotDiv.classList.add('margin-bottom');
-    mainDiv.appendChild(plotDiv);
-
-    // Create title heading
-    const titleHeading = document.createElement('h2');
-    titleHeading.textContent = 'Indrajāla Plots';
-    titleHeading.classList.add('margin-bottom');
-    plotDiv.appendChild(titleHeading);
+    function aiMonChart() {
+        chart = new Chart(plotCanvas, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Loss',
+                    data: [],
+                    borderWidth: 1,
+                    pointRadius: 0,
+                }
+                    , {
+                    label: 'Mean Loss',
+                    data: [],
+                    borderWidth: 1,
+                    pointRadius: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                animation: false,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        }
+        );
+    }
+    let plotTypes = [
+        { value: 'none', name: 'Select Application', subscription: null, chart_init: null, msg_event: null },
+        {
+            value: 'aiMon', name: 'AI monitor', subscription: '$event/ml/model/train/+/+/+/record', chart_init: aiMonChart, msg_event: aiMonitorEvent
+        },
+        { value: 'servperf', name: 'Server performance', subscription: null, chart_init: null, msg_event: null },
+        { value: 'sensordata', name: 'Sensor data', subscription: null, chart_init: null, msg_event: null },];
 
     const plotTypeSelect = document.createElement('select');
     plotTypeSelect.classList.add('selectBox');
     plotTypeSelect.classList.add('margin-bottom');
-    plotTypeSelect.innerHTML = `
-        <option value="line">Line</option>
-        <option value="bar">Bar</option>
-        <option value="scatter">Scatter</option>
-        <option value="bubble">Bubble</option>
-        `;
+    for (let i = 0; i < plotTypes.length; i++) {
+        let option = document.createElement('option');
+        option.value = plotTypes[i].value;
+        option.text = plotTypes[i].name;
+        option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
+        plotTypeSelect.appendChild(option);
+    }
+    plotTypeSelect.addEventListener('change', function () {
+        console.log('Selected plot type:', plotTypeSelect.value);
+        let sel = plotTypeSelect.selectedIndex;
+        if (curSubscription !== null) {
+            unsubscribe(curSubscription);
+        }
+        if (chart !== null) {
+            chart.destroy();
+            chart = null;
+        }
+        if (plotTypes[sel].chart_init !== null) {
+            plotTypes[sel].chart_init();
+        }
+        if (plotTypes[sel].subscription !== null) {
+            curSubscription = plotTypes[sel].subscription;
+            subscribe(curSubscription, plotTypes[sel].msg_event);
+        }
+    });
     plotDiv.appendChild(plotTypeSelect);
 
     const plotPane = document.createElement('div');
@@ -142,35 +252,6 @@ function plotPage(currentUser) {
     plotCanvas = document.createElement('canvas');
     plotCanvas.classList.add('plot-canvas');
     plotPane.appendChild(plotCanvas);
-    const chart = new Chart(plotCanvas, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Loss',
-                data: [],
-                borderWidth: 1,
-                pointRadius: 0,
-            }
-                , {
-                label: 'Mean Loss',
-                data: [],
-                borderWidth: 1,
-                pointRadius: 0,
-            }]
-        },
-        options: {
-            responsive: true,
-            animation: false,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: false
-                }
-            }
-        }
-    }
-    );
 
     let buttonLine = document.createElement('div');
     buttonLine.classList.add('button-line');
@@ -187,7 +268,7 @@ function plotPage(currentUser) {
                 showNotification('Logout failed.');
             }
             removeMainElement();
-            loginPage(plotPage, indraPortalApp, "Indrajāla Plots login", ['admin']);
+            loginPage(plotPage, indraPortalApp, "Indrajāla Plots login", ['app']);
         });
     }
 
