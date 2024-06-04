@@ -199,10 +199,11 @@ function plotPage(currentUser) {
         console.log('Edit plot');
     }
 
-    let buttons = [{ name: 'delete', icon: 'e872', action: deletePlot },
-    { name: 'logout', icon: 'e9ba', action: handleLogout },
-    { name: 'exit', icon: 'e5cd', action: indraPortalApp },
-    { name: 'edit', icon: 'e3c9', action: editPlot }
+    let buttons = [
+        { name: 'edit', icon: 'e3c9', action: editPlot },
+        { name: 'delete', icon: 'e872', action: deletePlot },
+        { name: 'logout', icon: 'e9ba', action: handleLogout },
+        { name: 'exit', icon: 'e5cd', action: indraPortalApp },
     ];
 
     for (let i = 0; i < buttons.length; i++) {
