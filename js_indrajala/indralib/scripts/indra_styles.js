@@ -227,6 +227,19 @@ const indraStyleDict = {
         'font-size': 'smaller',
         'color': 'gray'
     },
+    '.selectBox': {
+        'display': 'flex',
+        'align-items': 'center',
+        'justify-content': 'space-between',
+        'padding': '10px',
+        'border': '1px solid #ddd',
+        'border-radius': '3px',
+        'cursor': 'pointer',
+        'height': '40px',
+        'width': '100%',
+        'font-size': '16px',  // This prevents iOS from zooming in on input fields 
+        'appearance': 'none', // No fancy 3D gradient
+    },
     '.separator': {
         'width': '100%',
         'height': '1px',
@@ -254,7 +267,7 @@ const indraStyleDict = {
         'overflow': 'auto',
         //'background-color': '#f0f0f8',
         //'border': '2px solid #ccc',
-        'margin': '10px',
+        //'margin': '10px',
         'width': '100%',
         'height': '100%',
     },
