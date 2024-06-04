@@ -464,25 +464,6 @@ function userListPage() {
     let editButton = null;
     let deleteButton = null;
 
-    function userGui() {
-        // Create container div
-        let usersDiv = document.createElement('div');
-        usersDiv.classList.add('margin-top');
-        usersDiv.classList.add('margin-bottom');
-
-        // Create title heading
-        const titleHeading = document.createElement('h2');
-        titleHeading.textContent = 'Indrajāla Users';
-        titleHeading.classList.add('margin-bottom');
-
-        userList = document.createElement('ul');
-        userList.classList.add('userList');
-
-        usersDiv.appendChild(titleHeading);
-        usersDiv.appendChild(userList);
-        return usersDiv;
-    }
-
     function deleteUser() {
         if (selectedUser === null) {
             console.log('No user selected.');
@@ -655,56 +636,25 @@ function userListPage() {
     let main_div = document.createElement('div');
     main_div.classList.add('container-style');
 
-    let usersDiv = userGui();
+    // Create container div
+    let usersDiv = document.createElement('div');
+    usersDiv.classList.add('margin-top');
+    usersDiv.classList.add('margin-bottom');
+
+    // Create title heading
+    const titleHeading = document.createElement('h2');
+    titleHeading.textContent = 'Indrajāla Users';
+    titleHeading.classList.add('margin-bottom');
+
+    userList = document.createElement('ul');
+    userList.classList.add('userList');
+
+    usersDiv.appendChild(titleHeading);
+    usersDiv.appendChild(userList);
     main_div.appendChild(usersDiv);
 
     let button_line = document.createElement('div');
     button_line.classList.add('button-line');
-
-    let addButton = document.createElement('button');
-    addButton.classList.add('icon-button-style');
-    let addIcon = 'e7fe'; // 'add person' icon
-    addButton.innerHTML = `&#x${addIcon};`;
-
-    editButton = document.createElement('button');
-    editButton.classList.add('icon-button-style');
-    let editIcon = 'e3c9'; // 'edit' icon
-    editButton.innerHTML = `&#x${editIcon};`;
-
-    deleteButton = document.createElement('button');
-    deleteButton.classList.add('icon-button-style');
-    let deleteIcon = 'e872'; // 'delete' icon
-    deleteButton.innerHTML = `&#x${deleteIcon};`;
-
-    let logoutButton = document.createElement('button');
-    logoutButton.classList.add('icon-button-style');
-    let accountIcon = 'e9ba'; // 'logout' icon
-    logoutButton.innerHTML = `&#x${accountIcon};`;
-
-    let exitButton = document.createElement('button');
-    exitButton.classList.add('icon-button-style');
-    let exitIcon = 'e5cd'; // 'exit' icon
-    exitButton.innerHTML = `&#x${exitIcon};`;
-
-    let sep1 = document.createElement('div');
-    sep1.classList.add('separator');
-    main_div.appendChild(sep1);
-
-    button_line.appendChild(addButton);
-    button_line.appendChild(editButton);
-    button_line.appendChild(deleteButton);
-    button_line.appendChild(logoutButton);
-    button_line.appendChild(exitButton);
-
-    let buttons = [addButton, editButton, deleteButton, logoutButton, exitButton];
-    for (let i = 0; i < buttons.length; i++) {
-        buttons[i].addEventListener('mouseenter', function () {
-            this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
-        });
-        buttons[i].addEventListener('mouseleave', function () {
-            this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
-        });
-    }
 
     function handleLogout() {
         console.log('Logging out...');
@@ -755,14 +705,31 @@ function userListPage() {
         changeMainElement(curDiv);
     }
 
-    // Add event listeners
-    addButton.addEventListener('click', () => addEditUser(true));
-    editButton.addEventListener('click', () => addEditUser(false));
-    deleteButton.addEventListener('click', deleteUser);
+    let button = [
+        { name: 'add', icon: 'e7fe', action: () => addEditUser(true) },
+        { name: 'edit', icon: 'e3c9', action: () => addEditUser(false) },
+        { name: 'delete', icon: 'e872', action: deleteUser },
+        { name: 'logout', icon: 'e9ba', action: handleLogout },
+        { name: 'exit', icon: 'e5cd', action: indraPortalApp }
+    ];
+    for (let i = 0; i < button.length; i++) {
+        let buttonElement = document.createElement('button');
+        buttonElement.classList.add('icon-button-style');
+        buttonElement.innerHTML = `&#x${button[i].icon};`;
+        buttonElement.addEventListener('click', button[i].action);
+        buttonElement.addEventListener('mouseenter', function () {
+            this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
+        });
+        buttonElement.addEventListener('mouseleave', function () {
+            this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
+        });
+        button_line.appendChild(buttonElement);
+    }
 
-    logoutButton.addEventListener('click', handleLogout);
-    // Exit button, got to main page
-    exitButton.addEventListener('click', indraPortalApp);
+    let sep1 = document.createElement('div');
+    sep1.classList.add('separator');
+    main_div.appendChild(sep1);
+
     // Append all elements to container div
     main_div.appendChild(button_line);
     changeMainElement(main_div);
