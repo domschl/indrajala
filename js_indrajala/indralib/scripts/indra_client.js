@@ -66,7 +66,7 @@ export function connection(connectionEvent = null) {
         if (connectionEvent !== null) {
             connectionEvent("disconnected", { connectionState: false, indraServerUrl: websocketUrl });
         }
-        setTimeout(connection, 1000);
+        setTimeout(() => connection(connectionEvent), 1000);
     });
 }
 

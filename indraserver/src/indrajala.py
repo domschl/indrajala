@@ -197,7 +197,7 @@ def main_runner(main_logger, event_queue, modules):
                                         ev_stat.data_type = "Float"
                                         ev_stat.from_id = "indrajala"
                                         ev_stat.data = json.dumps(msg_sec)
-                                        main_logger.info(f"JD-Time: {ev.time_jd_start}")
+                                        # main_logger.info(f"JD-Time: {ev.time_jd_start}")
                                         event_queue.put(ev_stat)
                                     last_stat_output = time.time()
                                 main_logger.info(
