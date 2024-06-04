@@ -23,7 +23,7 @@ try:
 except ModuleNotFoundError:  # Python 3.10 and older:
     import tomli as tomllib  # type: ignore
 
-from indralib.indra_event import IndraEvent  # type: ignore
+from indralib.indra_event import IndraEvent
 
 INDRAJALA_VERSION = "0.1.0"
 
@@ -143,7 +143,7 @@ def main_runner(main_logger, event_queue, modules):
                             sysstat_subs = True
                         # if sub not in subs[origin_module]:  # XXX different sessions can sub to the same thing, alternative would be reference counting...
                         subs[origin_module].append(sub)
-                        main_logger.debug(f"Subscribing to {sub} by {origin_module}")
+                        main_logger.info(f"Subscribing to {sub} by {origin_module}")
             elif ev.domain == "$cmd/unsub":
                 sub_list = json.loads(ev.data)
                 if isinstance(sub_list, list) is True:
@@ -189,7 +189,17 @@ def main_runner(main_logger, event_queue, modules):
                                         "Switching back to single-message ROUTE infos, due to reduced message volume"
                                     )
                                     overview_mode = False
-                                last_stat_output = time.time()
+                                if time.time() - last_stat_output > 1.0:
+                                    if sysstat_subs is True:
+                                        # Only send statistics, if there is a subscriber
+                                        ev_stat = IndraEvent()
+                                        ev_stat.domain = "$sys/stat/msgpersec"
+                                        ev_stat.data_type = "Float"
+                                        ev_stat.from_id = "indrajala"
+                                        ev_stat.data = json.dumps(msg_sec)
+                                        main_logger.info(f"JD-Time: {ev.time_jd_start}")
+                                        event_queue.put(ev_stat)
+                                    last_stat_output = time.time()
                                 main_logger.info(
                                     f"ROUTE {ev.domain[:30]}={ev.data[:10]} to {module}, {msg_sec:0.2f} msg/s, que: {unprocessed_items}"
                                 )
@@ -206,15 +216,15 @@ def main_runner(main_logger, event_queue, modules):
                                     main_logger.info(
                                         f"ROUTE summary {msg_sec:0.2f} msg/sec, queued: {unprocessed_items}"
                                     )
-                                    last_stat_output = time.time()
                                     if sysstat_subs is True:
                                         # Only send statistics, if there is a subscriber
                                         ev_stat = IndraEvent()
                                         ev_stat.domain = "$sys/stat/msgpersec"
                                         ev_stat.data_type = "Float"
                                         ev_stat.from_id = "indrajala"
-                                        ev_stat.data = str(msg_sec)
+                                        ev_stat.data = json.dumps(msg_sec)
                                         event_queue.put(ev_stat)
+                                    last_stat_output = time.time()
                             if modules[module]["mode"] == "queue":
                                 modules[module]["send_queue"].put(ev)
                             elif modules[module]["mode"] == "zeromq":
