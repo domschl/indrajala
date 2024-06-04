@@ -2,7 +2,7 @@
 
 import { IndraEvent } from './indralib.js';
 
-let socket;
+var socket = null;
 let trx = {};
 var session_id = '';
 
@@ -47,7 +47,7 @@ export function connection(connectionEvent = null) {
                 return;
             }
         }
-        for (sub in subscriptions) {
+        for (let sub in subscriptions) {
             if (IndraEvent.mqcmp(ie.domain, sub)) {
                 subscriptions[sub](ie);
             }
