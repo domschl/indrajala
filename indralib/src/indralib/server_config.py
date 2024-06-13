@@ -49,6 +49,9 @@ class Profiles:
     def get_profiles(self):
         return self.profiles
 
+    def get_default_profile(self):
+        return self.get_profile(self.default_profile)
+
     def get_profile(self, profile_name):
         for profile in self.profiles:
             if profile["name"] == profile_name:

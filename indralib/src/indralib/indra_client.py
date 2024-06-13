@@ -32,6 +32,7 @@ class IndraClient:
         self.recv_task = None
         self.initialized = False
         self.error_shown = False
+        self.profiles = Profiles()
         if profile is not None and Profiles.check_profile(profile) is False:
             self.log.error(f"Invalid profile {profile}")
             self.profile = None
@@ -41,7 +42,7 @@ class IndraClient:
             self.initialized = True
         else:
             if profile_name == "default":
-                self.profile = Profiles.get_profile(Profiles.default_profile)
+                self.profile = self.profiles.get_default_profile()
             else:
                 self.profile = Profiles.get_profile(profile_name)
             if self.profile is not None:
