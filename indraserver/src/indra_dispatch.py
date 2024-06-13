@@ -183,6 +183,61 @@ class IndraProcess(IndraProcessCore):
                 rev.data_type = "session/new"
                 rev.data = json.dumps(session_id)
                 self.event_send(rev)
+            elif chat_cmd["cmd"] == "end_chat":
+                if "session_id" not in chat_cmd:
+                    self.log.error(
+                        f"Session command 'end_chat' missing 'session_id' field: {ev.data}"
+                    )
+                    self._trx_err(
+                        ev, "Session command 'end_chat' missing 'session_id' field"
+                    )
+                    return
+                session_id = chat_cmd["session_id"]
+                if session_id not in self.chat_sessions:
+                    self.log.error(
+                        f"Session command 'end_chat' has invalid session_id: {session_id}"
+                    )
+                    self._trx_err(
+                        ev, "Session command 'end_chat' has invalid session_id"
+                    )
+                    return
+                del self.chat_sessions[session_id]
+                rev = IndraEvent()
+                rev.domain = ev.from_id
+                rev.from_id = self.name
+                rev.uuid4 = ev.uuid4
+                rev.to_scope = ev.domain
+                rev.time_jd_start = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
+                )
+                rev.time_jd_end = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
+                )
+                rev.data_type = "session/end"
+                rev.data = json.dumps(session_id)
+                self.event_send(rev)
+            elif chat_cmd["cmd"] == "list_user_sessions":
+                user_sessions = []
+                for user_session in self.user_sessions:
+                    user_sessions.append(user_session["user"])
+                rev = IndraEvent()
+                rev.domain = ev.from_id
+                rev.from_id = self.name
+                rev.uuid4 = ev.uuid4
+                rev.to_scope = ev.domain
+                rev.time_jd_start = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
+                )
+                rev.time_jd_end = IndraTime.datetime2julian(
+                    datetime.datetime.now(tz=datetime.timezone.utc)
+                )
+                rev.data_type = "session/list"
+                rev.data = json.dumps(user_sessions)
+                self.event_send(rev)
+            else:
+                self.log.error(f"Invalid session command: {chat_cmd['cmd']}")
+                self._trx_err(ev, f"Invalid session command: {chat_cmd['cmd']}")
+
         elif IndraEvent.mqcmp(ev.domain, "$event/chat/#"):
             try:
                 chat_msg = json.loads(ev.data)
