@@ -32,7 +32,7 @@ class IndraClient:
         self.recv_task = None
         self.initialized = False
         self.error_shown = False
-        if Profiles.check_profile(profile) is False:
+        if profile is not None and Profiles.check_profile(profile) is False:
             self.log.error(f"Invalid profile {profile}")
             self.profile = None
             return
