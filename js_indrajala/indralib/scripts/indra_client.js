@@ -280,4 +280,32 @@ export function unsubscribe(domain) {
     console.log('Sent message to server:', ie.to_json());
 }
 
-
+export function getUserSessionList(listHandler) {
+    let ie = new IndraEvent();
+    ie.domain = "$trx/cs/session";
+    ie.from_id = "ws/js";
+    ie.auth_hash = session_id;
+    ie.data_type = "list_request";
+    cmd = {
+        cmd: "list_user_sessions",
+    }
+    ie.data = JSON.stringify(cmd);
+    let pr = sendTransaction(ie);
+    if (pr === null) {
+        console.log('Didn\'t get promise!');
+        return null;
+    }
+    console.log('Sent message to server:', ie.to_json());
+    // Wait for the promise to resolve
+    pr.then((ie) => {
+        console.log('Promise: Received response from server:', ie);
+        let value = JSON.parse(ie.data);
+        console.log('Value:', value);
+        listHandler(value);
+    },
+        (error) => {
+            console.log('Promise: Error:', error);
+            listHandler(null);
+        }
+    );
+}
