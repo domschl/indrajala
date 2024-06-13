@@ -12,7 +12,8 @@ from indralib.server_config import Profiles
 class IndraClient:
     def __init__(
         self,
-        profile,
+        profile=None,
+        profile_name="default",
         verbose=False,
         module_name=None,
         log_handler=None,
@@ -32,11 +33,19 @@ class IndraClient:
         self.initialized = False
         self.error_shown = False
         if Profiles.check_profile(profile) is False:
-            self.log.error("Invalid profile {profile}")
+            self.log.error(f"Invalid profile {profile}")
             self.profile = None
             return
-        self.profile = profile
-        self.initialized = True
+        if profile is not None:
+            self.profile = profile
+            self.initialized = True
+        else:
+            if profile_name == "default":
+                self.profile = Profiles.get_default_profile()
+            else:
+                self.profile = Profiles.get_profile(profile_name)
+            if self.profile is not None:
+                self.initialized = True
 
     async def init_connection(self, verbose=False):
         """Initialize connection"""
