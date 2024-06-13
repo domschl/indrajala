@@ -46,7 +46,7 @@ function chatApp(loggedInUser) {
             case 'disconnected':
                 app_data.userList = null;
                 app_data.loginState = false;
-                loginDiv = loginPage(userListPage, indraPortalApp, "Indrajāla chat login", ['user', 'chat']);
+                loginDiv = loginPage(chatPage, indraPortalApp, "Indrajāla chat login", ['user', 'chat']);
                 changeMainElement(loginDiv);
                 disableElement(loginDiv);
                 break;
@@ -65,8 +65,23 @@ function indraPortalApp() {
 
 
 function chatPage(currentUser) {
+    let mainDiv = document.createElement('div');
+    mainDiv.classList.add('container-style');
+
     const chatDiv = document.createElement('div');
-    chatDiv.classList.add('pane-container');
+    chatDiv.classList.add('margin-top');
+    chatDiv.classList.add('margin-bottom');
+    mainDiv.appendChild(chatDiv);
+
+    // Create title heading
+    const titleHeading = document.createElement('h2');
+    titleHeading.textContent = 'Indrajāla Chat Users';
+    titleHeading.classList.add('margin-bottom');
+    chatDiv.appendChild(titleHeading);
+
+
+    const chatListsDiv = document.createElement('div');
+    chatListsDiv.classList.add('pane-container');
     // create left and right pane separated by a movable splitter:
     const leftPane = document.createElement('div');
     leftPane.classList.add('pane');
@@ -80,9 +95,9 @@ function chatPage(currentUser) {
     rightPane.textContent = 'Chat Window';
 
     // add to chatDiv
-    chatDiv.appendChild(leftPane);
-    chatDiv.appendChild(splitter);
-    chatDiv.appendChild(rightPane);
+    chatListsDiv.appendChild(leftPane);
+    chatListsDiv.appendChild(splitter);
+    chatListsDiv.appendChild(rightPane);
 
     let isDragging = false;
 
@@ -90,7 +105,7 @@ function chatPage(currentUser) {
         isDragging = true;
     });
 
-    chatDiv.addEventListener('mousemove', function (e) {
+    chatListsDiv.addEventListener('mousemove', function (e) {
         if (!isDragging) {
             return;
         }
@@ -105,7 +120,9 @@ function chatPage(currentUser) {
     document.addEventListener('mouseup', function (e) {
         isDragging = false;
     });
-    changeMainElement(chatDiv);
+    chatDiv.appendChild(chatListsDiv);
+
+    changeMainElement(mainDiv);
 }
 
 function nonsense() {
