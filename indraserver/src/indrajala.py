@@ -144,7 +144,7 @@ def main_runner(main_logger, event_queue, modules):
                         # if sub not in subs[origin_module]:  # XXX different sessions can sub to the same thing, alternative would be reference counting...
                         subs[origin_module].append(sub)
                         main_logger.info(f"Subscribing to {sub} by {origin_module}")
-            elif ev.domain == "$cmd/unsub":
+            elif ev.domain == "$cmd/unsubs":
                 sub_list = json.loads(ev.data)
                 if isinstance(sub_list, list) is True:
                     for sub in sub_list:
