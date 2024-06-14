@@ -35,6 +35,9 @@ class IndraProcess(IndraProcessCore):
         self.set_throttle(1)  # Max 1 message per sec to inbound
         self.database = os.path.expanduser(config_data["database"])
         self.database_directory = os.path.dirname(self.database)
+        if os.path.exists(self.database_directory) is False:
+            os.makedirs(self.database_directory)
+            self.log.info(f"Created database directory {self.database_directory}")
         self.last_commit = 0
         self.commit_delay_sec = config_data["commit_delay_sec"]
         self.epsilon = config_data["epsilon"]
