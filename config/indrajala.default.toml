@@ -91,7 +91,7 @@ target_language = "de"
 device = "cuda"
 
 [[indra_ai]]
-active = true
+active = false
 name = "indra_ai.3"
 loglevel = "debug"
 subscriptions = []
@@ -101,7 +101,7 @@ model = "gemma-2b-it"
 device = "cuda"
 
 [[zero_test]]
-active = true
+active = false
 name = "zero_test.1"
 zeromq_port = 8092
 # zeromq_host = "localhost"
@@ -110,3 +110,19 @@ loglevel = "debug"
 subscriptions = ["zero_test/#"]
 # Max for M2 cpu is around 5000 Hz message input via ZMQ
 ping_frequency_hz = 1
+
+[[indra_ticker]]
+    active = true
+    name = "ticker.1"
+    # zeromq_port = 8092
+    # zeromq_host = "localhost"
+    # zeromq_executable = "some path to module"
+    loglevel = "debug"
+    subscriptions = ["$cmd/ticker/#"]
+
+    [[indra_ticker.task]]
+        "active" = true
+        "name" = "Weather Uni Muc"
+        "source" = "ticker_muc_weather.get_weather"
+        "interval_sec" = 10
+        "params" = {}
