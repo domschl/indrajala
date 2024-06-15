@@ -8,3 +8,6 @@ torch
 transformers
 accelerate
 "huggingface_hub[cli]"
+pandas
+beautifulsoup4
+lxml
