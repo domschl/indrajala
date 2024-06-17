@@ -29,6 +29,7 @@ final class indralibTests: XCTestCase {
       }
     } catch {
       print("Error reading JSON file: \(error)")
+      XCTFail("Error reading JSON file: \(error)")
     }
   }
 

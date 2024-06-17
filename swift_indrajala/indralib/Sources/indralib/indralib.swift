@@ -1,6 +1,6 @@
 import Foundation
 
-class IndraEvent: Codable {
+public class IndraEvent: Codable {
   var domain: String = ""
   var from_id: String = ""
   var uuid4: String = UUID().uuidString
@@ -17,7 +17,7 @@ class IndraEvent: Codable {
     // No initialization logic required
   }
 
-  func to_json() -> String? {
+  public func to_json() -> String? {
     let encoder = JSONEncoder()
     encoder.outputFormatting = .prettyPrinted
     do {
@@ -29,7 +29,7 @@ class IndraEvent: Codable {
     }
   }
 
-  static func from_json(json_str: String) -> IndraEvent? {
+  public static func from_json(json_str: String) -> IndraEvent? {
     let decoder = JSONDecoder()
     do {
       let jsonData = json_str.data(using: .utf8)!
@@ -41,7 +41,7 @@ class IndraEvent: Codable {
     }
   }
 
-  static func mqcmp(pub: String, sub: String) -> Bool {
+  public static func mqcmp(pub: String, sub: String) -> Bool {
     let illegalChars = ["+", "#"]
     for c in illegalChars {
       if pub.contains(c) {
@@ -102,7 +102,7 @@ class IndraEvent: Codable {
     return false
   }
 
-  static func timeToJulian(year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, microsecond: Int) -> Double {
+  public static func timeToJulian(year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, microsecond: Int) -> Double {
     // Convert (extended) Gregorian date to Julian date
       // Apple's uttlery ridiculous Swift type-checker fails on primary-school level math!
       let temp_0: Double = Double(367 * year) - Double(7 * (year + ((month + 9) / 12)))
@@ -112,7 +112,7 @@ class IndraEvent: Codable {
     return jd
   }
 
-  static func julianToTime(jd: Double) -> (year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, microsecond: Int) {
+  public static func julianToTime(jd: Double) -> (year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, microsecond: Int) {
     // Convert Julian date to discrete time
     let jd = jd + 0.5
     let Z = Int(jd)
@@ -149,7 +149,7 @@ class IndraEvent: Codable {
     return (year, month, Int(day), hour, minute, second, microsecond)
   }
 
-static func timeToJulian(year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, microsecond: Int) -> Double? {
+public static func timeToJulian(year: Int, month: Int, day: Int, hour: Int, minute: Int, second: Int, microsecond: Int) -> Double? {
     // Convert discrete time to Julian date, assume Julian calendar for time < 1582 otherwise Gregorian calendar
     if year == 0 {
         print("There is no year 0 in the Julian calendar! Use toTimeGregorian for continuous use of the extended Gregorian calendar.")
