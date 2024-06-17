@@ -1,0 +1,13 @@
+paho-mqtt
+numpy
+aiohttp
+bcrypt
+indralib
+pyzmq
+torch
+transformers
+accelerate
+"huggingface_hub[cli]"
+pandas
+beautifulsoup4
+lxml
