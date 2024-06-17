@@ -144,7 +144,7 @@ def main_runner(main_logger, event_queue, modules):
                         # if sub not in subs[origin_module]:  # XXX different sessions can sub to the same thing, alternative would be reference counting...
                         subs[origin_module].append(sub)
                         main_logger.info(f"Subscribing to {sub} by {origin_module}")
-            elif ev.domain == "$cmd/unsub":
+            elif ev.domain == "$cmd/unsubs":
                 sub_list = json.loads(ev.data)
                 if isinstance(sub_list, list) is True:
                     for sub in sub_list:
@@ -555,9 +555,13 @@ def read_config_arguments():
     msh.setFormatter(formatter)
     root_logger.addHandler(msh)
 
+    created_log_dir = False
     log_dir = toml_data["indrajala"]["logdir"]
     if "{configdir}" in log_dir:
         log_dir = log_dir.replace("{configdir}", str(config_dir))
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        created_log_dir = True
     log_file = os.path.join(log_dir, "indrajala.log")
     try:
         # mfh = logging.FileHandler(log_file, mode='w')
@@ -579,6 +583,8 @@ def read_config_arguments():
     main_logger.info("----------------------------------------------------------")
     main_logger.info(f"   Starting Indrajala server {INDRAJALA_VERSION}")
 
+    if created_log_dir:
+        main_logger.info(f"   Created log directory {log_dir}")
     return main_logger, toml_data, args
 
 
