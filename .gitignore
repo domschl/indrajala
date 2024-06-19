@@ -19,4 +19,5 @@ dist/
 indralib.egg-info/
 web/
 portal_apps.json
+.vscode/
 
