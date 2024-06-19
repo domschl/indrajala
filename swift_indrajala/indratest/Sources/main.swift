@@ -4,10 +4,18 @@
 import Foundation
 import indralib
 
-struct TestData: Codable {
+struct DomainTestData: Codable {
   let publish: String
   let subscribe: String
   let result: Bool
+}
+
+struct TimeTestData: Codable {
+  let Calendar: String
+  let RD: Double
+  let JulianDate: Double
+  let julian_string: String
+  let gregorian_string: String
 }
 
 struct result_block: Codable {
@@ -37,13 +45,13 @@ func test_mqcmp(folder: String = "../../test_data", checkFailures: Bool = false)
   }
   let fileURL = URL(fileURLWithPath: filePath)
 
-  let testCases: [TestData]
+  let testCases: [DomainTestData]
   do {
     // Read the JSON data from the file, return error on failure:
     let jsonData = try Data(contentsOf: fileURL)
     // Decode the JSON data using JSONDecoder
     let decoder = JSONDecoder()
-    testCases = try decoder.decode([TestData].self, from: jsonData)
+    testCases = try decoder.decode([DomainTestData].self, from: jsonData)
   } catch {
     print("Error reading JSON data from file: \(error)")
     res.num_failed += 1
@@ -51,7 +59,7 @@ func test_mqcmp(folder: String = "../../test_data", checkFailures: Bool = false)
     return res
   }
   // Process the test data
-  for testCase: TestData in testCases {
+  for testCase: DomainTestData in testCases {
     let result = IndraEvent.mqcmp(pub: testCase.publish, sub: testCase.subscribe)
     if result != testCase.result {
       print("Failed for publish:\(testCase.publish), subscribe:\(testCase.subscribe)")
@@ -60,6 +68,76 @@ func test_mqcmp(folder: String = "../../test_data", checkFailures: Bool = false)
     } else {
       res.num_ok += 1
     }
+  }
+  return res
+}
+
+/*
+def cmp_time(d1: str, d2: str):
+    l1 = len(d1)
+    l2 = len(d2)
+    if l1 < l2:
+        d2 = d2[: len(d1)]
+    if l2 < l1:
+        d1 = d1[: len(d2)]
+    return d1 == d2
+*/
+
+func cmp_time(d1: String, d2: String) -> Bool {
+  let l1 = d1.count
+  let l2 = d2.count
+  var d1_ = d1
+  var d2_ = d2
+  if l1 < l2 {
+    d2_ = String(d2.prefix(l1))
+  }
+  if l2 < l1 {
+    d1_ = String(d1.prefix(l2))
+  }
+  return d1_ == d2_
+}
+
+func test_time(folder: String = "../../test_data", checkFailures: Bool = false) -> result_block {
+  var res: result_block = result_block(num_ok: 0, num_failed: 0, num_skipped: 0, errors: [])
+  // Read mqcmp_data.json file in current directory (no bundle) with test data:
+  // format: [ { "publish": "abc", "subscribe": "abc", "result": true}, ...]
+  let filePath: String
+  if checkFailures == false {
+    filePath = "\(folder)/time/normalized_jd_time_data.json)"
+  } else {
+    res.num_failed += 1
+    res.errors.append("Failure cases not implemented for time")
+    return res
+  }
+  // check if file exists
+  let fileManager = FileManager.default
+  if !fileManager.fileExists(atPath: filePath) {
+    print("File not found: \(filePath)")
+    res.num_failed += 1
+    res.errors.append("Test data file not found: \(filePath)")
+    return res
+  }
+  let fileURL = URL(fileURLWithPath: filePath)
+
+  let testCases: [TimeTestData]
+  do {
+    // Read the JSON data from the file, return error on failure:
+    let jsonData = try Data(contentsOf: fileURL)
+    // Decode the JSON data using JSONDecoder
+    let decoder = JSONDecoder()
+    testCases = try decoder.decode([TimeTestData].self, from: jsonData)
+  } catch {
+    print("Error reading JSON data from file: \(error)")
+    res.num_failed += 1
+    res.errors.append("Error reading JSON data from file: \(error)")
+    return res
+  }
+  // Process the test data
+  for testCase: TimeTestData in testCases {
+    var apendix = ""
+    let dit = IndraEvent.julianToISO(jd: testCase.JulianDate)
+    let dij = IndraEvent.ISOToJulian(iso: dit)!
+    let dih: String = IndraEvent.julianToStringTime(jd: testCase.JulianDate)
   }
   return res
 }
