@@ -25,6 +25,7 @@ test_tasks = [
     {
         "name": "swift_indralib domain tests via Swift",
         "cmd": "swift run --package-path ../swift_indrajala/indratest indratest --folder=../test_data --include_failure_cases=false --test_cases=domain",
+        "failure_sim_cmd": "swift run --package-path ../swift_indrajala/indratest indratest --folder=../test_data --include_failure_cases=true --test_cases=domain",
     },
 ]
 
