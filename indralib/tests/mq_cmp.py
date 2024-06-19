@@ -24,7 +24,7 @@ def do_tests(data):
     return result
 
 
-folder = "../../test_data/time"
+folder = "../../test_data/domain"
 do_failure_cases = False
 for arg in sys.argv:
     if arg.startswith("--folder="):

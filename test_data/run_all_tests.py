@@ -22,6 +22,10 @@ test_tasks = [
         "name": "py_indralib_indra_time_tests via Python",
         "cmd": "python ../indralib/tests/time_tests.py --folder=time",
     },
+    {
+        "name": "swift_indralib domain tests via Swift",
+        "cmd": "swift run --package-path ../swift_indrajala/indratest indratest --folder=../test_data --include_failure_cases=false --test_cases=domain",
+    },
 ]
 
 
