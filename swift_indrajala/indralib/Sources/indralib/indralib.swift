@@ -134,7 +134,7 @@ public class IndraEvent: Codable {
     let C = Int((Double(B) - 122.1) / 365.25)
     let D = Int(365.25 * Double(C))
     let E = Int((Double(B) - Double(D)) / 30.6001)
-    let day: Double = Double(B) - Double(D) - Double(30.6001 * Double(E)) + F
+    let day: Int = B - D - Int(30.6001 * Double(E)) + Int(F)
     let month: Int
     if E < 14 {
       month = E - 1
@@ -237,7 +237,12 @@ public class IndraEvent: Codable {
     }
     let date = String(parts[0])
     let time = String(parts[1])
-    parts = date.split(separator: "-")
+    if date.starts(with: "-") {
+      parts = date.dropFirst().split(separator: "-")
+      parts[0] = "-" + parts[0]
+    } else {
+      parts = date.split(separator: "-")
+    }
     let year = Int(parts[0])!
     let month = Int(parts[1])!
     let day = Int(parts[2])!
@@ -277,7 +282,8 @@ public class IndraEvent: Codable {
     } else {
       // AD
       // dt = IndraTime.julian2datetime(jd)
-      let (year, month, day, hour, minute, second, microsecond) = julianToTime(jd: jd)
+      // let (year, month, day, hour, minute, second, microsecond) = julianToTime(jd: jd)
+      let (year, month, day, _, _, _, _) = julianToTime(jd: jd)
       if month == 1 && day == 1 && year < 1900 {
         return String(year)
       } else if day == 1 && year < 1900 {

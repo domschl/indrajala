@@ -43,6 +43,7 @@ func test_mqcmp(folder: String = "../../test_data", checkFailures: Bool = false)
     res.errors.append("Test data file not found: \(filePath)")
     return res
   }
+  print("Reading test data from file: \(filePath)")
   let fileURL = URL(fileURLWithPath: filePath)
 
   let testCases: [DomainTestData]
@@ -72,17 +73,6 @@ func test_mqcmp(folder: String = "../../test_data", checkFailures: Bool = false)
   return res
 }
 
-/*
-def cmp_time(d1: str, d2: str):
-    l1 = len(d1)
-    l2 = len(d2)
-    if l1 < l2:
-        d2 = d2[: len(d1)]
-    if l2 < l1:
-        d1 = d1[: len(d2)]
-    return d1 == d2
-*/
-
 func cmp_time(d1: String, d2: String) -> Bool {
   let l1 = d1.count
   let l2 = d2.count
@@ -103,12 +93,13 @@ func test_time(folder: String = "../../test_data", checkFailures: Bool = false) 
   // format: [ { "publish": "abc", "subscribe": "abc", "result": true}, ...]
   let filePath: String
   if checkFailures == false {
-    filePath = "\(folder)/time/normalized_jd_time_data.json)"
+    filePath = "\(folder)/time/normalized_jd_time_data.json"
   } else {
     res.num_failed += 1
     res.errors.append("Failure cases not implemented for time")
     return res
   }
+  print("Reading test data from file: \(filePath)")
   // check if file exists
   let fileManager = FileManager.default
   if !fileManager.fileExists(atPath: filePath) {
@@ -134,10 +125,46 @@ func test_time(folder: String = "../../test_data", checkFailures: Bool = false) 
   }
   // Process the test data
   for testCase: TimeTestData in testCases {
-    var apendix = ""
     let dit = IndraEvent.julianToISO(jd: testCase.JulianDate)
     let dij = IndraEvent.ISOToJulian(iso: dit)!
-    let dih: String = IndraEvent.julianToStringTime(jd: testCase.JulianDate)
+    // let dih: String = IndraEvent.julianToStringTime(jd: testCase.JulianDate)
+    // if dit ends with " BC"
+    var it = dit
+    if it.hasSuffix(" BC") {
+      it = "-" + it.prefix(it.count - 3)
+    }
+    if cmp_time(d1: dit, d2: it) == false {
+      print("Failed for JulianDate:\(testCase.JulianDate), julian_string:\(testCase.julian_string)")
+      res.num_failed += 1
+      res.errors.append(
+        "Failed for JulianDate:\(testCase.JulianDate), julian_string:\(testCase.julian_string)")
+    } else {
+      res.num_ok += 1
+    }
+    var res_str: String = ""
+    if cmp_time(d1: testCase.julian_string, d2: it) {
+      res_str += "[JD]"
+    }
+    if cmp_time(d1: testCase.gregorian_string, d2: it) {
+      res_str += "[GD]"
+    }
+    if res_str == "" {
+      res_str = "Error"
+      res.num_failed += 1
+      res.errors.append("Both \(testCase.julian_string) and \(testCase.gregorian_string) != \(it)")
+    } else {
+      res.num_ok += 1
+    }
+    if dij != testCase.JulianDate {
+      print(
+        "Failed for JulianDate:\(testCase.JulianDate), dij:\(dij)"
+      )
+      res.num_failed += 1
+      res.errors.append(
+        "Failed for JulianDate:\(testCase.JulianDate), dij:\(dij)")
+    } else {
+      res.num_ok += 1
+    }
   }
   return res
 }
@@ -194,6 +221,21 @@ if testCases.contains("domain") || testCases == "all" {
   encoder.outputFormatting = .prettyPrinted
   do {
     let jsonData = try encoder.encode(res_mq)
+    let jsonString = String(data: jsonData, encoding: .utf8)
+    print(jsonString!)
+  } catch {
+    print("Failed to convert result to JSON: \(error)")
+  }
+}
+if testCases.contains("time") || testCases == "all" {
+  print("Testing time with folder: \(folder)")
+  let res_time = test_time(folder: folder, checkFailures: checkFailures)
+  print("#$#$# Result #$#$#")
+  // serialize and print res_time:
+  let encoder = JSONEncoder()
+  encoder.outputFormatting = .prettyPrinted
+  do {
+    let jsonData = try encoder.encode(res_time)
     let jsonString = String(data: jsonData, encoding: .utf8)
     print(jsonString!)
   } catch {
