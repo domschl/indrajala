@@ -118,11 +118,3 @@ ping_frequency_hz = 1
     # zeromq_host = "localhost"
     # zeromq_executable = "some path to module"
     loglevel = "debug"
-    subscriptions = ["$cmd/ticker/#"]
-
-    [[indra_ticker.task]]
-        "active" = true
-        "name" = "Weather Uni Muc"
-        "source" = "ticker_muc_weather.get_weather"
-        "interval_sec" = 10
-        "params" = {}
