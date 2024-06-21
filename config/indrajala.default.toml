@@ -111,10 +111,11 @@ subscriptions = ["zero_test/#"]
 # Max for M2 cpu is around 5000 Hz message input via ZMQ
 ping_frequency_hz = 1
 
-[[indra_ticker]]
+[[indra_ticker_muc_weather]]
     active = true
-    name = "ticker.1"
+    name = "ticker_muc_weather.1"
     # zeromq_port = 8092
     # zeromq_host = "localhost"
     # zeromq_executable = "some path to module"
     loglevel = "debug"
+    period_sec = 3600
