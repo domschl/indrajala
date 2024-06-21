@@ -54,11 +54,6 @@ class IndraProcess(IndraProcessCore):
             time.sleep(1)
 
     def get_weather(self):
-        global last_run
-        if time.time() - last_run < 3500:  # A bit less than 1h
-            self.log.warning("Not enough time passed since last run, min delay is 1h")
-            return True
-        last_run = time.time()
         url = "https://www.meteo.physik.uni-muenchen.de/mesomikro/stadt/messung.php"
         meass = {
             "temperature": ("temperature", "number/float/temperature/celsius"),
@@ -165,10 +160,10 @@ class IndraProcess(IndraProcessCore):
             if k in meass:
                 ie.domain = f"$event/measurement/{meass[k][0]}/{o_context}/{o_location}"
                 ie.data_type = meass[k][1]
-                ie.from_id = self.config["name"]
+                ie.from_id = self.config_data["name"]
                 ie.data_type = meass[k][1]
                 ie.data = json.dumps(float(data[k]))
-                self.send_event(ie)
+                self.event_send(ie)
                 self.log.debug(f"Sent event {ie.domain} {ie.data_type} {ie.data}")
             else:
                 self.log.debug(f"Unknown key {k} in data")
