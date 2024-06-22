@@ -109,7 +109,7 @@ class IndraProcess(IndraProcessCore):
                             ie.data_type = meass[k][1]
                             ie.data = json.dumps(float(data[k]))
                             self.event_send(ie)
-                            self.log.info(
+                            self.log.debug(
                                 f"Sent event {ie.domain} {ie.data_type} {ie.data}"
                             )
                         else:
