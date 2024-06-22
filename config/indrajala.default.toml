@@ -120,3 +120,14 @@ ping_frequency_hz = 1
     subscriptions = []
     loglevel = "debug"
     period_sec = 3600
+
+[[indra_radiation_bfs]]
+    active = false
+    name = "radiation_bfs.1"
+    # zeromq_port = 8092
+    # zeromq_host = "localhost"
+    # zeromq_executable = "some path to module"
+    subscriptions = []
+    loglevel = "debug"
+    period_sec = 3600
+    bfs_kenn = "check https://odlinfo.bfs.de/ODL/DE/service/datenschnittstelle/datenschnittstelle_node.html"
