@@ -48,10 +48,14 @@ class IndraProcess(IndraProcessCore):
     def scheduled_downloader(self):
         self.log.info("scheduled_downloader thread started")
         while self.thread_active:
-            if time.time() - self.last_run > self.period_sec:
-                self.get_weather()
+            tc = time.time()
+            tcr = int(tc % 3600)
+            if tcr < 10 and tc - self.last_run > self.period_sec - 100:
+                self.log.info("Getting data")
+                self.get_data()
                 self.last_run = time.time()
             time.sleep(1)
+            # self.log.info(f"x-{3600-tcr} seconds")
         self.log.info("scheduled_downloader thread stopped")
 
     def get_weather(self):
