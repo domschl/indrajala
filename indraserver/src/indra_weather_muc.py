@@ -58,7 +58,7 @@ class IndraProcess(IndraProcessCore):
             # self.log.info(f"x-{3600-tcr} seconds")
         self.log.info("scheduled_downloader thread stopped")
 
-    def get_weather(self):
+    def get_data(self):
         url = "https://www.meteo.physik.uni-muenchen.de/mesomikro/stadt/messung.php"
         meass = {
             "temperature": ("temperature", "number/float/temperature/celsius"),
