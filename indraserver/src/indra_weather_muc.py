@@ -41,17 +41,18 @@ class IndraProcess(IndraProcessCore):
                 self.log.warning("Period too short, setting to 1h")
         else:
             self.period_sec = 3600
-        # Start ticker thread
+        # Start scheduled_downloader thread
         self.thread_active = False
         self.last_run = 0
 
-    def ticker(self):
-        self.log.info("Ticker thread started")
+    def scheduled_downloader(self):
+        self.log.info("scheduled_downloader thread started")
         while self.thread_active:
             if time.time() - self.last_run > self.period_sec:
                 self.get_weather()
                 self.last_run = time.time()
             time.sleep(1)
+        self.log.info("scheduled_downloader thread stopped")
 
     def get_weather(self):
         url = "https://www.meteo.physik.uni-muenchen.de/mesomikro/stadt/messung.php"
@@ -172,8 +173,10 @@ class IndraProcess(IndraProcessCore):
     def inbound_init(self):
         # start thread
         self.thread_active = True
-        self.ticker_thread = threading.Thread(target=self.ticker, daemon=True)
-        self.ticker_thread.start()
+        self.scheduled_downloader_thread = threading.Thread(
+            target=self.scheduled_downloader, daemon=True
+        )
+        self.scheduled_downloader_thread.start()
         return True
 
     def inbound(self):
@@ -181,7 +184,9 @@ class IndraProcess(IndraProcessCore):
         return None
 
     def outbound(self, ev: IndraEvent):
-        self.log.warning(f"Publish-request from {ev.from_id}, {ev.domain} to Ticker")
+        self.log.warning(
+            f"Publish-request from {ev.from_id}, {ev.domain} to scheduled_downloader"
+        )
 
     def shutdown(self):
         self.thread_active = False

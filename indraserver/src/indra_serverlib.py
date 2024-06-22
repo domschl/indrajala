@@ -366,3 +366,15 @@ class IndraProcessCore:
             ie.data = json.dumps([domains])
         self.event_send(ie)
         return True
+
+    def get_last_event(self, domain):
+        ev = IndraEvent()
+        ev.domain = "$trx/db/req/last"
+        ev.from_id = self.name
+        rq_data = {
+            "domain": domain,
+        }
+        ev.data = json.dumps(rq_data)
+        ev.data_type = "json/rq_data"
+        self.event_send(ev)
+        return ev.uuid4
