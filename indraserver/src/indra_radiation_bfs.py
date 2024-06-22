@@ -109,12 +109,13 @@ class IndraProcess(IndraProcessCore):
                             ie.data_type = meass[k][1]
                             ie.data = json.dumps(float(data[k]))
                             self.event_send(ie)
-                            self.log.debug(
+                            self.log.info(
                                 f"Sent event {ie.domain} {ie.data_type} {ie.data}"
                             )
                         else:
                             self.log.warning(f"Unknown key {k} in data")
                     return True
+            self.log.warning(f"No data for kenn {self.kenn}")
             return False
         else:
             self.log.error("No bfs_kenn in config_data")
