@@ -137,3 +137,13 @@
     # abort_error_count = 5
     run_condition = "default"
     bfs_kenn = "check https://odlinfo.bfs.de/ODL/DE/service/datenschnittstelle/datenschnittstelle_node.html"
+
+[[indra_k_index_noaa]]
+    active = true
+    name = "k_index_noaa.1"
+    # zeromq_port = 8092
+    # zeromq_host = "localhost"
+    # zeromq_executable = "some path to module"
+    subscriptions = ["k_index_noaa.1"]
+    loglevel = "debug"
+    run_condition = "default"
