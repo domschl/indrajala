@@ -1,115 +1,115 @@
 [indrajala]
-logdir = "log"
-max_loglevel_logfile = "debug"
-loglevel = "info"
-modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_dispatch", "indra_ai", "zero_test"]
-data_directory = "~/.config/indrajala"
-zeromq_port = 8091
+    logdir = "log"
+    max_loglevel_logfile = "debug"
+    loglevel = "info"
+    modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_dispatch", "indra_ai", "zero_test"]
+    data_directory = "~/.config/indrajala"
+    zeromq_port = 8091
 
 [[pingpong]]
-active = false
-zeromq_port = 8092
-name = "pingpong.1"
-loglevel = "debug"
-subscriptions = ["pingpong/#"]
-ping_frequency_hz = 1
+    active = false
+    zeromq_port = 8092
+    name = "pingpong.1"
+    loglevel = "debug"
+    subscriptions = ["pingpong/#"]
+    ping_frequency_hz = 1
 
 [[pingpong]]
-active = false
-name = "pingpong.2"
-loglevel = "debug"
-subscriptions = ["pingpong/#"]
-ping_frequency_hz = 1
+    active = false
+    name = "pingpong.2"
+    loglevel = "debug"
+    subscriptions = ["pingpong/#"]
+    ping_frequency_hz = 1
 
 [[pingpong]]
-active = false
-name = "pingpong.3"
-loglevel = "debug"
-subscriptions = ["pingpong/#"]
-ping_frequency_hz = 1
+    active = false
+    name = "pingpong.3"
+    loglevel = "debug"
+    subscriptions = ["pingpong/#"]
+    ping_frequency_hz = 1
 
 [[indra_mqtt]]
-active = false
-name = "indra_mqtt.1"
-loglevel = "debug"
-subscriptions = ["mqtt/#"]
-mqtt_server = "my-mqtt-server"
-mqtt_port = 1883
-mqtt_keepalive = 60
-raw_mqtt_subscriptions = ["omu/#"]
-inbound_parsers = [["omu/#", "muwerk"], ["hastates/#", "ha"]]
-outbound_parsers = []
+    active = false
+    name = "indra_mqtt.1"
+    loglevel = "debug"
+    subscriptions = ["mqtt/#"]
+    mqtt_server = "my-mqtt-server"
+    mqtt_port = 1883
+    mqtt_keepalive = 60
+    raw_mqtt_subscriptions = ["omu/#"]
+    inbound_parsers = [["omu/#", "muwerk"], ["hastates/#", "ha"]]
+    outbound_parsers = []
 
 [[indra_db]]
-active = true
-name = "indra_db.1"
-loglevel = "debug"
-epsilon = 0.000001
-subscriptions = []
-database = "{{data_directory}}/db/indrajala.db"
-commit_delay_sec = 0.0
+    active = true
+    name = "indra_db.1"
+    loglevel = "debug"
+    epsilon = 0.000001
+    subscriptions = []
+    database = "{{data_directory}}/db/indrajala.db"
+    commit_delay_sec = 0.0
 
 [[async_http]]
-active = true
-name = "async_http.1"
-loglevel = "debug"
-subscriptions = []
-port = 8080
-bind_addresses = ["localhost"]
-tls = true
-private_key = "{{data_directory}}/certs/my-key.pem"
-public_key = "{{data_directory}}/certs/my-cert.pem"
-web_root = "{{data_directory}}/web"
-static_apps = [["/admin", "{{data_directory}}/web/admin"], ["/chat", "{{data_directory}}/web/chat"]]
+    active = true
+    name = "async_http.1"
+    loglevel = "debug"
+    subscriptions = []
+    port = 8080
+    bind_addresses = ["localhost"]
+    tls = true
+    private_key = "{{data_directory}}/certs/my-key.pem"
+    public_key = "{{data_directory}}/certs/my-cert.pem"
+    web_root = "{{data_directory}}/web"
+    static_apps = [["/admin", "{{data_directory}}/web/admin"], ["/chat", "{{data_directory}}/web/chat"]]
 
 [[indra_dispatch]]
-active = true
-name = "indra_dispatch.1"
-loglevel = "debug"
-subscriptions = []
-annotate = ["sentiment"]
+    active = true
+    name = "indra_dispatch.1"
+    loglevel = "debug"
+    subscriptions = []
+    annotate = ["sentiment"]
 
 [[indra_ai]]
-active = false
-name = "indra_ai.1"
-loglevel = "debug"
-subscriptions = []
-models_directory = "{{data_directory}}/models"
-application = "sentiment"
-model = "bert-multilingual-sentiment"
-device = "cuda"
+    active = false
+    name = "indra_ai.1"
+    loglevel = "debug"
+    subscriptions = []
+    models_directory = "{{data_directory}}/models"
+    application = "sentiment"
+    model = "bert-multilingual-sentiment"
+    device = "cuda"
 
 [[indra_ai]]
-active = false
-name = "indra_ai.2"
-loglevel = "debug"
-subscriptions = []
-models_directory = "{{data_directory}}/models"
-application = "translation"
-model = "madlad400-3b-mt"
-target_language = "de"
-device = "cuda"
+    active = false
+    name = "indra_ai.2"
+    loglevel = "debug"
+    subscriptions = []
+    models_directory = "{{data_directory}}/models"
+    application = "translation"
+    model = "madlad400-3b-mt"
+    target_language = "de"
+    device = "cuda"
 
 [[indra_ai]]
-active = false
-name = "indra_ai.3"
-loglevel = "debug"
-subscriptions = []
-models_directory = "{{data_directory}}/models"
-application = "conversational"
-model = "gemma-2b-it"
-device = "cuda"
+    active = false
+    name = "indra_ai.3"
+    loglevel = "debug"
+    subscriptions = []
+    models_directory = "{{data_directory}}/models"
+    application = "conversational"
+    model = "gemma-2b-it"
+    device = "cuda"
 
 [[zero_test]]
-active = false
-name = "zero_test.1"
-zeromq_port = 8092
-# zeromq_host = "localhost"
-# zeromq_executable = "some path to module"
-loglevel = "debug"
-subscriptions = ["zero_test/#"]
-# Max for M2 cpu is around 5000 Hz message input via ZMQ
-ping_frequency_hz = 1
+    active = false
+    name = "zero_test.1"
+    zeromq_port = 8092
+    # zeromq_host = "localhost"
+    # zeromq_executable = "some path to module"
+    loglevel = "debug"
+    subscriptions = ["zero_test/#"]
+    # Max for M2 cpu is around 5000 Hz message input via ZMQ
+    ping_frequency_hz = 1
 
 [[indra_weather_muc]]
     active = false

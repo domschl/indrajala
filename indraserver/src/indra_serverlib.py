@@ -568,10 +568,12 @@ class IndraProcessCore:
                             return
                     else:
                         error_count = 0
+                    t = time.localtime()
                     while (
                         t.tm_min == period_descriptor and self.shutdown_timer is False
                     ):
                         time.sleep(resolution_sec)
+                        t = time.localtime()
                 time.sleep(resolution_sec)
         elif timer_type == "daily":
             h = period_descriptor[0]
