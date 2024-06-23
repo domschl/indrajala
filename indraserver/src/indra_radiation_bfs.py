@@ -78,7 +78,7 @@ class IndraProcess(IndraProcessCore):
             self.resolution_sec = 1.0
 
     def get_data(self):
-        self.log.info(self.url_latest)
+        # self.log.info(self.url_latest)
         meass = {
             "radiation": ("gamma_radiation", "number/float/radiation/uSv_h"),
             "radiation_cosmic": (
