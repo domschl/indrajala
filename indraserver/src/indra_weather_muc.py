@@ -34,29 +34,25 @@ class IndraProcess(IndraProcessCore):
         )
         self.config_data = config_data
         self.bConnectActive = True
-        if "period_sec" in config_data:
-            self.period_sec = config_data["period_sec"]
-            if self.period_sec < 3600:
-                self.period_sec = 3600
-                self.log.warning("Period too short, setting to 1h")
+        if "run_condition" in config_data and config_data["run_condition"] != "default":
+            self.run_condition = config_data["run_condition"]
+            self.log.warning(f"Using custom run_condition {self.run_condition}")
         else:
-            self.period_sec = 3600
-        # Start scheduled_downloader thread
-        self.thread_active = False
-        self.last_run = 0
-
-    def scheduled_downloader(self):
-        self.log.info("scheduled_downloader thread started")
-        while self.thread_active:
-            tc = time.time()
-            tcr = int(tc % 3600)
-            if tcr < 10 and tc - self.last_run > self.period_sec - 100:
-                self.log.info("Getting data")
-                self.get_data()
-                self.last_run = time.time()
-            time.sleep(1)
-            # self.log.info(f"x-{3600-tcr} seconds")
-        self.log.info("scheduled_downloader thread stopped")
+            self.run_condition = "hourly@:05"
+        if (
+            "abort_error_count" in config_data
+            and config_data["abort_error_count"] != "default"
+        ):
+            self.abort_error_count = config_data["abort_error_count"]
+        else:
+            self.abort_error_count = 5
+        if (
+            "timer_resolution_sec" in config_data
+            and config_data["timer_resolution_sec"] != "default"
+        ):
+            self.resolution_sec = config_data["timer_resolution_sec"]
+        else:
+            self.resolution_sec = 1.0
 
     def get_data(self):
         url = "https://www.meteo.physik.uni-muenchen.de/mesomikro/stadt/messung.php"
@@ -175,13 +171,16 @@ class IndraProcess(IndraProcessCore):
         return True
 
     def inbound_init(self):
-        # start thread
-        self.thread_active = True
-        self.scheduled_downloader_thread = threading.Thread(
-            target=self.scheduled_downloader, daemon=True
+        if not self.bConnectActive:
+            return False
+        ret = self.create_timer_thread(
+            self.name,
+            self.run_condition,
+            self.get_data,
+            resolution_sec=self.resolution_sec,
+            abort_error_count=self.abort_error_count,
         )
-        self.scheduled_downloader_thread.start()
-        return True
+        return ret
 
     def inbound(self):
         time.sleep(1)

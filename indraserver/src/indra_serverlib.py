@@ -127,6 +127,7 @@ class IndraProcessCore:
             self.zmq_event_socket,
         )
         self.bActive = True
+        self.shutdown_timer = False
         self.config_data = config_data
         self.throttle = 0
 
@@ -281,6 +282,7 @@ class IndraProcessCore:
             if ev is not None:
                 self.log.debug(f"Received: {ev.domain}")
                 if ev.domain == "$cmd/quit":
+                    self.shutdown_timer = True
                     self.shutdown()
                     self.log.debug(f"{self.name} terminating receive_worker...")
                     self.bActive = False
@@ -309,12 +311,13 @@ class IndraProcessCore:
 
     async def in_out_bound(self):
         bActive = True
-        self.log.info("Async handler started")
+        # self.log.info("Async handler started")
         await self.async_init()
         while bActive:
             if self.send_queue.empty() is False:
                 ev = self.send_queue.get()
                 if ev.domain == "$cmd/quit":
+                    self.shutdown_timer = True
                     await self.async_shutdown()
                     self.log.info("Terminating async handler")
                     return
@@ -378,3 +381,220 @@ class IndraProcessCore:
         ev.data_type = "json/rq_data"
         self.event_send(ev)
         return ev.uuid4
+
+    def create_timer_thread(
+        self, job_name, run_condition, callback, resolution_sec=1.0, abort_error_count=5
+    ):
+        condition_types = ["periodic", "hourly", "daily", "workdays"]
+        time_specs = ["s", "m", "h"]
+        conds = run_condition.split("@")
+        if len(conds) != 2:
+            self.log.error(
+                f"Invalid run_condition job {job_name}, format: {run_condition}, expected 'condition_type@params"
+            )
+            return False
+        if conds[0] not in condition_types:
+            self.log.error(
+                f"Invalid condition type job {job_name}: {conds[0]}, expected one of {condition_types}"
+            )
+            return False
+        timer_type = conds[0]
+        if timer_type == "periodic":
+            timer_period = conds[1]
+            if len(timer_period) < 2:
+                self.log.error(
+                    f"Invalid time spec job {job_name}, expected 10s, 10m, 10h"
+                )
+                return False
+            t_spec = timer_period[-1]
+            if t_spec not in time_specs:
+                self.log.error(
+                    f"Invalid timer_period spec job {job_name}: {timer_period}, expected ending one of {time_specs}"
+                )
+                return False
+            try:
+                t_val = int(timer_period[:-1])
+            except ValueError:
+                self.log.error(
+                    f"Invalid time value job {job_name}: {timer_period[:-1]}, expected integer"
+                )
+                return False
+            if t_spec == "s":
+                t_val = t_val
+            elif t_spec == "m":
+                t_val = t_val * 60
+            elif t_spec == "h":
+                t_val = t_val * 3600
+            else:
+                self.log.error(
+                    f"Invalid time spec job {job_name}: {t_spec}, expected one of {time_specs}"
+                )
+                return False
+            self.timer_scheduler_thread = threading.Thread(
+                target=self._timer_scheduler,
+                daemon=True,
+                args=[
+                    callback,
+                    job_name,
+                    timer_type,
+                    t_val,
+                    resolution_sec,
+                    abort_error_count,
+                ],
+            )
+            self.timer_scheduler_thread.start()
+            return True
+        elif timer_type == "hourly":
+            timer_period = conds[1].split(":")
+            if (
+                len(timer_period) != 2
+                or len(timer_period[0]) != 0
+                or len(timer_period[1]) != 2
+            ):
+                self.log.error(
+                    f"Invalid timer_period job {job_name}: {timer_period}, expected hourly@:MM"
+                )
+                return False
+            try:
+                t_val = int(timer_period[1])
+            except ValueError:
+                self.log.error(
+                    f"Invalid time value job {job_name}: {timer_period[1]}, expected integer"
+                )
+                return False
+            if t_val < 0 or t_val > 59:
+                self.log.error(
+                    f"Invalid time value job {job_name}: {t_val}, expected 0-59"
+                )
+                return False
+            self.timer_scheduler_thread = threading.Thread(
+                target=self._timer_scheduler,
+                daemon=True,
+                args=[
+                    callback,
+                    job_name,
+                    timer_type,
+                    t_val,
+                    resolution_sec,
+                    abort_error_count,
+                ],
+            )
+            self.timer_scheduler_thread.start()
+            return True
+        elif timer_type == "daily":
+            timer_period = conds[1].split(":")
+            if (
+                len(timer_period) != 2
+                or len(timer_period[0]) != 2
+                or len(timer_period[1]) != 2
+            ):
+                self.log.error(
+                    f"Invalid timer_period job {job_name}: {timer_period}, expected daily@HH:MM"
+                )
+                return False
+            try:
+                t_val = int(timer_period[0])
+                t_val2 = int(timer_period[1])
+            except ValueError:
+                self.log.error(
+                    f"Invalid time value job {job_name}: {timer_period[0]}, {timer_period[1]}, expected integer"
+                )
+                return False
+            if t_val < 0 or t_val > 23 or t_val2 < 0 or t_val2 > 59:
+                self.log.error(
+                    f"Invalid time value job {job_name}: {t_val}, {t_val2}, expected 0-23, 0-59"
+                )
+                return False
+            self.timer_scheduler_thread = threading.Thread(
+                target=self._timer_scheduler,
+                daemon=True,
+                args=[
+                    callback,
+                    job_name,
+                    timer_type,
+                    (t_val, t_val2),
+                    resolution_sec,
+                    abort_error_count,
+                ],
+            )
+            self.timer_scheduler_thread.start()
+            return True
+        else:
+            self.log.error(
+                f"Invalid timer type job {job_name}: {timer_type}, expected one of {condition_types}"
+            )
+            return False
+
+    def _timer_scheduler(
+        self,
+        callback,
+        job_name,
+        timer_type,
+        period_descriptor,
+        resolution_sec=1.0,
+        abort_error_count=0,
+    ):
+        self.log.info(
+            f"Timer scheduler started for job {job_name}, of type {timer_type} with descriptor {period_descriptor}"
+        )
+        error_count = 0
+        if timer_type == "periodic":
+            last_run = 0
+            while self.shutdown_timer is False:
+                if time.time() - last_run > period_descriptor:
+                    last_run = time.time()
+                    ret = callback()
+                    if ret is False:
+                        error_count += 1
+                        if abort_error_count != 0 and error_count >= abort_error_count:
+                            self.log.error(
+                                f"Timer scheduler of job {job_name} terminated due to error count={error_count}"
+                            )
+                            return
+                    else:
+                        error_count = 0
+                time.sleep(resolution_sec)
+        elif timer_type == "hourly":
+            while self.shutdown_timer is False:
+                t = time.localtime()
+                if t.tm_min == period_descriptor:
+                    ret = callback()
+                    if ret is False:
+                        error_count += 1
+                        if abort_error_count != 0 and error_count >= abort_error_count:
+                            self.log.error(
+                                f"Timer scheduler of job {job_name} terminated due to error count={error_count}"
+                            )
+                            return
+                    else:
+                        error_count = 0
+                    while (
+                        t.tm_min == period_descriptor and self.shutdown_timer is False
+                    ):
+                        time.sleep(resolution_sec)
+                time.sleep(resolution_sec)
+        elif timer_type == "daily":
+            h = period_descriptor[0]
+            m = period_descriptor[1]
+            while self.shutdown_timer is False:
+                t = time.localtime()
+                if t.tm_hour == h and t.tm_min == m:
+                    ret = callback()
+                    if ret is False:
+                        error_count += 1
+                        if abort_error_count != 0 and error_count >= abort_error_count:
+                            self.log.error(
+                                f"Timer scheduler of job {job_name} terminated due to error count={error_count}"
+                            )
+                            return
+                    else:
+                        error_count = 0
+                    while (
+                        t.tm_hour == h
+                        and t.tm_min == m
+                        and self.shutdown_timer is False
+                    ):
+                        time.sleep(resolution_sec)
+                time.sleep(resolution_sec)
+
+        self.log.info(f"Timer scheduler of job {job_name} terminated")
