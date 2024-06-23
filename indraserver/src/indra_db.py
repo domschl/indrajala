@@ -750,7 +750,7 @@ class IndraProcess(IndraProcessCore):
                     rev.data = lev.to_json()
                 else:
                     self.log.warning(f"Not found: {sql_cmd} with {q_params}")
-                    rev.data_type = "errror/notfound"
+                    rev.data_type = "error/notfound"
                 self.event_send(rev)
             elif ev.domain == "$trx/db/req/uniquedomains":
                 try:

@@ -539,7 +539,7 @@ class IndraProcessCore:
         )
         error_count = 0
         if timer_type == "periodic":
-            last_run = 0
+            last_run = time.time()
             while self.shutdown_timer is False:
                 if time.time() - last_run > period_descriptor:
                     last_run = time.time()

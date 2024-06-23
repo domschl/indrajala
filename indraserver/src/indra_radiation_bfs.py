@@ -12,13 +12,6 @@ from indralib.indra_time import IndraTime
 
 from indra_serverlib import IndraProcessCore
 
-# https://odlinfo.bfs.de/ODL/DE/service/datenschnittstelle/datenschnittstelle_node.html
-
-# https://www.imis.bfs.de/ogc/opendata/ows?service=WFS&version=1.1.0&request=GetFeature&typeName=opendata:odlinfo_timeseries_odl_1h&outputFormat=application/json&viewparams=kenn:091620001
-# https://www.imis.bfs.de/ogc/opendata/ows?service=WFS&version=1.1.0&request=GetFeature&typeName=opendata:odlinfo_odl_1h_latest&outputFormat=application/json
-# https://www.imis.bfs.de/ogc/opendata/ows?service=WFS&version=1.1.0&request=GetFeature&typeName=opendata:odlinfo_timeseries_odl_1h&outputFormat=application/json&viewparams=kenn:091620001&maxFeatures=2&sortBy=end_measure+D
-# https://www.imis.bfs.de/ogc/opendata/ows?service=WFS&version=1.1.0&request=GetFeature&typeName=opendata:odlinfo_odl_1h_latest&outputFormat=application/json&viewparams=kenn:091620001&maxFeatures=1
-
 
 class IndraProcess(IndraProcessCore):
     def __init__(
@@ -41,13 +34,6 @@ class IndraProcess(IndraProcessCore):
         )
         self.config_data = config_data
         self.bConnectActive = True
-        if "period_sec" in config_data:
-            self.period_sec = config_data["period_sec"]
-            if self.period_sec < 3600:
-                self.period_sec = 3600
-                self.log.warning("Period too short, setting to 1h")
-        else:
-            self.period_sec = 3600
         self.url_latest = "https://www.imis.bfs.de/ogc/opendata/ows?service=WFS&version=1.1.0&request=GetFeature&typeName=opendata:odlinfo_odl_1h_latest&outputFormat=application/json"
         if "bfs_kenn" in config_data:
             self.kenn = config_data["bfs_kenn"]
