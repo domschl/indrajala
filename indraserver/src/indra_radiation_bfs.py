@@ -61,7 +61,7 @@ class IndraProcess(IndraProcessCore):
             self.run_condition = config_data["run_condition"]
             self.log.warning(f"Using custom run_condition {self.run_condition}")
         else:
-            self.run_condition = "hourly@:05"
+            self.run_condition = "hourly@:30"
         if (
             "abort_error_count" in config_data
             and config_data["abort_error_count"] != "default"
