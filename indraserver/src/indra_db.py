@@ -782,23 +782,24 @@ class IndraProcess(IndraProcessCore):
                     return
                 q_params = []
                 sql_cmd = f"SELECT DISTINCT domain FROM indra_events"
-                if "domain" in rq_fields:
-                    d = rq_fields["domain"]
+                if "domain" in rq_data:
+                    d = rq_data["domain"]
                     if "%" in d:
                         op1 = "LIKE"
                     else:
                         op1 = "="
                     q_params.append(d)
-                    sql_cmd += " WHERE domain {op1} ?"
-                if "data_type" in rq_fields:
-                    dt = rq_fields["data_type"]
+                    sql_cmd += f" WHERE domain {op1} ?"
+                if "data_type" in rq_data:
+                    dt = rq_data["data_type"]
                     if "%" in dt:
                         op2 = "LIKE"
                     else:
                         op2 = "="
                     q_params.append(dt)
-                    sql_cmd = +f" AND data_type {op2} ?"
+                    sql_cmd += f" AND data_type {op2} ?"
                 t_start = datetime.datetime.now(tz=datetime.timezone.utc)
+                self.log.info(f"Executing {sql_cmd} with {q_params}")
                 self.cur.execute(sql_cmd, q_params)
                 result = self.cur.fetchall()
                 rev = IndraEvent()
