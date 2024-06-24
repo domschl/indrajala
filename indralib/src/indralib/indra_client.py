@@ -528,6 +528,6 @@ class IndraClient:
         dt = []
         y = []
         for t, yv in result:
-            dt.append(IndraTime.julian_to_datetime(t))
+            dt.append(IndraTime.julian2datetime(t))
             y.append(yv)
         return dt, y
