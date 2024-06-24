@@ -706,7 +706,12 @@ class IndraProcess(IndraProcessCore):
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "vector/tuple/jd/float"
-                rev.data = json.dumps(result)
+                try:
+                    jd_y = [(x[0], json.loads(x[1])) for x in result]
+                    rev.data = json.dumps(jd_y)
+                except Exception as e:
+                    self.log.error(f"Failed to process result: {e}")
+                    rev.data = json.dumps([])
                 self.event_send(rev)
             elif ev.domain == "$trx/db/req/last":
                 try:
