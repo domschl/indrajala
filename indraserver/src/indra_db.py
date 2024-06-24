@@ -687,10 +687,15 @@ class IndraProcess(IndraProcessCore):
                         self.log.error(
                             f"Failure, unexpected mode {rq_data['mode']}, internal error, rq from {ev.from_id}"
                         )
+                else:
+                    sql_cmd += ")"
                 sql_cmd += " ORDER BY time_jd_start ASC;"
                 t_start = datetime.datetime.now(tz=datetime.timezone.utc)
+                self.log.info(f"Executing {sql_cmd} with {q_params}")
                 self.cur.execute(sql_cmd, q_params)
+                self.log.info(f"Executed {sql_cmd} with {q_params}")
                 result = self.cur.fetchall()
+                self.log.info(f"Result len: {len(result)}")
                 rev = IndraEvent()
                 rev.domain = ev.from_id
                 rev.from_id = self.name
