@@ -309,3 +309,81 @@ export function getUserSessionList(listHandler) {
         }
     );
 }
+
+
+export function getUniqueDomains(domain = null, dataType = null, uniqueDomainHandler = null) {
+    if (domain === null) {
+        domain = "$event/measurement%";
+    }
+    if (dataType === null) {
+        dataType = "%";
+    }
+    if (uniqueDomainHandler === null) {
+        console.log('No handler for unique domains!');
+        uniqueDomainHandler = (value) => {
+            console.log('Unique domains:', value);
+        }
+    }
+    let cmd = {
+        domain: domain,
+        data_type: dataType,
+    };
+    let ie = new IndraEvent();
+    ie.domain = "$trx/db/req/uniquedomains";
+    ie.from_id = "ws/js";
+    ie.data_type = "uniquedomainrequest";
+    ie.auth_hash = session_id;
+    ie.data = JSON.stringify(cmd);
+    let pr = sendTransaction(ie);
+    if (pr === null) {
+        console.log('Didn\'t get promise!');
+        return null;
+    }
+    console.log('Sent message to server:', ie.to_json());
+    // Wait for the promise to resolve
+    pr.then((ie) => {
+        console.log('Promise: Received response from server:', ie);
+        let value = JSON.parse(ie.data);
+        console.log('Value:', value);
+        uniqueDomainHandler(value);
+    },
+        (error) => {
+            console.log('Promise: Error:', error);
+            uniqueDomainHandler(null);
+        }
+    );
+}
+
+export function getHistory(domain, startTime = null, endTime = null, sampleSize = null, mode = "Sample") {
+    let cmd = {
+        domain: domain,
+        time_jd_start: startTime,
+        time_jd_end: endTime,
+        limit: sampleSize,
+        mode: mode,
+    }
+    let ie = new IndraEvent();
+    ie.domain = "$trx/db/req/history";
+    ie.from_id = "ws/js";
+    ie.data_type = "historyrequest";
+    ie.auth_hash = session_id;
+    ie.data = JSON.stringify(cmd);
+    let pr = sendTransaction(ie);
+    if (pr === null) {
+        console.log('Didn\'t get promise!');
+        return null;
+    }
+    console.log('Sent message to server:', ie.to_json());
+    // Wait for the promise to resolve
+    pr.then((ie) => {
+        console.log('Promise: Received response from server:', ie);
+        let value = JSON.parse(ie.data);
+        console.log('Value:', value);
+        return value;
+    },
+        (error) => {
+            console.log('Promise: Error:', error);
+            return null;
+        }
+    );
+}

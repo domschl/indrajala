@@ -73,6 +73,15 @@ class IndraProcess(IndraProcessCore):
                 continue
             self.log.debug(f"Adding static app: {prefix} -> {path}")
             self.app.add_routes([web.static(prefix, path)])
+            if prefix == "/plot":
+                self.app.add_routes(
+                    [
+                        web.static(
+                            os.path.join(prefix, "scripts/node_modules"),
+                            os.path.join(path, "scripts/node_modules"),
+                        )
+                    ]
+                )
         # if self.tls is True:
         #     self.app.add_routes([web.get('/wss', self.websocket_handler)])
         # else:

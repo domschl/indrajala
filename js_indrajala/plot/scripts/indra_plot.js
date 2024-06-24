@@ -3,7 +3,9 @@
 
 import { indra_styles, color_scheme } from '../../indralib/scripts/indra_styles.js';
 import {
-    connection, subscribe, unsubscribe, indraLogin, indraLogout, indraKVRead, indraKVWrite, indraKVDelete
+    connection, subscribe, unsubscribe, indraLogin, indraLogout,
+    indraKVRead, indraKVWrite, indraKVDelete,
+    getUniqueDomains, getHistory
 } from '../../indralib/scripts/indra_client.js';
 import {
     showNotification, removeStatusLine, loginPage,
@@ -11,7 +13,10 @@ import {
     showStatusLine
 } from '../../indralib/scripts/indra_client_gui_lib.js';
 import { IndraTime } from '../../indralib/scripts/indra_time.js';
-import './chart.umd.js';
+//import './chart.umd.js';
+import "./node_modules/chart.js/dist/chart.umd.js";
+//import "./node_modules/moment/dist/moment.js";
+import './node_modules/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.js';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
@@ -163,6 +168,77 @@ function plotPage(currentUser) {
         );
     }
 
+    function measurementEvent(data) {
+        console.log('Measurement event:', data);
+        // split domain:
+        let doms = data.domain.split('/');
+        if (doms.length !== 5) {
+            console.error(`Received invalid domain ${data.domain}`);
+            return;
+        }
+        let meas_type = doms[2];
+        let context = doms[3];
+        let location = doms[4];
+        let plot_desc = `${meas_type}, ${context}, ${location}`;
+        if (!(plot_desc in app_data.plotData)) {
+            app_data.plotData[plot_desc] = {
+                x: [],
+                y: [],
+            };
+        }
+        let yi = JSON.parse(data.data);
+        let xi = IndraTime.julianToDatetime(data.time_jd_start);
+        app_data.plotData[plot_desc].x.push(xi);
+        app_data.plotData[plot_desc].y.push(yi);
+        // update chart
+        if (plotCanvas === null) {
+            console.error('Plot canvas not found');
+            return;
+        }
+        if (chart === null) {
+            console.error('Chart not found');
+            return;
+        }
+        //let chart = Chart.getChart(plotCanvas);
+        chart.data.labels = app_data.plotData[plot_desc].x;
+        chart.data.datasets[0].data = app_data.plotData[plot_desc].y;
+        chart.update();
+        console.log(`Received model train event ${data.data}`);
+    }
+
+    function measurementChart() {
+        chart = new Chart(plotCanvas, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Measurement',
+                    data: [],
+                    borderWidth: 1,
+                    pointRadius: 0,
+                }
+                ]
+            },
+            options: {
+                responsive: true,
+                animation: false,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'second'
+                        }
+                    },
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        }
+        );
+    }
+
     function serverPerfEvent(data) {
         console.log('Server performance event:', data);
         let msgpersec = JSON.parse(data.data);
@@ -240,45 +316,85 @@ function plotPage(currentUser) {
     const plotTypeSelect = document.createElement('select');
     plotTypeSelect.classList.add('selectBox');
     plotTypeSelect.classList.add('margin-bottom');
-    for (let i = 0; i < plotTypes.length; i++) {
-        let option = document.createElement('option');
-        option.value = plotTypes[i].value;
-        option.text = plotTypes[i].name;
-        option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
-        plotTypeSelect.appendChild(option);
-    }
-    plotTypeSelect.addEventListener('change', function () {
-        console.log('Selected plot type:', plotTypeSelect.value);
-        let sel = plotTypeSelect.selectedIndex;
-        if (curSubscription !== null) {
-            unsubscribe(curSubscription);
+
+    getUniqueDomains("$event/measurement%", "%", (result) => {
+        for (let i = 0; i < plotTypes.length; i++) {
+            let option = document.createElement('option');
+            option.value = plotTypes[i].value;
+            option.text = plotTypes[i].name;
+            option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
+            plotTypeSelect.appendChild(option);
         }
-        if (chart !== null) {
-            chart.destroy();
-            chart = null;
+        for (let i = 0; i < result.length; i++) {
+            let option = document.createElement('option');
+            option.value = result[i];
+            option.text = result[i];
+            option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
+            plotTypeSelect.appendChild(option);
         }
-        if (plotTypes[sel].chart_init !== null) {
-            plotTypes[sel].chart_init();
+        plotTypeSelect.addEventListener('change', function () {
+            console.log('Selected plot type:', plotTypeSelect.value);
+            let sel = plotTypeSelect.selectedIndex;
+            if (curSubscription !== null) {
+                unsubscribe(curSubscription);
+            }
+            if (chart !== null) {
+                chart.destroy();
+                chart = null;
+            }
+            if (sel < plotTypes.length && plotTypes[sel].chart_init !== null) {
+                plotTypes[sel].chart_init();
+            } else {
+                measurementChart();
+            }
+            if (sel > 0) {
+                if (sel < plotTypes.length) {
+                    curSubscription = plotTypes[sel].subscription;
+                    subscribe(curSubscription, plotTypes[sel].msg_event);
+                } else {
+                    curSubscription = plotTypeSelect.value;
+                    subscribe(curSubscription, measurementEvent);
+                }
+            }
+        });
+        plotDiv.appendChild(plotTypeSelect);
+
+        const plotPane = document.createElement('div');
+        plotPane.classList.add('pane');
+        plotPane.classList.add('plot-pane');
+        plotDiv.appendChild(plotPane);
+
+        // add canvas
+        plotCanvas = document.createElement('canvas');
+        plotCanvas.classList.add('plot-canvas');
+        plotPane.appendChild(plotCanvas);
+
+        let buttonLine = document.createElement('div');
+        buttonLine.classList.add('button-line');
+        let buttons = [
+            { name: 'edit', icon: 'e3c9', action: editPlot },
+            { name: 'delete', icon: 'e872', action: deletePlot },
+            { name: 'logout', icon: 'e9ba', action: handleLogout },
+            { name: 'exit', icon: 'e5cd', action: indraPortalApp },
+        ];
+
+        for (let i = 0; i < buttons.length; i++) {
+            let button = document.createElement('button');
+            button.classList.add('icon-button-style');
+            button.innerHTML = `&#x${buttons[i].icon};`;
+            button.addEventListener('mouseenter', function () {
+                this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
+            });
+            button.addEventListener('mouseleave', function () {
+                this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
+            });
+            button.addEventListener('click', buttons[i].action);
+            buttonLine.appendChild(button);
         }
-        if (plotTypes[sel].subscription !== null) {
-            curSubscription = plotTypes[sel].subscription;
-            subscribe(curSubscription, plotTypes[sel].msg_event);
-        }
+        mainDiv.appendChild(buttonLine);
+
+        changeMainElement(mainDiv);
     });
-    plotDiv.appendChild(plotTypeSelect);
-
-    const plotPane = document.createElement('div');
-    plotPane.classList.add('pane');
-    plotPane.classList.add('plot-pane');
-    plotDiv.appendChild(plotPane);
-
-    // add canvas
-    plotCanvas = document.createElement('canvas');
-    plotCanvas.classList.add('plot-canvas');
-    plotPane.appendChild(plotCanvas);
-
-    let buttonLine = document.createElement('div');
-    buttonLine.classList.add('button-line');
 
     function handleLogout() {
         console.log('Logging out...');
@@ -315,30 +431,7 @@ function plotPage(currentUser) {
         console.log('Edit plot');
     }
 
-    let buttons = [
-        { name: 'edit', icon: 'e3c9', action: editPlot },
-        { name: 'delete', icon: 'e872', action: deletePlot },
-        { name: 'logout', icon: 'e9ba', action: handleLogout },
-        { name: 'exit', icon: 'e5cd', action: indraPortalApp },
-    ];
 
-    for (let i = 0; i < buttons.length; i++) {
-        let button = document.createElement('button');
-        button.classList.add('icon-button-style');
-        button.innerHTML = `&#x${buttons[i].icon};`;
-        button.addEventListener('mouseenter', function () {
-            this.style.backgroundColor = color_scheme['light']['edit-mouse-enter'];
-        });
-        button.addEventListener('mouseleave', function () {
-            this.style.backgroundColor = color_scheme['light']['edit-mouse-leave'];
-        });
-        button.addEventListener('click', buttons[i].action);
-        buttonLine.appendChild(button);
-    }
-
-    mainDiv.appendChild(buttonLine);
-
-    changeMainElement(mainDiv);
 }
 
 
