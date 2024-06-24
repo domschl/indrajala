@@ -282,7 +282,7 @@ class IndraClient:
         return await self.send_event(ie)
 
     async def get_wait_history(
-        self, domain, start_time, end_time=None, sample_size=None, mode="Sample"
+        self, domain, start_time=None, end_time=None, sample_size=None, mode="Sample"
     ):
         future = await self.get_history(domain, start_time, end_time, sample_size, mode)
         hist_result = await future
