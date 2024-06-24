@@ -20,4 +20,5 @@ indralib.egg-info/
 web/
 portal_apps.json
 .vscode/
+.ipynb_checkpoints/
 
