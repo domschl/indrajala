@@ -6,6 +6,7 @@ import json
 import time
 
 from indralib.indra_event import IndraEvent
+from indralib.indra_time import IndraTime
 from indralib.server_config import Profiles
 
 
@@ -521,3 +522,12 @@ class IndraClient:
     async def error(self, message, module_name=None):
         self.log.error(f"Indra_log-Error: {message}")
         return await self.indra_log("error", message, module_name)
+
+    @staticmethod
+    def get_timeseries(result):
+        dt = []
+        y = []
+        for t, yv in result:
+            dt.append(IndraTime.julian_to_datetime(t))
+            y.append(yv)
+        return dt, y
