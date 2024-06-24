@@ -807,6 +807,7 @@ class IndraProcess(IndraProcessCore):
                 self.log.info(f"Executing {sql_cmd} with {q_params}")
                 self.cur.execute(sql_cmd, q_params)
                 result = self.cur.fetchall()
+                res_list = [x[0] for x in result]
                 rev = IndraEvent()
                 rev.domain = ev.from_id
                 rev.from_id = self.name
@@ -817,7 +818,7 @@ class IndraProcess(IndraProcessCore):
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "vector/string"
-                rev.data = json.dumps(result)
+                rev.data = json.dumps(res_list)
                 self.event_send(rev)
             elif ev.domain == "$trx/db/req/del":
                 try:
