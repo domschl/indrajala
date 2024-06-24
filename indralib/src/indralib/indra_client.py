@@ -44,7 +44,7 @@ class IndraClient:
             if profile_name == "default":
                 self.profile = self.profiles.get_default_profile()
             else:
-                self.profile = Profiles.get_profile(profile_name)
+                self.profile = self.profiles.get_profile(profile_name)
             if self.profile is not None:
                 self.initialized = True
 
