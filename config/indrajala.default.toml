@@ -144,6 +144,6 @@
     # zeromq_port = 8092
     # zeromq_host = "localhost"
     # zeromq_executable = "some path to module"
-    subscriptions = ["k_index_noaa.1"]
+    subscriptions = []
     loglevel = "debug"
     run_condition = "default"

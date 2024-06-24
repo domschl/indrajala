@@ -41,7 +41,7 @@ class IndraProcess(IndraProcessCore):
             self.run_condition = config_data["run_condition"]
             self.log.warning(f"Using custom run_condition {self.run_condition}")
         else:
-            self.run_condition = f"periodic@30m"
+            self.run_condition = "hourly@:15"
         if (
             "abort_error_count" in config_data
             and config_data["abort_error_count"] != "default"
@@ -57,16 +57,16 @@ class IndraProcess(IndraProcessCore):
         else:
             self.resolution_sec = 1.0
         self.descriptors = {
-            "k_index": "NOAA: The K-index, and by extension the Planetary K-index, are used to characterize the magnitude of geomagnetic storms. Kp is an excellent indicator of disturbances in the Earth's magnetic field and is used by SWPC to decide whether geomagnetic alerts and warnings need to be issued for users who are affected by these disturbances. The principal users affected by geomagnetic storms are the electrical power grid, spacecraft operations, users of radio signals that reflect off of or pass through the ionosphere, and observers of the aurora.",
+            "magnetic_field": "The NASA Advanced Composition Explorer (ACE) satellite enables SWPC to give advance warning of geomagnetic storms. Geomagnetic storms are a natural hazard, like hurricanes and tsunamis, which the National Oceanic and Atmospheric Administration (NOAA) Space Weather Prediction Center (SWPC) forecasts for the public's benefit. Geomagnetic storms impact the electric power grid, aircraft operations, GPS, manned spaceflight, and satellite operations, to name some of the most damaging. Severe geomagnetic storms can result in electric utility blackouts over a wide area. The location of ACE at the L1 libration point between the Earth and the Sun, about 1,500,000 km forward of Earth, enables ACE to give up to one hour advance warning of the arrival of damaging space weather events at Earth. SWPC issues warnings of imminent geomagnetic storms using these data.",
         }
-        # https://www.swpc.noaa.gov/products/planetary-k-index
+        # https://www.swpc.noaa.gov/products/ace-real-time-solar-wind
         self.meass = {
-            "k_index": ("planetary_k_index", "number/float/geomagnetic/k_index"),
+            "magnetic_field": ("ace_b_total", "number/float/magnetic_field/nT"),
         }
         self.subscribe(self.name)  # For answers to $trx requests
-        o_context = "geomagnetic_storm"
+        o_context = "magnetic_field"
         o_location = "earth"
-        k = "k_index"
+        k = "magnetic_field"
         self.domain = f"$event/measurement/{self.meass[k][0]}/{o_context}/{o_location}"
         self.last_event_time = None
         self.last_event_time_init = False
@@ -81,16 +81,16 @@ class IndraProcess(IndraProcessCore):
                 "Job started before last_event_time_init, can lead to duplicated events"
             )
             return False
-        url_k_index = "https://services.swpc.noaa.gov/json/boulder_k_index_1m.json"
-        self.log.info(f"Reading {url_k_index}")
+        url_ace_mag_1h = "https://services.swpc.noaa.gov/json/ace/mag/ace_mag_1h.json"
+        self.log.info(f"Reading {url_ace_mag_1h}")
         try:
-            with urllib.request.urlopen(url_k_index) as url:
+            with urllib.request.urlopen(url_ace_mag_1h) as url:
                 data = json.loads(url.read().decode())
         except Exception as e:
             self.log.error(f"Cannot read {self.url_latest}: {e}")
             return False
         upd = 0
-        for d in data:
+        for d in reversed(data):
             utc_iso = d["time_tag"] + ".000"
             jd = IndraTime.ISO2julian(utc_iso)
             dt = IndraTime.julian2datetime(jd)
@@ -100,12 +100,12 @@ class IndraProcess(IndraProcessCore):
             ie.time_jd_start = jd
             ie.time_jd_end = jd
             # f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
-            k = "k_index"
+            k = "magnetic_field"
             ie.domain = self.domain
             ie.data_type = self.meass[k][1]
             ie.from_id = self.config_data["name"]
             ie.data_type = self.meass[k][1]
-            ie.data = json.dumps(float(d["k_index"]))
+            ie.data = json.dumps(float(d["bt"]))
             self.event_send(ie)
             self.log.debug(f"Sent event {ie.domain} {ie.data_type} {ie.data}")
             upd += 1
