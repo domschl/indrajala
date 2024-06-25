@@ -22,4 +22,4 @@ web/
 portal_apps.json
 .vscode/
 .ipynb_checkpoints/
-
+indra_creds.json
