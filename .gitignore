@@ -11,6 +11,7 @@ certs/
 bin/
 lib/
 lib64
+etc/
 pyvenv.cfg
 share/
 .DS_Store
