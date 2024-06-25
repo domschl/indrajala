@@ -203,7 +203,6 @@ function plotPage(currentUser) {
             app_data.plotData[domain].x.push(xi);
             app_data.plotData[domain].y.push(yi);
         } else {
-            console.log('getHistory Measurement event:', data);
             if (!(domain in app_data.plotData)) {
                 app_data.plotData[domain] = {
                     x: [],
@@ -214,20 +213,31 @@ function plotPage(currentUser) {
                 let jd = data[tup][0];
                 let yi = data[tup][1];
                 let xi = IndraTime.julianToDatetime(jd);
-                console.log(`Measurement event: ${tup}, ${jd}, ${xi}, ${yi}`);
                 app_data.plotData[domain].x.push(xi);
                 app_data.plotData[domain].y.push(yi);
             }
         }
 
         // While plotData x and y is longer than 1000, remove random element
-        for (let domain in app_data.plotData) {
-            while (app_data.plotData[domain].x.length > 1000) {
-                let idx = Math.floor(Math.random() * app_data.plotData[domain].x.length);
-                app_data.plotData[domain].x.splice(idx, 1);
-                app_data.plotData[domain].y.splice(idx, 1);
-            }
+        //for (let domain in app_data.plotData) {
+        while (app_data.plotData[domain].x.length > 1000) {
+            let idx = Math.floor(Math.random() * app_data.plotData[domain].x.length);
+            app_data.plotData[domain].x.splice(idx, 1);
+            app_data.plotData[domain].y.splice(idx, 1);
         }
+        //}
+        // Sort by x
+        //for (let domain in app_data.plotData) {
+        let x = app_data.plotData[domain].x;
+        let y = app_data.plotData[domain].y;
+        let z = x.map((e, i) => [e, y[i]]);
+        z.sort((a, b) => a[0] - b[0]);
+        for (let i = 0; i < z.length; i++) {
+            x[i] = z[i][0];
+            y[i] = z[i][1];
+        }
+        //}
+
         // update chart
         if (plotCanvas === null) {
             console.error('Plot canvas not found');
@@ -264,9 +274,6 @@ function plotPage(currentUser) {
                 scales: {
                     x: {
                         type: 'time'
-                        //                        time: {
-                        //                            unit: 'second'
-                        //                        }
                     },
                     y: {
                         beginAtZero: false
