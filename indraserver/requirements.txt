@@ -11,3 +11,5 @@ huggingface_hub[cli]
 pandas
 beautifulsoup4
 lxml
+jupyterlab
+matplotlib
