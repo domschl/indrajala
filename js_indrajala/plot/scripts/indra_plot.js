@@ -168,28 +168,56 @@ function plotPage(currentUser) {
         );
     }
 
-    function measurementEvent(data) {
-        console.log('Measurement event:', data);
-        // split domain:
-        let doms = data.domain.split('/');
-        if (doms.length !== 5) {
-            console.error(`Received invalid domain ${data.domain}`);
-            return;
+    function measurementEvent(data, mode, domain = null) {
+        if (mode == 1) {
+            domain = data.domain;
+            console.log('Measurement event:', data);
+            // split domain:
+            let doms = data.domain.split('/');
+            if (doms.length !== 5) {
+                console.error(`Received invalid domain ${data.domain}`);
+                return;
+            }
+            let meas_type = doms[2];
+            let context = doms[3];
+            let location = doms[4];
+            let plot_desc = `${meas_type}, ${context}, ${location}`;
+            if (!(domain in app_data.plotData)) {
+                app_data.plotData[domain] = {
+                    x: [],
+                    y: [],
+                };
+            }
+            let yi = JSON.parse(data.data);
+            let xi = IndraTime.julianToDatetime(data.time_jd_start);
+            app_data.plotData[domain].x.push(xi);
+            app_data.plotData[domain].y.push(yi);
+        } else {
+            console.log('getHistory Measurement event:', data);
+            if (!(domain in app_data.plotData)) {
+                app_data.plotData[domain] = {
+                    x: [],
+                    y: [],
+                };
+            }
+            for (let tup in data) {
+                let jd = data[tup][0];
+                let yi = data[tup][1];
+                let xi = IndraTime.julianToDatetime(jd);
+                console.log(`Measurement event: ${tup}, ${jd}, ${xi}, ${yi}`);
+                app_data.plotData[domain].x.push(xi);
+                app_data.plotData[domain].y.push(yi);
+            }
         }
-        let meas_type = doms[2];
-        let context = doms[3];
-        let location = doms[4];
-        let plot_desc = `${meas_type}, ${context}, ${location}`;
-        if (!(plot_desc in app_data.plotData)) {
-            app_data.plotData[plot_desc] = {
-                x: [],
-                y: [],
-            };
+
+        // While plotData x and y is longer than 1000, remove random element
+        for (let domain in app_data.plotData) {
+            while (app_data.plotData[domain].x.length > 1000) {
+                let idx = Math.floor(Math.random() * app_data.plotData[domain].x.length);
+                app_data.plotData[domain].x.splice(idx, 1);
+                app_data.plotData[domain].y.splice(idx, 1);
+            }
         }
-        let yi = JSON.parse(data.data);
-        let xi = IndraTime.julianToDatetime(data.time_jd_start);
-        app_data.plotData[plot_desc].x.push(xi);
-        app_data.plotData[plot_desc].y.push(yi);
         // update chart
         if (plotCanvas === null) {
             console.error('Plot canvas not found');
@@ -200,8 +228,8 @@ function plotPage(currentUser) {
             return;
         }
         //let chart = Chart.getChart(plotCanvas);
-        chart.data.labels = app_data.plotData[plot_desc].x;
-        chart.data.datasets[0].data = app_data.plotData[plot_desc].y;
+        chart.data.labels = app_data.plotData[domain].x;
+        chart.data.datasets[0].data = app_data.plotData[domain].y;
         chart.update();
         console.log(`Received model train event ${data.data}`);
     }
@@ -353,7 +381,8 @@ function plotPage(currentUser) {
                     subscribe(curSubscription, plotTypes[sel].msg_event);
                 } else {
                     curSubscription = plotTypeSelect.value;
-                    subscribe(curSubscription, measurementEvent);
+                    getHistory(curSubscription, null, null, 1000, "Sample", (data) => { measurementEvent(data, 0, curSubscription); });
+                    subscribe(curSubscription, (data) => { measurementEvent(data, 1); });
                 }
             }
         });

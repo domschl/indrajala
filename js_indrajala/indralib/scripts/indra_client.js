@@ -354,7 +354,7 @@ export function getUniqueDomains(domain = null, dataType = null, uniqueDomainHan
     );
 }
 
-export function getHistory(domain, startTime = null, endTime = null, sampleSize = null, mode = "Sample") {
+export function getHistory(domain, startTime = null, endTime = null, sampleSize = null, mode = "Sample", historyHandler = null) {
     let cmd = {
         domain: domain,
         time_jd_start: startTime,
@@ -379,11 +379,11 @@ export function getHistory(domain, startTime = null, endTime = null, sampleSize 
         console.log('Promise: Received response from server:', ie);
         let value = JSON.parse(ie.data);
         console.log('Value:', value);
-        return value;
+        historyHandler(value);
     },
         (error) => {
             console.log('Promise: Error:', error);
-            return null;
+            historyHandler(null);
         }
     );
 }
