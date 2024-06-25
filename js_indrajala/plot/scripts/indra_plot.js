@@ -119,6 +119,16 @@ function plotPage(currentUser) {
         app_data.plotData[plot_desc].x.push(xi);
         app_data.plotData[plot_desc].y_l.push(yi);
         app_data.plotData[plot_desc].y_lm.push(ymi);
+
+        // While plotData x and y is longer than 1000, remove first element
+        for (let plot_desc in app_data.plotData) {
+            while (app_data.plotData[plot_desc].x.length > 1000) {
+                app_data.plotData[plot_desc].x.shift();
+                app_data.plotData[plot_desc].y_l.shift();
+                app_data.plotData[plot_desc].y_lm.shift();
+            }
+        }
+
         // update chart
         if (plotCanvas === null) {
             console.error('Plot canvas not found');
@@ -173,9 +183,9 @@ function plotPage(currentUser) {
             domain = data.domain;
             console.log('Measurement event:', data);
             // split domain:
-            let doms = data.domain.split('/');
+            let doms = domain.split('/');
             if (doms.length !== 5) {
-                console.error(`Received invalid domain ${data.domain}`);
+                console.error(`Received invalid domain ${domain}`);
                 return;
             }
             let meas_type = doms[2];
@@ -231,7 +241,7 @@ function plotPage(currentUser) {
         chart.data.labels = app_data.plotData[domain].x;
         chart.data.datasets[0].data = app_data.plotData[domain].y;
         chart.update();
-        console.log(`Received model train event ${data.data}`);
+        console.log(`Received measure event ${data.data}`);
     }
 
     function measurementChart() {
@@ -253,10 +263,10 @@ function plotPage(currentUser) {
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        type: 'time',
-                        time: {
-                            unit: 'second'
-                        }
+                        type: 'time'
+                        //                        time: {
+                        //                            unit: 'second'
+                        //                        }
                     },
                     y: {
                         beginAtZero: false
@@ -291,6 +301,16 @@ function plotPage(currentUser) {
         }
         app_data.plotData[plotDesc].x.push(x);
         app_data.plotData[plotDesc].y.push(y);
+
+        // While plotData x and y is longer than 1000, remove first element
+        for (let plot_desc in app_data.plotData) {
+            while (app_data.plotData[plot_desc].x.length > 1000) {
+                app_data.plotData[plot_desc].x.shift();
+                app_data.plotData[plot_desc].y_l.shift();
+                app_data.plotData[plot_desc].y_lm.shift();
+            }
+        }
+
         // update chart
         if (plotCanvas === null) {
             console.error('Plot canvas not found');
