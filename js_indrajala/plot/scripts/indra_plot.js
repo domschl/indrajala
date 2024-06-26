@@ -93,6 +93,12 @@ function plotPage(currentUser) {
     let chart = null;
     let curSubscription = null;
 
+    let plotData = {
+        x: [],
+        y_l: [],
+        y_lm: []
+    };
+
     function aiMonitorEvent(data) {
         console.log('AI Monitor event:', data);
         // split domain:
@@ -104,29 +110,20 @@ function plotPage(currentUser) {
         let model = doms[4];
         let variant = doms[5];
         let run_number = doms[6];
-        let plot_desc = `${model}/${variant}/${run_number}`;
-        if (!(plot_desc in app_data.plotData)) {
-            app_data.plotData[plot_desc] = {
-                x: [],
-                y_l: [],
-                y_lm: []
-            };
-        }
+        // let plot_desc = `${model}/${variant}/${run_number}`;
         let rec = JSON.parse(data.data);
         let xi = rec['epoch'].toFixed(6);
         let yi = rec['loss'];
         let ymi = rec['mean_loss'];
-        app_data.plotData[plot_desc].x.push(xi);
-        app_data.plotData[plot_desc].y_l.push(yi);
-        app_data.plotData[plot_desc].y_lm.push(ymi);
+        plotData.x.push(xi);
+        plotData.y_l.push(yi);
+        plotData.y_lm.push(ymi);
 
         // While plotData x and y is longer than 1000, remove first element
-        for (let plot_desc in app_data.plotData) {
-            while (app_data.plotData[plot_desc].x.length > 1000) {
-                app_data.plotData[plot_desc].x.shift();
-                app_data.plotData[plot_desc].y_l.shift();
-                app_data.plotData[plot_desc].y_lm.shift();
-            }
+        while (plotData.x.length > 1000) {
+            plotData.x.shift();
+            plotData.y_l.shift();
+            plotData.y_lm.shift();
         }
 
         // update chart
@@ -139,9 +136,9 @@ function plotPage(currentUser) {
             return;
         }
         //let chart = Chart.getChart(plotCanvas);
-        chart.data.labels = app_data.plotData[plot_desc].x;
-        chart.data.datasets[0].data = app_data.plotData[plot_desc].y_l;
-        chart.data.datasets[1].data = app_data.plotData[plot_desc].y_lm;
+        chart.data.labels = plotData.x;
+        chart.data.datasets[0].data = plotData.y_l;
+        chart.data.datasets[1].data = plotData.y_lm;
         chart.update();
         console.log(`Received model train event ${data.data}`);
     }
@@ -310,12 +307,10 @@ function plotPage(currentUser) {
         app_data.plotData[plotDesc].y.push(y);
 
         // While plotData x and y is longer than 1000, remove first element
-        for (let plot_desc in app_data.plotData) {
-            while (app_data.plotData[plot_desc].x.length > 1000) {
-                app_data.plotData[plot_desc].x.shift();
-                app_data.plotData[plot_desc].y_l.shift();
-                app_data.plotData[plot_desc].y_lm.shift();
-            }
+        while (plotData.x.length > 1000) {
+            plotData.x.shift();
+            plotData.y_l.shift();
+            plotData.y_lm.shift();
         }
 
         // update chart
@@ -372,6 +367,20 @@ function plotPage(currentUser) {
     plotTypeSelect.classList.add('selectBox');
     plotTypeSelect.classList.add('margin-bottom');
 
+    function titleFromDomain(domain) {
+        let doms = domain.split('/');
+        if (doms.length !== 5) {
+            return domain;
+        }
+        // uppercase first letter of each word
+        let capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+        let meas_type = capitalize(doms[2]);
+        let context = capitalize(doms[3]);
+        let location = capitalize(doms[4]);
+        return `${context}: ${meas_type} @${location}`;
+    }
+
     getUniqueDomains("$event/measurement%", "%", (result) => {
         for (let i = 0; i < plotTypes.length; i++) {
             let option = document.createElement('option');
@@ -383,7 +392,7 @@ function plotPage(currentUser) {
         for (let i = 0; i < result.length; i++) {
             let option = document.createElement('option');
             option.value = result[i];
-            option.text = result[i];
+            option.text = titleFromDomain(result[i]);
             option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
             plotTypeSelect.appendChild(option);
         }
@@ -469,13 +478,11 @@ function plotPage(currentUser) {
     }
 
     function deletePlot() {
-        for (let plot_desc in app_data.plotData) {
-            app_data.plotData[plot_desc] = {
-                x: [],
-                y_l: [],
-                y_lm: []
-            };
-        }
+        plotData = {
+            x: [],
+            y_l: [],
+            y_lm: []
+        };
         let chart = Chart.getChart(plotCanvas);
         chart.data.labels = [];
         chart.data.datasets[0].data = [];
