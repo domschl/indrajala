@@ -93,11 +93,7 @@ function plotPage(currentUser) {
     let chart = null;
     let curSubscription = null;
 
-    let plotData = {
-        x: [],
-        y_l: [],
-        y_lm: []
-    };
+    let plotData = null;
 
     function aiMonitorEvent(data) {
         console.log('AI Monitor event:', data);
@@ -176,7 +172,7 @@ function plotPage(currentUser) {
     }
 
     function measurementEvent(data, mode, domain = null) {
-        if (mode == 1) {
+        if (mode == 1) {  // Real time single event
             domain = data.domain;
             console.log('Measurement event:', data);
             // split domain:
@@ -189,51 +185,63 @@ function plotPage(currentUser) {
             let context = doms[3];
             let location = doms[4];
             let plot_desc = `${meas_type}, ${context}, ${location}`;
-            if (!(domain in app_data.plotData)) {
-                app_data.plotData[domain] = {
-                    x: [],
-                    y: [],
-                };
-            }
             let yi = JSON.parse(data.data);
-            let xi = IndraTime.julianToDatetime(data.time_jd_start);
-            app_data.plotData[domain].x.push(xi);
-            app_data.plotData[domain].y.push(yi);
-        } else {
-            if (!(domain in app_data.plotData)) {
-                app_data.plotData[domain] = {
-                    x: [],
-                    y: [],
-                };
-            }
+            let xi = data.time_jd_start; // IndraTime.julianToDatetime(data.time_jd_start);
+            plotData.x.push(xi);
+            plotData.y.push(yi);
+        } else {  // History event, bulk update
             for (let tup in data) {
                 let jd = data[tup][0];
                 let yi = data[tup][1];
-                let xi = IndraTime.julianToDatetime(jd);
-                app_data.plotData[domain].x.push(xi);
-                app_data.plotData[domain].y.push(yi);
+                let xi = jd; // IndraTime.julianToDatetime(jd);
+                plotData.x.push(xi);
+                plotData.y.push(yi);
             }
         }
 
         // While plotData x and y is longer than 1000, remove random element
-        //for (let domain in app_data.plotData) {
-        while (app_data.plotData[domain].x.length > 1000) {
-            let idx = Math.floor(Math.random() * app_data.plotData[domain].x.length);
-            app_data.plotData[domain].x.splice(idx, 1);
-            app_data.plotData[domain].y.splice(idx, 1);
+        while (plotData.x.length > 1000) {
+            let idx = Math.floor(Math.random() * plotData.x.length);
+            plotData.x.splice(idx, 1);
+            plotData.y.splice(idx, 1);
         }
-        //}
-        // Sort by x
-        //for (let domain in app_data.plotData) {
-        let x = app_data.plotData[domain].x;
-        let y = app_data.plotData[domain].y;
+        // Sort by x, make copy of x and y
+        let x = plotData.x.slice();  // copy
+        let y = plotData.y.slice();  // copy
         let z = x.map((e, i) => [e, y[i]]);
         z.sort((a, b) => a[0] - b[0]);
         for (let i = 0; i < z.length; i++) {
             x[i] = z[i][0];
             y[i] = z[i][1];
         }
-        //}
+        // get average x distance
+        if (x.length > 10) {
+            let dx_s = 0;
+            for (let i = 1; i < x.length; i++) {
+                dx_s += x[i] - x[i - 1];
+            }
+            let dx_m = dx_s / (x.length - 1);
+            // Insert NaNs for missing x values (dxi > 5 * dx), start reverse:
+            let nan_cnt = 0;
+            let i = x.length - 1;
+            while (i > 0) {
+                let dxi = x[i] - x[i - 1];
+                if (dxi > 5 * dx_m) {
+                    // Insert one for Y
+                    x.splice(i, 0, x[i - 1] + dxi / 2);
+                    y.splice(i, 0, NaN);
+                    i--;
+                    nan_cnt++;
+                }
+                i--;
+            }
+            console.log(`Inserted ${nan_cnt} NaNs`);
+        }
+
+        // Time conversion
+        for (let i = 0; i < x.length; i++) {
+            x[i] = IndraTime.julianToDatetime(x[i]);
+        }
 
         // update chart
         if (plotCanvas === null) {
@@ -245,13 +253,15 @@ function plotPage(currentUser) {
             return;
         }
         //let chart = Chart.getChart(plotCanvas);
-        chart.data.labels = app_data.plotData[domain].x;
-        chart.data.datasets[0].data = app_data.plotData[domain].y;
+        chart.data.labels = x;
+        chart.data.datasets[0].data = y;
         chart.update();
-        console.log(`Received measure event ${data.data}`);
+        console.log(`Received measure event ${mode}`);
     }
 
     function measurementChart() {
+        const skipped = (ctx, value) => ctx.p0.skip || ctx.p1.skip ? value : undefined;
+        const down = (ctx, value) => ctx.p0.parsed.y > ctx.p1.parsed.y ? value : undefined;
         chart = new Chart(plotCanvas, {
             type: 'line',
             data: {
@@ -261,6 +271,12 @@ function plotPage(currentUser) {
                     data: [],
                     borderWidth: 1,
                     pointRadius: 0,
+                    borderColor: 'rgb(192, 75, 75)',
+                    segment: {
+                        borderColor: ctx => skipped(ctx, 'rgb(0,0,0,0.2)') || down(ctx, 'rgb(75, 192, 192)'),
+                        borderDash: ctx => skipped(ctx, [6, 6]),
+                    },
+                    spanGaps: true,
                 }
                 ]
             },
@@ -358,10 +374,15 @@ function plotPage(currentUser) {
     let plotTypes = [
         { value: 'none', name: 'Select Application', subscription: null, chart_init: null, msg_event: null },
         {
-            value: 'aiMon', name: 'AI monitor', subscription: '$event/ml/model/train/+/+/+/record', chart_init: aiMonChart, msg_event: aiMonitorEvent
+            value: 'aiMon', name: 'AI monitor', subscription: '$event/ml/model/train/+/+/+/record', chart_init: aiMonChart, msg_event: aiMonitorEvent, pData: {
+                x: [],
+                y_l: [],
+                y_lm: []
+            },
+
         },
-        { value: 'servperf', name: 'Server performance', subscription: '$sys/stat/msgpersec', chart_init: serverPerfChart, msg_event: serverPerfEvent },
-        { value: 'sensordata', name: 'Sensor data', subscription: null, chart_init: null, msg_event: null },];
+        { value: 'servperf', name: 'Server performance', subscription: '$sys/stat/msgpersec', chart_init: serverPerfChart, msg_event: serverPerfEvent, pData: { x: [], y: [] } },
+    ];
 
     const plotTypeSelect = document.createElement('select');
     plotTypeSelect.classList.add('selectBox');
@@ -413,9 +434,14 @@ function plotPage(currentUser) {
             }
             if (sel > 0) {
                 if (sel < plotTypes.length) {
+                    plotData = plotTypes[sel].pData;
                     curSubscription = plotTypes[sel].subscription;
                     subscribe(curSubscription, plotTypes[sel].msg_event);
                 } else {
+                    plotData = {
+                        x: [],
+                        y: []
+                    };
                     curSubscription = plotTypeSelect.value;
                     getHistory(curSubscription, null, null, 1000, "Sample", (data) => { measurementEvent(data, 0, curSubscription); });
                     subscribe(curSubscription, (data) => { measurementEvent(data, 1); });
