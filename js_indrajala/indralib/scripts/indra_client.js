@@ -376,9 +376,9 @@ export function getHistory(domain, startTime = null, endTime = null, sampleSize 
     console.log('Sent message to server:', ie.to_json());
     // Wait for the promise to resolve
     pr.then((ie) => {
-        console.log('Promise: Received response from server:', ie);
+        // console.log('Promise: Received response from server:', ie);
         let value = JSON.parse(ie.data);
-        console.log('Value:', value);
+        // console.log('Value:', value);
         historyHandler(value);
     },
         (error) => {
