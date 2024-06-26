@@ -139,27 +139,37 @@ def main_runner(main_logger, event_queue, modules):
                 sub_list = json.loads(ev.data)
                 if isinstance(sub_list, list) is True:
                     for sub in sub_list:
-                        if sub.startswith("$sys/stat"):
-                            sysstat_subs = True
-                        # if sub not in subs[origin_module]:  # XXX different sessions can sub to the same thing, alternative would be reference counting...
-                        subs[origin_module].append(sub)
-                        main_logger.info(f"Subscribing to {sub} by {origin_module}")
+                        if sub is not None:
+                            if sub.startswith("$sys/stat"):
+                                sysstat_subs = True
+                            # if sub not in subs[origin_module]:  # XXX different sessions can sub to the same thing, alternative would be reference counting...
+                            subs[origin_module].append(sub)
+                            main_logger.info(f"Subscribing to {sub} by {origin_module}")
+                        else:
+                            main_logger.error(
+                                f"Invalid subscription {sub} requested by {origin_module}"
+                            )
             elif ev.domain == "$cmd/unsubs":
                 sub_list = json.loads(ev.data)
                 if isinstance(sub_list, list) is True:
                     for sub in sub_list:
-                        if sub in subs[origin_module]:
-                            subs[origin_module].remove(sub)
-                            main_logger.debug(
-                                f"Unsubscribing from {sub} by {origin_module}"
+                        if sub is not None:
+                            if sub in subs[origin_module]:
+                                subs[origin_module].remove(sub)
+                                main_logger.debug(
+                                    f"Unsubscribing from {sub} by {origin_module}"
+                                )
+                            if sub.startswith("$sys/stat"):
+                                sysstat_subs = False
+                                # Check if subscriber to sysstat is still active
+                                for module in subs:
+                                    for sub in subs[module]:
+                                        if sub.startswith("$sys/stat"):
+                                            sysstat_subs = True
+                        else:
+                            main_logger.error(
+                                f"Invalid unsubscription {sub} requested by {origin_module}"
                             )
-                        if sub.startswith("$sys/stat"):
-                            sysstat_subs = False
-                            # Check if subscriber to sysstat is still active
-                            for module in subs:
-                                for sub in subs[module]:
-                                    if sub.startswith("$sys/stat"):
-                                        sysstat_subs = True
             else:
                 main_logger.error(
                     f"Unknown command {ev.domain} received from {ev.from_id}, ignored."
