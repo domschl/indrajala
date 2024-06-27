@@ -228,16 +228,18 @@ class IndraTime:
         :param time_str: string time
         :return: tuple of Julian dates, second is None if point in time
         """
+        time_str = time_str.strip()
+        time_str = time_str.lower()
         pts = time_str.split(" - ")
         results = []
         for point in pts:
             pt = point.strip()
-            if pt.endswith(" AD"):
+            if pt.endswith(" ad"):
                 pt = pt[:-3]
             jdt = None
             if (
-                pt.endswith(" kya BP")
-                or pt.endswith(" kyr BP")
+                pt.endswith(" kya bp")
+                or pt.endswith(" kyr bp")
                 or pt.endswith(" kyr")
                 or pt.endswith(" kya")
             ):
@@ -246,62 +248,42 @@ class IndraTime:
                 # 1 kya BP is 1000 years before 1950
                 # 1950 is JD 2433282.5
                 jdt = 2433282.5 - kya * 1000.0 * 365.25
-            elif pt.endswith(" BP"):
+            elif pt.endswith(" bp"):
                 bp = int(pt.split(" ")[0])
                 # Convert to Julian date
                 # 1950 is JD 2433282.5
                 jdt = 2433282.5 - bp * 365.25
-            elif pt.endswith(" BC"):
+            elif pt.endswith(" bc"):
                 bc = int(pt.split(" ")[0])
                 # Convert to Julian date
                 # 1 BC is 1 year before 1 AD
                 # 1 AD is JD 1721423.5
                 jdt = 1721423.5 - bc * 365.25
             else:
-                month = 1
                 hour = 0
                 minute = 0
                 second = 0
                 microsecond = 0
+                month = 1
+                day = 1
                 dts = pt.split("-")
                 if len(dts) == 1:
                     # Year
                     year = int(dts[0])
-                    jdt = IndraTime.time_to_julian(
-                        year, month, day, hour, minute, second, microsecond
-                    )
-                    # jdt = IndraTime.datetime2julian(
-                    #     datetime.datetime(year, 1, 1, tzinfo=datetime.timezone.utc)
-                    # )
                 elif len(dts) == 2:
                     # Year and month
                     year = int(dts[0])
                     month = int(dts[1])
-                    jdt = IndraTime.time_to_julian(
-                        year, month, day, hour, minute, second, microsecond
-                    )
-                    # jdt = IndraTime.datetime2julian(
-                    #     datetime.datetime(year, month, 1, tzinfo=datetime.timezone.utc)
-                    # )
                 elif len(dts) == 3:
                     # Year, month, and day
                     year = int(dts[0])
                     month = int(dts[1])
                     day = int(dts[2])
-                    hour = 0
-                    minute = 0
-                    second = 0
-                    microsecond = 0
-                    jdt = IndraTime.time_to_julian(
-                        year, month, day, hour, minute, second, microsecond
-                    )
-                    # jdt = IndraTime.datetime2julian(
-                    #     datetime.datetime(
-                    #         year, month, day, tzinfo=datetime.timezone.utc
-                    #     )
-                    # )
                 else:
                     raise ValueError(f"Invalid date format: {pt}")
+                jdt = IndraTime.time_to_julian(
+                    year, month, day, hour, minute, second, microsecond
+                )
             results.append(jdt)
         return tuple(results)
 
