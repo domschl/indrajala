@@ -374,14 +374,18 @@ function plotPage(currentUser) {
     let plotTypes = [
         { value: 'none', name: 'Select Application', subscription: null, chart_init: null, msg_event: null },
         {
-            value: 'aiMon', name: 'AI monitor', subscription: '$event/ml/model/train/+/+/+/record', chart_init: aiMonChart, msg_event: aiMonitorEvent, pData: {
+            value: 'aiMon', name: 'AI monitor', subscription: '$event/ml/model/train/+/+/+/record', chart_init: aiMonChart, msg_event: aiMonitorEvent,
+            pData: {
                 x: [],
                 y_l: [],
                 y_lm: []
             },
 
         },
-        { value: 'servperf', name: 'Server performance', subscription: '$sys/stat/msgpersec', chart_init: serverPerfChart, msg_event: serverPerfEvent, pData: { x: [], y: [] } },
+        {
+            value: 'servperf', name: 'Server performance', subscription: '$sys/stat/msgpersec', chart_init: serverPerfChart, msg_event: serverPerfEvent,
+            pData: { x: [], y: [] }
+        },
     ];
 
     const plotTypeSelect = document.createElement('select');

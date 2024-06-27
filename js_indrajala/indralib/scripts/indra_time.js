@@ -146,4 +146,86 @@ export class IndraTime {
             }
         }
     }
+
+    static stringTime2Julian(timeStr) {
+        timeStr = timeStr.trim();
+        // lower case
+        timeStr = timeStr.toLowerCase();
+        let pts = timeStr.split(" - ");
+        let results = [];
+        for (let point of pts) {
+            let pt = point.trim();
+            if (pt.endsWith(" ad")) {
+                pt = pt.substring(0, pt.length - 3);
+            }
+            let jdt = null;
+            if (pt.endsWith(" kya bp") || pt.endsWith(" kyr bp") || pt.endsWith(" kyr") || pt.endsWith(" kya")) {
+                let kya = parseInt(pt.split(" ")[0]);
+                jdt = 2433282.5 - kya * 1000.0 * 365.25;
+            } else if (pt.endsWith(" bp")) {
+                let bp = parseInt(pt.split(" ")[0]);
+                jdt = 2433282.5 - bp * 365.25;
+            } else if (pt.endsWith(" bc")) {
+                let bc = parseInt(pt.split(" ")[0]);
+                jdt = 1721423.5 - bc * 365.25;
+            } else {
+                let hour = 0;
+                let minute = 0;
+                let second = 0;
+                let microsecond = 0;
+                if ("t" in pt) {
+                    pti = pt.split("t");
+                    pt = pti[0];
+                    if (pti.length > 1) {
+                        ptt = pti[1];
+                        let tts = ptt.split(":");
+                        if (tts.length === 1) {
+                            hour = parseInt(tts[0]);
+                        } else if (tts.length === 2) {
+                            hour = parseInt(tts[0]);
+                            minute = parseInt(tts[1]);
+                        } else if (tts.length === 3) {
+                            hour = parseInt(tts[0]);
+                            minute = parseInt(tts[1]);
+                            second = parseInt(tts[2]);
+                        }
+                        if (hour < 0 || hour >= 24) {
+                            hour = 0;
+                        }
+                        if (minute < 0 || minute >= 60) {
+                            minute = 0;
+                        }
+                        if (second < 0 || second >= 60) {
+                            second = 0;
+                        }
+                    }
+                }
+                let month = 1;
+                let day = 1;
+                let dts = pt.split("-");
+                if (dts.length === 1) {
+                    let year = parseInt(dts[0]);
+                } else if (dts.length === 2) {
+                    let year = parseInt(dts[0]);
+                    let month = parseInt(dts[1]);
+                } else if (dts.length === 3) {
+                    let year = parseInt(dts[0]);
+                    let month = parseInt(dts[1]);
+                    let day = parseInt(dts[2]);
+                } else {
+                    throw new Error(`Invalid date format: ${pt}`);
+                }
+                if (month < 1 || month > 12) {
+                    month = 1;
+                }
+                if (day < 1 || day > 31) {
+                    day = 1;
+                }
+                jdt = IndraTime.timeToJulian(year, month, day, hour, minute, second, microsecond);
+            }
+            results.push(jdt);
+        }
+        return results;
+    }
+
 }
