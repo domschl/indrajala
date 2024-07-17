@@ -86,19 +86,19 @@ class IndraProcess(IndraProcessCore):
         if os.path.exists(self.library_state_filename):
             with open(self.library_state_filename, "r") as f:
                 self.library_state = json.load(f)
-        for document in self.library_state:
-            if 'uuid' in document:
-                uuid = document['uuid']
+        for lib_entry in self.library_state:
+            if 'uuid' in lib_entry:
+                uuid = lib_entry['uuid']
             else:
-                self.log.error(f"Document {document} has no UUID")
+                self.log.error(f"Library entry {lib_entry} has no UUID")
                 uuid = "NONE"
-            if 'docs' in document:
-                for doc in document['docs']:
+            if 'docs' in lib_entry:
+                for doc in lib_entry['docs']:
                     fn = doc['name']
                     md5 = hashlib.md5(fn.encode('utf-8')).hexdigest()
                     self.md5_to_filename[md5] = {'filename': fn, 'uuid': uuid}
             else:
-                self.log.error(f"Document {document} has no docs")
+                self.log.error(f"Document {lib_entry} has no docs")
 
     async def async_web_agent(self):
         runner = web.AppRunner(self.app)
@@ -177,7 +177,7 @@ class IndraProcess(IndraProcessCore):
         if ret is not None:
             return ret
         document = request.match_info["document"]
-        self.log.debug(f"Syncs get progress request: {document}")
+        self.log.info(f"Syncs get progress request: {document}")
         user_info = self.reading_state[request.headers["x-auth-user"]]
         if document not in self.md5_to_filename:
             self.log.warning(f"Document {document} not found in library")
@@ -203,8 +203,8 @@ class IndraProcess(IndraProcessCore):
         if ret is not None:
             return ret
         data = await request.json()
-        self.log.debug(f"Syncs put progress request: {data}")
         document = data["document"]
+        self.log.info(f"Syncs put progress request for document {document}: {data}")
         self.reading_state[request.headers["x-auth-user"]]["documents"][document] = data
         if document not in self.md5_to_filename:
             self.log.warning(f"Document {document} not found in library")
