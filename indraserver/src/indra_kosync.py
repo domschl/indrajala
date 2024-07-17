@@ -44,7 +44,7 @@ class IndraProcess(IndraProcessCore):
         if os.path.exists(self.state_file):
             with open(self.state_file, "r") as f:
                 self.reading_state = json.load(f)
-        self.library_state_filename = self.config_data["library_state_file"]
+        self.library_state_filename = os.path.expanduser(self.config_data["library_state_file"])
         self._update_library_state()
         self.tls = False
         if self.config_data["tls"] is True:
