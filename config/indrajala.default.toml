@@ -74,6 +74,7 @@
     private_key = "{{data_directory}}/certs/ashurbanipal-key.pem"
     public_key = "{{data_directory}}/certs/ashurbanipal.pem"
     state_file = "{{data_directory}}/data/kosync/state.json"
+    library_state_file = "~/MetaLibrary/repo_state.json"
 
 [[indra_dispatch]]
     active = true
