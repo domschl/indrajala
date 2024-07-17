@@ -82,7 +82,7 @@ class IndraProcess(IndraProcessCore):
 
     def _update_library_state(self):
         self.md5_to_filename = {}
-        self.library_state = {}
+        self.library_state = []
         if os.path.exists(self.library_state_filename):
             with open(self.library_state_filename, "r") as f:
                 self.library_state = json.load(f)
@@ -90,12 +90,15 @@ class IndraProcess(IndraProcessCore):
             if 'uuid' in document:
                 uuid = document['uuid']
             else:
+                self.log.error(f"Document {document} has no UUID")
                 uuid = "NONE"
-            if 'docs' in self.library_state[document]:
-                for doc in self.library_state[document]['docs']:
+            if 'docs' in document:
+                for doc in document['docs']:
                     fn = doc['name']
                     md5 = hashlib.md5(fn.encode('utf-8')).hexdigest()
                     self.md5_to_filename[md5] = {'filename': fn, 'uuid': uuid}
+            else:
+                self.log.error(f"Document {document} has no docs")
 
     async def async_web_agent(self):
         runner = web.AppRunner(self.app)
