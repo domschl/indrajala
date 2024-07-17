@@ -86,6 +86,9 @@ class IndraProcess(IndraProcessCore):
         if os.path.exists(self.library_state_filename):
             with open(self.library_state_filename, "r") as f:
                 self.library_state = json.load(f)
+        else:
+            self.log.error(f"Library state file {self.library_state_filename} does not exist")
+            return
         for lib_entry in self.library_state:
             if 'uuid' in lib_entry:
                 uuid = lib_entry['uuid']
@@ -99,6 +102,7 @@ class IndraProcess(IndraProcessCore):
                     self.md5_to_filename[md5] = {'filename': fn, 'uuid': uuid}
             else:
                 self.log.error(f"Document {lib_entry} has no docs")
+        self.log.info(f"Library size: {len(self.md5_to_filename)}")
 
     async def async_web_agent(self):
         runner = web.AppRunner(self.app)
