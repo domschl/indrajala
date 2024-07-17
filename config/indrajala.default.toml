@@ -3,7 +3,7 @@
     max_loglevel_logfile = "debug"
     max_loglevel_console = "debug"
     loglevel = "info"
-    modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_dispatch", "indra_ai", "zero_test"]
+    modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_kosync", "indra_dispatch", "indra_ai", "zero_test"]
     data_directory = "~/.config/indrajala"
     zeromq_port = 8091
 
@@ -62,6 +62,18 @@
     public_key = "{{data_directory}}/certs/my-cert.pem"
     web_root = "{{data_directory}}/web"
     static_apps = [["/admin", "{{data_directory}}/web/admin"], ["/chat", "{{data_directory}}/web/chat"]]
+
+[[indra_kosync]]
+    active = false
+    name = "indra_kosync.1"
+    loglevel = "debug"
+    subscriptions = []
+    port = 8666
+    bind_addresses = ["0.0.0.0"]
+    tls = true
+    private_key = "{{data_directory}}/certs/ashurbanipal-key.pem"
+    public_key = "{{data_directory}}/certs/ashurbanipal.pem"
+    state_file = "{{data_directory}}/data/kosync/state.json"
 
 [[indra_dispatch]]
     active = true

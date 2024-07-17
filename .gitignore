@@ -25,3 +25,4 @@ portal_apps.json
 node_modules/
 package-lock.json
 indra_creds.json
+data/
