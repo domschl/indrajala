@@ -548,17 +548,18 @@ def read_config_arguments():
     toml_data["indrajala"]["config_directory"] = str(config_dir)
 
     loglevel_console = (
-        toml_data["indrajala"].get("max_loglevel_console", "info").upper()
+        toml_data["indrajala"].get("max_loglevel_console", "debug").upper()
     )
     loglevel_file = toml_data["indrajala"].get("max_loglevel_logfile", "debug").upper()
-    main_loglevel = toml_data["indrajala"].get("loglevel", "info").upper()
+    main_loglevel = toml_data["indrajala"].get("loglevel", "debug").upper()
+    llm = logging.getLevelName(main_loglevel)
     llc = logging.getLevelName(loglevel_console)
     llf = logging.getLevelName(loglevel_file)
 
-    # logging.basicConfig(level=logging.DEBUG)
+    # logging.basicConfig(level=llm)
     root_logger = logging.getLogger()
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
-    # root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(llm)
 
     msh = logging.StreamHandler()
     msh.setLevel(llc)
