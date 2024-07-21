@@ -114,7 +114,7 @@ class IndraProcess(IndraProcessCore):
                 uuid = "NONE"
             if 'docs' in lib_entry:
                 for doc in lib_entry['docs']:
-                    fn = doc['ref_name']
+                    fn = doc['ref_  name']
                     md5 = hashlib.md5(fn.encode('utf-8')).hexdigest()
                     self.md5_to_filename[md5] = {'filename': fn, 'uuid': uuid}
             else:
@@ -174,31 +174,31 @@ class IndraProcess(IndraProcessCore):
         self.log.debug(f"User auth request: {headers}")
         if "x-auth-user" not in headers:
             self.log.error("No username in request")
-            return web.json_response({"error": "No username in request"}, status=400)
+            return web.json_response({"error": "No username in request"}, status=400), None
         if "x-auth-key" not in headers:
             self.log.error("No password in request")
-            return web.json_response({"error": "No password in request"}, status=400)
+            return web.json_response({"error": "No password in request"}, status=400), None
         if headers["x-auth-user"] not in self.reading_state:
             self.log.error(f"User {headers["x-auth-user"]} not found")
-            return web.json_response({"error": "Authentication failure (UNE)"}, status=400)
+            return web.json_response({"error": "Authentication failure (UNE)"}, status=400), None
         if headers["x-auth-key"] != self.reading_state[headers["x-auth-user"]]["password"]:
             self.log.error(f"User {headers["x-auth-user"]} password mismatch")
-            return web.json_response({"error": "Authentication failure (PWF)"}, status=401)
+            return web.json_response({"error": "Authentication failure (PWF)"}, status=401), None
         self.log.info(f"User {headers["x-auth-user"]} authenticated")
-        return None
+        return None, self.reading_state[headers["x-auth-user"]]
 
     async def user_auth_handler(self, request):
-        ret = self._auth(request)
+        ret, _ = self._auth(request)
         if ret is None:
             return web.json_response({"authorized": "OK"}, status=200)
         return ret
 
     async def syncs_get_progress_handler(self, request):
-        ret = self._auth(request)
-        if ret is not None:
+        ret, user = self._auth(request)
+        if ret is not None or user is None:
             return ret
         document = request.match_info["document"]
-        self.log.info(f"Syncs get progress request: {document}")
+        self.log.info(f"Syncs {user} get progress request: {document}")
         user_info = self.reading_state[request.headers["x-auth-user"]]
         if document not in self.md5_to_filename:
             self.log.warning(f"Document {document} not found in library")
@@ -212,26 +212,41 @@ class IndraProcess(IndraProcessCore):
                 "percentage": 0.0,
                 "device": "none",
             }
-            self.reading_state[request.headers["x-auth-user"]]["documents"][document] = progress
+            self.reading_state[user]["documents"][document] = progress
             self._save_state()
-
         else:
             progress = user_info["documents"][document]
         return web.json_response(progress)
 
     async def syncs_put_progress_handler(self, request):
-        ret = self._auth(request)
+        ret, user = self._auth(request)
         if ret is not None:
             return ret
         data = await request.json()
         document = data["document"]
-        self.log.info(f"Syncs put progress request for document {document}: {data}")
+        self.log.info(f"Syncs put {user} progress request for document {document}: {data}")
         self.reading_state[request.headers["x-auth-user"]]["documents"][document] = data
         if document not in self.md5_to_filename:
-            self.log.warning(f"Document {document} not found in library")
+            self.log.warning(f"Document {document} not found in MetaLibrary, progress not saved as user-event")
         else:
             filename = self.md5_to_filename[document]['filename']
+            uuid = self.md5_to_filename[document]['uuid']
             self.log.info(f"Document {document} is {filename}") 
+            reading_progress = {
+                "filename": filename,
+                "uuid": uuid,
+                "progress": data["progress"],
+                "percentage": data["percentage"],
+                "device": data["device"],
+            }
+            domain = f"$event/books/reading_progress/{user}/{uuid}"
+            ev = IndraEvent()
+            ev.domain = domain
+            ev.from_id = self.name
+            ev.to_scope = f"private/user/{user}"
+            ev.data_type = "json/reading_progress"
+            ev.data = json.dumps(reading_progress)
+            self.event_send(ev)
         self._save_state()
         return web.json_response({"document": data["document"], "timestamp": time.time()}, status=200)
 
