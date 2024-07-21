@@ -37,6 +37,8 @@ class IndraProcess(IndraProcessCore):
         self.private_key = None
         self.public_key = None
         self.reading_state = {}
+        self.library_state = []
+        self.sequence_number = 0
         self.state_file = self.config_data["state_file"]
         # Create directory if it does not exist
         if not os.path.exists(os.path.dirname(self.state_file)):
@@ -45,7 +47,7 @@ class IndraProcess(IndraProcessCore):
             with open(self.state_file, "r") as f:
                 self.reading_state = json.load(f)
         self.library_state_filename = os.path.expanduser(self.config_data["library_state_file"])
-        self._update_library_state()
+        # self._update_library_state()
         self.tls = False
         if self.config_data["tls"] is True:
             if os.path.exists(self.config_data["private_key"]) is False:
@@ -80,12 +82,27 @@ class IndraProcess(IndraProcessCore):
                 self.tls = False
         asyncio.create_task(self.async_web_agent())
 
+        if 'repo_state_update_condition' in self.config_data:
+            self.repo_state_update_condition = self.config_data['repo_state_update_condition']
+        else:
+            self.repo_state_update_condition = "periodic@3m"
+            self.log.info(f"Using default repo_state_update_condition: {self.repo_state_update_condition}")
+        self.create_timer_thread("repo_state_update", self.repo_state_update_condition, self._update_library_state)
+
     def _update_library_state(self):
         self.md5_to_filename = {}
         self.library_state = []
+        old_sequence_number = self.sequence_number
         if os.path.exists(self.library_state_filename):
             with open(self.library_state_filename, "r") as f:
-                self.library_state = json.load(f)
+                repo_state = json.load(f)
+                self.library_state = repo_state['lib_entries']
+                self.sequence_number = repo_state['sequence_number']
+                if self.sequence_number == old_sequence_number:
+                    self.log.info(f"Library state file {self.library_state_filename} has not changed")
+                    return
+                else:
+                    self.log.info(f"Library state file {self.library_state_filename} has changed, updating.")
         else:
             self.log.error(f"Library state file {self.library_state_filename} does not exist")
             return

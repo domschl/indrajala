@@ -75,6 +75,7 @@
     public_key = "{{data_directory}}/certs/ashurbanipal.pem"
     state_file = "{{data_directory}}/data/kosync/state.json"
     library_state_file = "~/MetaLibrary/repo_state.json"
+    repo_state_update_condition = "periodic@:3m"
 
 [[indra_dispatch]]
     active = true
