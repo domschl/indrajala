@@ -90,7 +90,7 @@ class IndraProcess(IndraProcessCore):
         self.create_timer_thread("repo_state_update", self.repo_state_update_condition, self._update_library_state)
 
     def _update_library_state(self):
-        self.md5_to_filename = {}
+        self.md5_to_lib_entry = {}
         self.library_state = []
         old_sequence_number = self.sequence_number
         if os.path.exists(self.library_state_filename):
@@ -114,12 +114,12 @@ class IndraProcess(IndraProcessCore):
                 uuid = "NONE"
             if 'docs' in lib_entry:
                 for doc in lib_entry['docs']:
-                    fn = doc['ref_  name']
+                    fn = doc['ref_name']
                     md5 = hashlib.md5(fn.encode('utf-8')).hexdigest()
-                    self.md5_to_filename[md5] = {'filename': fn, 'uuid': uuid}
+                    self.md5_to_lib_entry[md5] = {'filename': fn, 'uuid': uuid}
             else:
                 self.log.error(f"Document {lib_entry} has no docs")
-        self.log.info(f"Library size: {len(self.md5_to_filename)}")
+        self.log.info(f"Library size: {len(self.md5_to_lib_entry)}")
 
     async def async_web_agent(self):
         runner = web.AppRunner(self.app)
@@ -200,10 +200,10 @@ class IndraProcess(IndraProcessCore):
         document = request.match_info["document"]
         self.log.info(f"Syncs {user} get progress request: {document}")
         user_info = self.reading_state[request.headers["x-auth-user"]]
-        if document not in self.md5_to_filename:
+        if document not in self.md5_to_lib_entry:
             self.log.warning(f"Document {document} not found in library")
         else:
-            filename = self.md5_to_filename[document]['filename']
+            filename = self.md5_to_lib_entry[document]['filename']
             self.log.info(f"Document {document} is {filename}") 
         if document not in user_info["documents"]:
             progress = {
@@ -226,12 +226,12 @@ class IndraProcess(IndraProcessCore):
         document = data["document"]
         self.log.info(f"Syncs put {user} progress request for document {document}: {data}")
         self.reading_state[request.headers["x-auth-user"]]["documents"][document] = data
-        if document not in self.md5_to_filename:
+        if document not in self.md5_to_lib_entry:
             self.log.warning(f"Document {document} not found in MetaLibrary, progress not saved as user-event")
         else:
-            filename = self.md5_to_filename[document]['filename']
-            uuid = self.md5_to_filename[document]['uuid']
-            self.log.info(f"Document {document} is {filename}") 
+            filename = self.md5_to_lib_entry[document]['filename']
+            uuid = self.md5_to_lib_entry[document]['uuid']
+            self.log.info(f"Document {document}, user {user} is {filename}") 
             reading_progress = {
                 "filename": filename,
                 "uuid": uuid,
