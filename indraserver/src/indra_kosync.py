@@ -47,7 +47,7 @@ class IndraProcess(IndraProcessCore):
             with open(self.state_file, "r") as f:
                 self.reading_state = json.load(f)
         self.library_state_filename = os.path.expanduser(self.config_data["library_state_file"])
-        # self._update_library_state()
+        self._update_library_state()
         self.tls = False
         if self.config_data["tls"] is True:
             if os.path.exists(self.config_data["private_key"]) is False:
@@ -114,7 +114,7 @@ class IndraProcess(IndraProcessCore):
                 uuid = "NONE"
             if 'docs' in lib_entry:
                 for doc in lib_entry['docs']:
-                    fn = doc['name']
+                    fn = doc['ref_name']
                     md5 = hashlib.md5(fn.encode('utf-8')).hexdigest()
                     self.md5_to_filename[md5] = {'filename': fn, 'uuid': uuid}
             else:
