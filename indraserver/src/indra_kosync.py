@@ -185,7 +185,7 @@ class IndraProcess(IndraProcessCore):
             self.log.error(f"User {headers["x-auth-user"]} password mismatch")
             return web.json_response({"error": "Authentication failure (PWF)"}, status=401), None
         self.log.info(f"User {headers["x-auth-user"]} authenticated")
-        return None, self.reading_state[headers["x-auth-user"]]
+        return None, headers["x-auth-user"]
 
     async def user_auth_handler(self, request):
         ret, _ = self._auth(request)
