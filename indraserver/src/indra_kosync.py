@@ -115,8 +115,8 @@ class IndraProcess(IndraProcessCore):
             if 'docs' in lib_entry:
                 for doc in lib_entry['docs']:
                     fn = doc['ref_name']
-                    md5 = hashlib.md5(fn.encode('utf-8')).hexdigest()
-                    self.md5_to_lib_entry[md5] = {'filename': fn, 'uuid': uuid}
+                    md5_hash = hashlib.md5(fn.encode('utf-8')).hexdigest()
+                    self.md5_to_lib_entry[md5_hash] = {'filename': fn, 'uuid': uuid}
             else:
                 self.log.error(f"Document {lib_entry} has no docs")
         self.log.info(f"Library size: {len(self.md5_to_lib_entry)}")
