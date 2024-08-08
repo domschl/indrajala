@@ -258,7 +258,40 @@ class IndraTime:
                 # Convert to Julian date
                 # 1 BC is 1 year before 1 AD
                 # 1 AD is JD 1721423.5
-                jdt = 1721423.5 - bc * 365.25
+                # old-year-only: jdt = 1721423.5 - bc * 365.25
+                hour = 0
+                minute = 0
+                second = 0
+                microsecond = 0
+                month = 1
+                day = 1
+                dts = pt.split("-")
+                if len(dts) == 1:
+                    # Year
+                    try:
+                        year = -1 * int(dts[0])
+                    except ValueError:
+                        raise ValueError(f"Invalid date format: {pt}")
+                elif len(dts) == 2:
+                    # Year and month
+                    try:
+                        year = int(dts[0])
+                        month = int(dts[1])
+                    except ValueError:
+                        raise ValueError(f"Invalid date format: {pt}")
+                elif len(dts) == 3:
+                    # Year, month, and day
+                    try:
+                        year = int(dts[0])
+                        month = int(dts[1])
+                        day = int(dts[2])
+                    except ValueError:
+                        raise ValueError(f"Invalid date format: {pt}")
+                else:
+                    raise ValueError(f"Invalid date format: {pt}")
+                jdt = IndraTime.time_to_julian(
+                    year, month, day, hour, minute, second, microsecond
+                )
             else:
                 hour = 0
                 minute = 0
