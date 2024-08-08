@@ -267,7 +267,6 @@ class IndraTime:
                 month = 1
                 day = 1
                 dts = pt.split("-")
-                try:
                 if len(dts) == 1:
                     # Year
                     try:
