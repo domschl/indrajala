@@ -84,14 +84,14 @@ class IndraTime:
     @staticmethod
     def time_to_julian(year, month, day, hour, minute, second, microsecond):
         """Convert discrete time to Julian date, assume Julian calendar for time < 1582 otherwise Gregorian calendar"""
-        if year == 0:
-            print(
-                f"Bad date at time_to_julian(): {year}-{month:02}-{day:02} {hour:02}:{minute:02}:{second:02}.{microsecond:06}"
-            )
-            print(
-                "There is no year 0 in julian calendar! Use time_to_julian_gregorian for continuous use of extended Gregorian calendar."
-            )
-            # return None
+        # if year == 0:
+        #     print(
+        #         f"Bad date at time_to_julian(): {year}-{month:02}-{day:02} {hour:02}:{minute:02}:{second:02}.{microsecond:06}"
+        #     )
+        #     print(
+        #         "There is no year 0 in julian calendar! Use time_to_julian_gregorian for continuous use of extended Gregorian calendar."
+        #     )
+        # return None
         # The new calendar was developed by Aloysius Lilius (about 1510 - 1576) and Christophorus Clavius (1537/38 - 1612).
         # It was established by a papal bull of Pope Gregor XIII that Thursday, October 4th, 1582, should be followed by Friday, October 15th, 1582.
         # This shifted the date of the vernal equinox to its proper date.
