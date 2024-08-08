@@ -254,10 +254,10 @@ class IndraTime:
                 # 1950 is JD 2433282.5
                 jdt = 2433282.5 - bp * 365.25
             elif pt.endswith(" bc"):
-                bc = int(pt.split(" ")[0])
                 # Convert to Julian date
                 # 1 BC is 1 year before 1 AD
                 # 1 AD is JD 1721423.5
+                # old-year-only:bc = int(pt.split(" ")[0])
                 # old-year-only: jdt = 1721423.5 - bc * 365.25
                 hour = 0
                 minute = 0
@@ -265,7 +265,7 @@ class IndraTime:
                 microsecond = 0
                 month = 1
                 day = 1
-                dts = pt.split("-")
+                dts = pt[:-3].split("-")
                 if len(dts) == 1:
                     # Year
                     try:
@@ -275,14 +275,14 @@ class IndraTime:
                 elif len(dts) == 2:
                     # Year and month
                     try:
-                        year = int(dts[0])
+                        year = -1 * int(dts[0])
                         month = int(dts[1])
                     except ValueError:
                         raise ValueError(f"Invalid date format: {pt}")
                 elif len(dts) == 3:
                     # Year, month, and day
                     try:
-                        year = int(dts[0])
+                        year = -1 * int(dts[0])
                         month = int(dts[1])
                         day = int(dts[2])
                     except ValueError:
