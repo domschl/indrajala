@@ -267,18 +267,28 @@ class IndraTime:
                 month = 1
                 day = 1
                 dts = pt.split("-")
+                try:
                 if len(dts) == 1:
                     # Year
-                    year = int(dts[0])
+                    try:
+                        year = int(dts[0])
+                    except ValueError:
+                        raise ValueError(f"Invalid date format: {pt}")
                 elif len(dts) == 2:
                     # Year and month
-                    year = int(dts[0])
-                    month = int(dts[1])
+                    try:
+                        year = int(dts[0])
+                        month = int(dts[1])
+                    except ValueError:
+                        raise ValueError(f"Invalid date format: {pt}")
                 elif len(dts) == 3:
                     # Year, month, and day
-                    year = int(dts[0])
-                    month = int(dts[1])
-                    day = int(dts[2])
+                    try:
+                        year = int(dts[0])
+                        month = int(dts[1])
+                        day = int(dts[2])
+                    except ValueError:
+                        raise ValueError(f"Invalid date format: {pt}")
                 else:
                     raise ValueError(f"Invalid date format: {pt}")
                 jdt = IndraTime.time_to_julian(
