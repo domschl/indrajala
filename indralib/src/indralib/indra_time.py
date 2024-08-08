@@ -269,20 +269,20 @@ class IndraTime:
                 if len(dts) == 1:
                     # Year
                     try:
-                        year = -1 * int(dts[0])
+                        year = -1 * int(dts[0]) + 1
                     except ValueError:
                         raise ValueError(f"Invalid date format: {pt}")
                 elif len(dts) == 2:
                     # Year and month
                     try:
-                        year = -1 * int(dts[0])
+                        year = -1 * int(dts[0]) + 1
                         month = int(dts[1])
                     except ValueError:
                         raise ValueError(f"Invalid date format: {pt}")
                 elif len(dts) == 3:
                     # Year, month, and day
                     try:
-                        year = -1 * int(dts[0])
+                        year = -1 * int(dts[0]) + 1
                         month = int(dts[1])
                         day = int(dts[2])
                     except ValueError:
