@@ -86,7 +86,10 @@ class IndraTime:
         """Convert discrete time to Julian date, assume Julian calendar for time < 1582 otherwise Gregorian calendar"""
         if year == 0:
             print(
-                "There is no year 0 in julian calendar! Use to_time_gd for continuous use of extended Gregorian calendar."
+                f"Bad date at time_to_julian(): {year}-{month:02}-{day:02} {hour:02}:{minute:02}:{second:02}.{microsecond:06}"
+            )
+            print(
+                "There is no year 0 in julian calendar! Use time_to_julian_gregorian for continuous use of extended Gregorian calendar."
             )
             return None
         # The new calendar was developed by Aloysius Lilius (about 1510 - 1576) and Christophorus Clavius (1537/38 - 1612).
