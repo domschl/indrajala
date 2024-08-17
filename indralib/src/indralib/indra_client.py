@@ -291,23 +291,65 @@ class IndraClient:
         hist_result = await future
         return json.loads(hist_result.data)
 
-    async def _get_history_block(self, username=None, password=None, domain=None, start_time=None, end_time=None):
-        await self.init_connection()
-        ret = await self.login_wait(username, password)
-        if ret is not None:
-            data = await self.get_wait_history(domain, start_time, end_time)
-            await self.logout_wait()
-            await self.close_connection()
-            return data
-        return None
-
+    @staticmethod
     def get_current_time_jd():
         cdt = datetime.datetime.now(timezone.utc)
         dt_jd = IndraTime.datetime2julian(cdt)
         return dt_jd
 
-    def get_history_sync(self, username, password, domain, start_time, end_time):
-        return asyncio.run(self._get_history_block(username=username, password=password, domain=domain, start_time=start_time, end_time=end_time))
+    @staticmethod
+    async def _get_history_block(
+        username=None,
+        password=None,
+        domain=None,
+        start_time=None,
+        end_time=None,
+        verbose=False,
+        sample_size=20,
+    ):
+        ic = IndraClient(verbose=verbose)
+        if verbose is True:
+            ic.log.info(f"Connecting")
+        await ic.init_connection()
+        if verbose is True:
+            ic.log.info("Connected to Indrajala")
+        ret = await ic.login_wait(username, password)
+        if verbose is True:
+            ic.log.info(f"Login result: {ret}")
+        if ret is not None:
+            if verbose is True:
+                ic.log.info(f"Logged in as {username}")
+            data = await ic.get_wait_history(
+                domain=domain,
+                start_time=start_time,
+                end_time=end_time,
+                sample_size=sample_size,
+                mode="Sample",
+            )
+            if verbose is True:
+                ic.log.info(f"Data: {data}")
+            await ic.logout_wait()
+            await ic.close_connection()
+            if verbose is True:
+                ic.log.info("Logged out and closed connection")
+            return data
+        return None
+
+    @staticmethod
+    def get_history_sync(
+        username,
+        password,
+        domain,
+        start_time,
+        end_time=None,
+        sample_size=20,
+        verbose=False,
+    ):
+        return asyncio.run(
+            IndraClient._get_history_block(
+                username, password, domain, start_time, end_time, verbose, sample_size
+            )
+        )
 
     async def get_last_event(self, domain):
         """Get last event of domain"""
