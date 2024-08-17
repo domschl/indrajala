@@ -4,6 +4,8 @@ import logging
 import ssl
 import json
 import time
+import datetime
+from datetime import timezone
 
 from indralib.indra_event import IndraEvent
 from indralib.indra_time import IndraTime
@@ -288,6 +290,24 @@ class IndraClient:
         future = await self.get_history(domain, start_time, end_time, sample_size, mode)
         hist_result = await future
         return json.loads(hist_result.data)
+
+    async def _get_history_block(self, username=None, password=None, domain=None, start_time=None, end_time=None):
+        await self.init_connection()
+        ret = await self.login_wait(username, password)
+        if ret is not None:
+            data = await self.get_wait_history(domain, start_time, end_time)
+            await self.logout_wait()
+            await self.close_connection()
+            return data
+        return None
+
+    def get_current_time_jd():
+        cdt = datetime.datetime.now(timezone.utc)
+        dt_jd = IndraTime.datetime2julian(cdt)
+        return dt_jd
+
+    def get_history_sync(self, username, password, domain, start_time, end_time):
+        return asyncio.run(self._get_history_block(username=username, password=password, domain=domain, start_time=start_time, end_time=end_time))
 
     async def get_last_event(self, domain):
         """Get last event of domain"""
