@@ -3,7 +3,7 @@
     max_loglevel_logfile = "debug"
     max_loglevel_console = "debug"
     loglevel = "info"
-    modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_kosync", "indra_dispatch", "indra_ai", "zero_test"]
+    modules = ["pingpong", "indra_mqtt", "indra_db", "async_http", "indra_kosync", "indra_dispatch", "indra_ai", "zero_test", "indra_weather_dwd"]
     data_directory = "~/.config/indrajala"
     zeromq_port = 8091
 
@@ -162,3 +162,11 @@
     subscriptions = []
     loglevel = "debug"
     run_condition = "default"
+
+[[indra_weather_dwd]]
+    active = true
+    name = "weather_forecast.1"
+    subscriptions = []
+    loglevel = "debug"
+    run_condition = "hourly@:10"
+    station_id = "check: https://www.dwd.de/DE/leistungen/klimadatendeutschland/statliste/statlex_html.html?view=nasPublication&nn=16102"
