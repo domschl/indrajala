@@ -280,7 +280,8 @@ class IndraProcessCore:
                 except queue.Empty:
                     ev = None
             if ev is not None:
-                self.log.debug(f"Received: {ev.domain}")
+                if ev.domain.startswith("$self") is False:
+                    self.log.debug(f"Received: {ev.domain}")
                 if ev.domain == "$cmd/quit":
                     self.shutdown_timer = True
                     self.shutdown()

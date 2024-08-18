@@ -140,10 +140,65 @@ class IndraProcess(IndraProcessCore):
                     print(f"Bad len: {k}")
                     return None
             if k == 'timesteps':
-                dwd_fc['time'] = [datetime.fromisoformat(ti) for ti in fc['timesteps']]
-            elif k == 'TTT':
-                dwd_fc['temperature'] = [ float(ti) - 273.15 for ti in fc['TTT']]
-                
+                try:
+                    dwd_fc['time'] = [IndraTime.ISO2julian(ti) for ti in fc['timesteps']]
+                except Exception as e:
+                    self.log.error(f"Fatal time conversion error: {e}")
+                    return None
+            elif k == 'TTT': # Temperature in K -> C
+                try:
+                    dwd_fc['temperature'] = [ float(ti) - 273.15 if ti != '-' else None for ti in fc['TTT']]
+                except Exception as e:
+                    self.log.error(f"Temperature conversion error: {e}")
+                    continue
+            elif k == 'FF':  # Wind speed in m/s
+                try:
+                    dwd_fc['wind_speed'] = [ float(ti) if ti != '-' else None for ti in fc['FF']]
+                except Exception as e:
+                    self.log.error(f"Wind speed conversion error: {e}")
+                    continue
+            elif k == 'PPPP': # Pressure in Pa -> hPa
+                try:
+                    dwd_fc['pressure'] = [ float(ti)/100.0 if ti != '-' else None for ti in fc['PPPP']]
+                except Exception as e:
+                    self.log.error(f"Pressure conversion error: {e}")
+                    continue
+            elif k == 'wwP':  # Rain probability 0..100% -> 0..1.0
+                try:
+                    dwd_fc['rain_probability'] = [ float(ti)/100.0 if ti != '-' else None for ti in fc['wwP']]
+                except Exception as e:
+                    self.log.error(f"Rain probability conversion error: {e}")
+                    continue
+            elif k == 'DRR1':  # Duration of precipitation within the last hour (s) -> 0..1.0
+                try:
+                    dwd_fc['rain_duration'] = [ float(ti)/3600.0 if ti != '-' else None for ti in fc['DRR1']]
+                except Exception as e:
+                    self.log.error(f"Rain duration conversion error: {e}")
+                    continue
+            elif k == 'wwT':  # Occurance of thunderstorms 0..100% -> 0..1.0
+                try:
+                    dwd_fc['thunderstorm_probability'] = [ float(ti)/100.0 if ti != '-' else None for ti in fc['wwT']]
+                except Exception as e:
+                    self.log.error(f"Thunderstorm probability conversion error: {e}")
+                    continue
+            elif k == 'VV10':  # Occurance of fog (visibility < 1000m) 0..100% -> 0..1.0
+                try:
+                    dwd_fc['fog_probability'] = [ float(ti)/100.0 if ti != '-' else None for ti in fc['VV10']]
+                except Exception as e:
+                    self.log.error(f"Fog probability conversion error: {e}")
+                    continue
+            elif k == 'RRad1':  # Global irradiation in % (0..80) -> 0..1.0
+                try:
+                    dwd_fc['global_irradiation'] = [ float(ti)/100.0 if ti != '-' else None for ti in fc['RRad1']]
+                except Exception as e:
+                    self.log.error(f"Global irradiation conversion error: {e}")
+                    continue
+            elif k == 'SunD1':  # Sunshine duration in last hour in s -> 0..1.0
+                try:
+                    dwd_fc['sunshine_duration'] = [ float(ti)/3600.0 if ti != '-' else None for ti in fc['SunD1']]
+                except Exception as e:
+                    self.log.error(f"Sunshine duration conversion error: {e}")
+                    continue
         return dwd_fc            
 
     def get_data(self):
@@ -155,24 +210,46 @@ class IndraProcess(IndraProcessCore):
                 zfile.namelist()[0]).read()
         except Exception as e:
             self.log.error(f'Unable to download {self.url_station_forecast}: {e}')
-            return None
-        xmlroot = et.fromstring(iodata)
-        fc = self._xml_analyse(xmlroot)
-        dwd_fc = self._xml_dwd_extract(fc)
-        vals = [("temperature", "vector/tuple/jd/float/temperature/celsius")]
+            return False
+        try:
+            iodata = iodata.decode('utf-8')
+            xmlroot = et.fromstring(iodata)
+            fc = self._xml_analyse(xmlroot)
+            dwd_fc = self._xml_dwd_extract(fc)
+        except Exception as e:
+            self.log.error(f'Unable to parse xml: {e}')
+            return False
+        try:
+            jd_start = IndraTime.ISO2julian(fc['timesteps'][0])
+            jd_end = IndraTime.ISO2julian(fc['timesteps'][-1])
+        except Exception as e:
+            self.log.error(f'Unable to convert time: {e}')
+            return False
+        vals = [("temperature", "vector/tuple/jd/float/temperature/celsius"),
+                ("wind_speed", "vector/tuple/jd/float/wind_speed/m_s"),
+                ("pressure", "vector/tuple/jd/float/pressure/hpa"),
+                ("rain_probability", "vector/tuple/jd/float/rain_probability"),
+                ("rain_duration", "vector/tuple/jd/float/rain_duration"),
+                ("thunderstorm_probability", "vector/tuple/jd/float/thunderstorm_probability"),
+                ("fog_probability", "vector/tuple/jd/float/fog_probability"),
+                ("global_irradiation", "vector/tuple/jd/float/global_irradiation"),
+                ("sunshine_duration", "vector/tuple/jd/float/sunshine_duration")
+                ]
         for val in vals:
             if val[0] not in dwd_fc:
                 self.log.error(f"Value {val[0]} not in forecast")
                 continue
             ie = IndraEvent()
-            ie.time_jd_start = IndraTime.ISO2julian(fc['timesteps'][0])
-            ie.time_jd_end = IndraTime.ISO2julian(fc['timesteps'][-1])
+            ie.time_jd_start = jd_start
+            ie.time_jd_end = jd_end
             ie.domain = f"$event/forecast/{val[0]}/dwd/{self.station_id}"
             ie.data_type = f"{val[1]}"
             ie.from_id = self.name
             data = [(jd, y) for jd, y in zip(dwd_fc['time'], dwd_fc[val[0]])]
             ie.data = json.dumps(data)
+            self.log.debug(f"Sending forecast event for {val[0]}")
             self.event_send(ie)
+        return True
 
     def inbound_init(self):
         if not self.bConnectActive or self.station_id is None:
