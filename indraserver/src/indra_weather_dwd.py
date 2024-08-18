@@ -35,7 +35,8 @@ class IndraProcess(IndraProcessCore):
         self.bConnectActive = True
         self.url_station_forecast_template = "https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_L/single_stations/{0}/kml/MOSMIX_L_LATEST_{0}.kmz"
         if "station_id" in config_data:
-            self.station_id = config_data["station_id"]
+            # Stationskenung aus <https://www.dwd.de/DE/leistungen/klimadatendeutschland/statliste/statlex_html.html?view=nasPublication&nn=16102>, nicht Stations_ID!
+            self.station_id = config_data["stationskennung"]
             self.url_station_forecast = self.url_station_forecast_template.format(
                 self.station_id
             )
