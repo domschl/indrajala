@@ -160,9 +160,7 @@ class IndraProcess(IndraProcessCore):
                     break
             if found is True:
                 ev = IndraEvent()
-                ev.domain = (
-                    f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
-                )
+                ev.domain = f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
                 ev.from_id = f"{self.name}/{topic}"
                 ev.data_type = o_data_type
                 ev.to_scope = "world"
@@ -184,14 +182,12 @@ class IndraProcess(IndraProcessCore):
             ("hastates/sensor/klima_nordseite_temperature/state", "temperature", "climate", "home_nordseite_ha", "number/float/temperature/celsius"),
             ("hastates/sensor/klima_nordseite_humidity/state", "humidity", "climate", "home_nordseite_ha", "number/float/humidity/percentage"),
         ]
-        for topic in topic_list:
-            if IndraEvent.mqcmp(topic[0], topic) is True:
+        for topic_i in topic_list:
+            if IndraEvent.mqcmp(topic, topic_i[0]) is True:
                 ev = IndraEvent()
-                ev.domain = (
-                    f"$event/measurement/{topic[1]}/{topic[2]}/{topic[3]}"
-                )
-                ev.from_id = f"{self.name}/{topic[0]}"
-                ev.data_type = topic[4]
+                ev.domain = f"$event/measurement/{topic_i[1]}/{topic_i[2]}/{topic_i[3]}"
+                ev.from_id = f"{self.name}/{topic_i[0]}"
+                ev.data_type = topic_i[4]
                 ev.to_scope = "world"
                 try:
                     ev.data = json.dumps(float(message))
