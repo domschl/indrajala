@@ -123,7 +123,7 @@ class IndraProcess(IndraProcessCore):
 
     def muwerk(self, topic, message):
         cont_locs = {
-            "omu/enviro-master/#": ("climate", "home-balkon"),
+            "omu/enviro-master/#": ("climate", "home-balkon-env"),
         }
         meass = {
             "temperature": ("temperature", "number/float/temperature/celsius"),
@@ -179,10 +179,10 @@ class IndraProcess(IndraProcessCore):
     def ha(self, topic, message):
         self.log.debug(f"inbound-parser-ha: {topic}, {message}")
         topic_list = [
-            ("hastates/sensor/klima_balkon_actual_temperature/state", "temperature", "climate", "home-balkon", "number/float/temperature/celsius"),
-            ("hastates/sensor/klima_balkon_humidity/state", "humidity", "climate", "home-balkon", "number/float/humidity/percentage"),
-            ("hastates/sensor/klima_nordseite_temperature/state", "temperature", "climate", "home-nordseite", "number/float/temperature/celsius"),
-            ("hastates/sensor/klima_nordseite_humidity/state", "humidity", "climate", "home-nordseite", "number/float/humidity/percentage"),
+            ("hastates/sensor/klima_balkon_actual_temperature/state", "temperature", "climate", "home-balkon-ha", "number/float/temperature/celsius"),
+            ("hastates/sensor/klima_balkon_humidity/state", "humidity", "climate", "home-balkon-ha", "number/float/humidity/percentage"),
+            ("hastates/sensor/klima_nordseite_temperature/state", "temperature", "climate", "home-nordseite-ha", "number/float/temperature/celsius"),
+            ("hastates/sensor/klima_nordseite_humidity/state", "humidity", "climate", "home-nordseite-ha", "number/float/humidity/percentage"),
         ]
         for topic in topic_list:
             if IndraEvent.mqcmp(topic[0], topic) is True:
