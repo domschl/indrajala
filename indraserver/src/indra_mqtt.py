@@ -123,17 +123,17 @@ class IndraProcess(IndraProcessCore):
 
     def muwerk(self, topic, message):
         cont_locs = {
-            "omu/enviro-master/#": ("climate", "home-balkon-env"),
+            "omu/enviro-master/#": ("home_balkon_env",),
         }
         meass = {
-            "temperature": ("temperature", "number/float/temperature/celsius"),
-            "humidity": ("humidity", "number/float/humidity/percentage"),
-            "illuminance": ("illuminance", "number/float/illuminance/lux"),
-            "pressureNN": ("pressure", "number/float/pressure/hpa"),
-            "gamma1minavg": ("gamma-1min-avg", "number/float/radiation/gamma"),
-            "gamma10minavg": ("gamma-10min-avg", "number/float/radiation/gamma"),
-            "frequency": ("geiger-frequency", "number/float/frequency/hz"),
-            "unitrain": ("rain", "number/float/rain/unit"),
+            "temperature": ("temperature", "number/float/temperature/celsius", "climate"),
+            "humidity": ("humidity", "number/float/humidity/percentage", "climate"),
+            "illuminance": ("illuminance", "number/float/illuminance/lux", "radiation"),
+            "pressureNN": ("pressure", "number/float/pressure/hpa", "climate"),
+            "gamma1minavg": ("gamma_radiation_1min_avg", "number/float/radiation/gamma/1minavg", "radiation"),
+            "gamma10minavg": ("gamma_radiation_10min_avt", "number/float/radiation/gamma/10minavg", "radiation"),
+            "frequency": ("geiger_radiation", "number/float/frequency/hz", "radiation"),
+            "unitrain": ("rain", "number/float/rain/unit", "climate"),
         }
         self.log.debug(f"inbound-parser-muwerk: {topic}, {message}")
         if IndraEvent.mqcmp(topic, "omu/+/+/sensor/+"):
@@ -152,9 +152,9 @@ class IndraProcess(IndraProcessCore):
             found = False
             for cl in cont_locs:
                 if IndraEvent.mqcmp(topic, cl):
-                    o_context, o_location = cont_locs[cl]
+                    o_location = cont_locs[cl]
                     if measurement in meass:
-                        o_measurement, o_data_type = meass[measurement]
+                        o_measurement, o_data_type, o_context = meass[measurement]
                         found = True
                         break
                     break
