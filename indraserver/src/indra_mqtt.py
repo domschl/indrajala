@@ -123,18 +123,18 @@ class IndraProcess(IndraProcessCore):
 
     def muwerk(self, topic, message):
         cont_locs = {
-            "omu/enviro-master/#": ("home_balkon_env",),
-        }
-        meass = {
-            "temperature": ("temperature", "number/float/temperature/celsius", "climate"),
-            "humidity": ("humidity", "number/float/humidity/percentage", "climate"),
-            "illuminance": ("illuminance", "number/float/illuminance/lux", "radiation"),
-            "pressureNN": ("pressure", "number/float/pressure/hpa", "climate"),
-            "gamma1minavg": ("gamma_radiation_1min_avg", "number/float/radiation/gamma/1minavg", "radiation"),
-            "gamma10minavg": ("gamma_radiation_10min_avt", "number/float/radiation/gamma/10minavg", "radiation"),
-            "frequency": ("geiger_radiation", "number/float/frequency/hz", "radiation"),
-            "unitrain": ("rain", "number/float/rain/unit", "climate"),
-        }
+            "omu/enviro-master/#": {"location": "home_balkon_env",
+                                    "measurements": {
+                                        "temperature": ("temperature", "number/float/temperature/celsius", "climate"),
+                                        "humidity": ("humidity", "number/float/humidity/percentage", "climate"),
+                                        "illuminance": ("illuminance", "number/float/illuminance/lux", "radiation"),
+                                        "pressureNN": ("pressure", "number/float/pressure/hpa", "climate"),
+                                        "gamma1minavg": ("gamma_radiation_1min_avg", "number/float/radiation/gamma/1minavg", "radiation"),
+                                        "gamma10minavg": ("gamma_radiation_10min_avt", "number/float/radiation/gamma/10minavg", "radiation"),
+                                        "frequency": ("geiger_radiation", "number/float/frequency/hz", "radiation"),
+                                        "unitrain": ("rain", "number/float/rain/unit", "climate"),
+                                    }},
+            }
         self.log.debug(f"inbound-parser-muwerk: {topic}, {message}")
         if IndraEvent.mqcmp(topic, "omu/+/+/sensor/+"):
             self.log.debug(f"Checking sensor: {topic}, {message}")
@@ -152,9 +152,9 @@ class IndraProcess(IndraProcessCore):
             found = False
             for cl in cont_locs:
                 if IndraEvent.mqcmp(topic, cl):
-                    o_location = cont_locs[cl]
-                    if measurement in meass:
-                        o_measurement, o_data_type, o_context = meass[measurement]
+                    o_location = cont_locs[cl]["location"]
+                    if measurement in cont_locs[cl]["measurements"]:
+                        o_measurement, o_data_type, o_context = cont_locs[cl]["measurements"][measurement]
                         found = True
                         break
                     break
