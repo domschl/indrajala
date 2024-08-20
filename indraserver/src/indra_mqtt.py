@@ -130,6 +130,10 @@ class IndraProcess(IndraProcessCore):
             "humidity": ("humidity", "number/float/humidity/percentage"),
             "illuminance": ("illuminance", "number/float/illuminance/lux"),
             "pressureNN": ("pressure", "number/float/pressure/hpa"),
+            "gamma1minavg": ("gamma-1min-avg", "number/float/radiation/gamma"),
+            "gamma10minavg": ("gamma-10min-avg", "number/float/radiation/gamma"),
+            "frequency": ("geiger-frequency", "number/float/frequency/hz"),
+            "unitrain": ("rain", "number/float/rain/unit"),
         }
         self.log.debug(f"inbound-parser-muwerk: {topic}, {message}")
         if IndraEvent.mqcmp(topic, "omu/+/+/sensor/+"):
@@ -174,43 +178,21 @@ class IndraProcess(IndraProcessCore):
 
     def ha(self, topic, message):
         self.log.debug(f"inbound-parser-ha: {topic}, {message}")
-        repls = [
-            ("pressure_nn", "pressure-nn"),
-            ("power_consumption", "power-consumption"),
-            ("total_energy", "total-energy"),
-            ("download_throughput", "download-throughput"),
-            ("electric_current", "electric-current"),
-            ("upload_throughput", "upload-throughput"),
-            ("gamma_1min_avg", "gamma-1min-avg"),
-            ("gamma_10min_avg", "gamma-10min-avg"),
-            ("unit_illuminance", "unit-illuminance"),
-            ("current_illumination", "current-illumination"),
-            ("energy_counter", "energy-counter"),
+        topic_list = [
+            {"hastates/sensor/klima_balkon_actual_temperature/state", "temperature", "climate", "home/balkon", "number/float/temperature/celsius"},
+            {"hastates/sensor/klima_balkon_humidity/state", "humidity", "climate", "home/balkon", "number/float/humidity/percentage"},
+            {"hastates/sensor/klima_nordseite_temperature/state", "temperature", "climate", "home/nordseite", "number/float/temperature/celsius"},
+            {"hastates/sensor/klima_nordseite_humidity/state", "humidity", "climate", "home/nordseite", "number/float/humidity/percentage"},
         ]
-        tp = topic
-        for rep in repls:
-            fr = rep[0]
-            to = rep[1]
-            tp = tp.replace(fr, to)
-        tpi = tp.split("/")
-        if len(tpi) == 4:
-            sbi = tpi[2].split("_")
-            sens = sbi[-1]
-            dev = "_".join(sbi[:-1])
-            # self.log.info(f"dev: {dev}, type: {sens} = {message}")
-            found = False
-            if found is True:
+        for topic in topic_list:
+            if IndraEvent.mqcmp(topic[0], topic) is True:
                 ev = IndraEvent()
                 ev.domain = (
-                    # f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
-                    "not-filled-in-yet"
+                    f"$event/measurement/{topic[1]}/{topic[2]}/{topic[3]}"
                 )
-                ev.from_id = f"{self.name}/{topic}"
-                ev.data_type = "total-mess"
+                ev.from_id = f"{self.name}/{topic[0]}"
+                ev.data_type = topic[4]
                 ev.to_scope = "world"
-
-                self.log.error("Not implemented yet: ha parser")
-
                 try:
                     ev.data = json.dumps(float(message))
                 except Exception as e:
