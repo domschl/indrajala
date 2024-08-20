@@ -513,7 +513,7 @@ class IndraProcess(IndraProcessCore):
             ),
             ("backup", "backup", "Backup Task", "backup@localhost", '["app"]'),
             ("translator", "translator", "Translation AI", "ai@localhost", '["app"]'),
-            ("test9", "test9", "Test User 9", "test9@localhost", '["admin"]'),
+            ("stat", "stat", "Statistics", "stat@localhost", '["app", "user"]'),
             ("test10", "test10", "Test User 10", "test10@localhost", '["user"]'),
         ]
         cur_pwd = self._read_kv(admin_key)
