@@ -246,7 +246,7 @@ class IndraTime:
                 or pt.endswith(" kyr")
                 or pt.endswith(" kya")
             ):
-                kya = int(pt.split(" ")[0])
+                kya = float(pt.split(" ")[0])
                 # Convert to Julian date
                 # 1 kya BP is 1000 years before 1950
                 # 1950 is JD 2433282.5
