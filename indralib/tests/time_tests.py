@@ -2,6 +2,7 @@
 import sys
 import os
 import json
+import math
 
 path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src/")
 print(path)
@@ -20,7 +21,7 @@ def cmp_time(d1: str, d2: str):
     return d1 == d2
 
 
-def do_tests(data):
+def do_tests(data, data2):
     result = {
                 "num_ok": 0,
                 "num_failed": 0,
@@ -55,6 +56,29 @@ def do_tests(data):
             result["num_failed"] += 1
         else:
             result["num_ok"] += 1
+
+    for d in data2:
+        gr = d["Gregorian year"]
+        bp = d["BP year"]
+        jd1 = IndraTime.string_time_2_julian(gr)[0]
+        jd2 = IndraTime.string_time_2_julian(bp)[0]
+        bpf = int(bp.split(" ")[0])
+        year = 1950 - bpf
+        month = 1
+        day = 1
+        hour = 0
+        minute = 0
+        second = 0
+        microsecond = 0
+        jd3 = jdt = IndraTime.time_to_julian(
+                    year, month, day, hour, minute, second, microsecond
+                )
+        if math.isclose(jd1, jd3, abs_tol=0.0001):
+            result["num_ok"] += 1
+        else:
+            result["num_failed"] += 1
+            err_msg = f"Error: {jd1} != {jd3} at test {d["Event"]}"
+            result["errors"].append(err_msg)
     return result
 
 # for d in data:
@@ -66,8 +90,11 @@ for arg in sys.argv:
         folder = arg.split("=")[1]
 
 with open(os.path.join(folder, "normalized_jd_time_data.json")) as f:
-    data = json.load(f)
-    result = do_tests(data)
+    data1 = json.load(f)
+with open(os.path.join(folder, "normalized_bp_time_data.json")) as f:
+    data2 = json.load(f)
 
-    print("#$#$# Result #$#$#")
-    print(json.dumps(result, indent=2))
+result = do_tests(data1, data2)
+
+print("#$#$# Result #$#$#")
+print(json.dumps(result, indent=2))

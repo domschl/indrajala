@@ -247,12 +247,32 @@ class IndraTime:
                 # Convert to Julian date
                 # 1 kya BP is 1000 years before 1950
                 # 1950 is JD 2433282.5
-                jdt = 2433282.5 - kya * 1000.0 * 365.25
+                # jdt = 2433282.5 - kya * 1000.0 * 365.25
+                year = 1950 - kya * 1000.0
+                month = 1
+                day = 1
+                hour = 0
+                minute = 0
+                second = 0
+                microsecond = 0
+                jdt = IndraTime.time_to_julian(
+                    year, month, day, hour, minute, second, microsecond
+                )
             elif pt.endswith(" bp"):
                 bp = int(pt.split(" ")[0])
                 # Convert to Julian date
                 # 1950 is JD 2433282.5
-                jdt = 2433282.5 - bp * 365.25
+                # jdt = 2433282.5 - bp * 365.25
+                year = 1950 - bp
+                month = 1
+                day = 1
+                hour = 0
+                minute = 0
+                second = 0
+                microsecond = 0
+                jdt = IndraTime.time_to_julian(
+                    year, month, day, hour, minute, second, microsecond
+                )
             elif pt.endswith(" bc"):
                 # Convert to Julian date
                 # 1 BC is 1 year before 1 AD
