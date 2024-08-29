@@ -237,7 +237,19 @@ class IndraTime:
             if pt.endswith(" ad"):
                 pt = pt[:-3]
             jdt = None
-            if (
+            if pt.endswith(" ma bp") or pt.endswith(" ma"):
+                ma = float(pt.split(" ")[0])
+                year = 1950 - ma * 1000000.0
+                month = 1
+                day = 1
+                hour = 0
+                minute = 0
+                second = 0
+                microsecond = 0
+                jdt = IndraTime.time_to_julian(
+                    year, month, day, hour, minute, second, microsecond
+                )
+            elif (
                 pt.endswith(" kya bp")
                 or pt.endswith(" kyr bp")
                 or pt.endswith(" kyr")
@@ -379,16 +391,26 @@ class IndraTime:
                 bp = 1950 - year
                 # bp = int((1721423.5 - jd) / 365.25)
                 return f"{bp} BP"
-            else:
+            elif jd > 1721423.5 - 1000000000 * 365.25:
                 # kya BP
                 year, month, day, hour, minute, second, microsecond = (
                     IndraTime.julian_to_time(jd)
                 )
                 if year < 0:
                     year = year + 1
-                kya = (1950 - year) / 1000
+                kya = round((1950 - year) / 1000.0, 2)
                 # kya = int((1721423.5 - jd) / (1000 * 365.25))
                 return f"{kya} kya BP"
+            else:
+                # ma BP
+                year, month, day, hour, minute, second, microsecond = (
+                    IndraTime.julian_to_time(jd)
+                )
+                if year < 0:
+                    year = year + 1
+                ma = round((1950 - year) / 1000000.0, 2)
+                # ma = int((1721423.5 - jd) / (1000000 * 365.25))
+                return f"{ma} Ma BP"
         else:
             # AD
             # dt = IndraTime.julian2datetime(jd)
