@@ -54,6 +54,13 @@ def read_calendrical_test_data():
     return tables[0]
 
 
+def read_bp_test_data():
+    with open("time/raw/time_bp.md", "r") as f:
+        markdown_text = f.read()
+    tables = extract_markdown_tables(markdown_text)
+    return tables[0]
+
+
 def morph_calendrical_data(data):
     out_data = []
     for d in data:
@@ -130,7 +137,7 @@ def add_js_data(data=[]):
     return data
 
 
-def write_normalized_data(destination_file):
+def write_normalized_data(destination_file1, destination_file2):
     data = (
         read_calendrical_test_data()
     )  # Read markdown-table from 'Calendrical Calculations'
@@ -140,10 +147,17 @@ def write_normalized_data(destination_file):
     )  # Add Test-Data from https://github.com/sarabveer/calendrica-js
     # sort by 'RD':
     data = sorted(data, key=lambda x: x["RD"])
-    with open(destination_file, "wb") as f:
+    with open(destination_file1, "wb") as f:
         f.write(json.dumps(data, indent=2).encode("utf-8"))
+
+    data = read_bp_test_data()
+    with open(destination_file2, "wb") as f:
+        f.write(json.dumps(data, indent=2).encode("utf-8"))
+
     return data
 
 
 if __name__ == "__main__":
-    write_normalized_data("time/normalized_jd_time_data.json")
+    write_normalized_data(
+        "time/normalized_jd_time_data.json", "time/normalized_bp_time_data.json"
+    )
