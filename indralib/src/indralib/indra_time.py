@@ -351,11 +351,23 @@ class IndraTime:
                 return f"{year} BC"
             elif jd > 1721423.5 - 100000 * 365.25:
                 # BP
-                bp = int((1721423.5 - jd) / 365.25)
+                year, month, day, hour, minute, second, microsecond = (
+                    IndraTime.julian_to_time(jd)
+                )
+                if year < 0:
+                    year = year + 1
+                bp = 1950 - year
+                # bp = int((1721423.5 - jd) / 365.25)
                 return f"{bp} BP"
             else:
                 # kya BP
-                kya = int((1721423.5 - jd) / (1000 * 365.25))
+                year, month, day, hour, minute, second, microsecond = (
+                    IndraTime.julian_to_time(jd)
+                )
+                if year < 0:
+                    year = year + 1
+                kya = (1950 - year) / 1000
+                # kya = int((1721423.5 - jd) / (1000 * 365.25))
                 return f"{kya} kya BP"
         else:
             # AD
