@@ -43,18 +43,18 @@ class IndraTime:
     def julian_to_time(jd):
         """Convert Julian date to discrete time"""
         jd = jd + 0.5
-        Z = int(jd)
+        Z = math.floor(jd)
         F = jd - Z
         if Z < 2299161:
             A = Z
         else:
-            alpha = int((Z - 1867216.25) / 36524.25)
-            A = Z + 1 + alpha - int(alpha / 4)
+            alpha = math.floor((Z - 1867216.25) / 36524.25)
+            A = Z + 1 + alpha - math.floor(alpha / 4)
         B = A + 1524
-        C = int((B - 122.1) / 365.25)
-        D = int(365.25 * C)
-        E = int((B - D) / 30.6001)
-        day = B - D - int(30.6001 * E) + F
+        C = math.floor((B - 122.1) / 365.25)
+        D = math.floor(365.25 * C)
+        E = math.floor((B - D) / 30.6001)
+        day = B - D - math.floor(30.6001 * E) + F
         if E < 14:
             month = E - 1
         else:
@@ -63,13 +63,10 @@ class IndraTime:
             year = C - 4716
         else:
             year = C - 4715
-        hour = 24 * (jd - int(jd))
-        minute = 60 * (hour - int(hour))
-        second = 60 * (minute - int(minute))
-        microsecond = 1000000 * (second - int(second))
-
-        # if year < 0:  ## XXX VERIFY!
-        #     year -= 1
+        hour = 24 * (jd - math.floor(jd))
+        minute = 60 * (hour - math.floor(hour))
+        second = 60 * (minute - math.floor(minute))
+        microsecond = 1000000 * (second - math.floor(second))
 
         return (
             year,
