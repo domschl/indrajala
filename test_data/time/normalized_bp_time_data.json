@@ -16,7 +16,8 @@
   },
   {
     "Gregorian year": "51 BC",
-    "BP year": "2000 BP"
+    "BP year": "2000 BP",
+    "Event": "2000 BP test case"
   },
   {
     "Gregorian year": "45 BC",
@@ -35,7 +36,8 @@
   },
   {
     "Gregorian year": "950",
-    "BP year": "1000 BP"
+    "BP year": "1000 BP",
+    "Event": "950 AD test case"
   },
   {
     "Gregorian year": "1582",
