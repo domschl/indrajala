@@ -399,8 +399,8 @@ class IndraTime:
                 year, month, day, hour, minute, second, microsecond = (
                     IndraTime.julian_to_time(jd)
                 )
-                if year < 0:
-                    year = year + 1
+                # if year < 0:
+                #    year = year + 1
                 bp = 1950 - year
                 # bp = int((1721423.5 - jd) / 365.25)
                 return f"{bp} BP"
@@ -409,8 +409,8 @@ class IndraTime:
                 year, month, day, hour, minute, second, microsecond = (
                     IndraTime.julian_to_time(jd)
                 )
-                if year < 0:
-                    year = year + 1
+                # if year < 0:
+                #     year = year + 1
                 kya = round((1950 - year) / 1000.0, 2)
                 # kya = int((1721423.5 - jd) / (1000 * 365.25))
                 return f"{kya} kya BP"
@@ -419,8 +419,8 @@ class IndraTime:
                 year, month, day, hour, minute, second, microsecond = (
                     IndraTime.julian_to_time(jd)
                 )
-                if year < 0:
-                    year = year + 1
+                # if year < 0:
+                #     year = year + 1
                 ma = round((1950 - year) / 1000000.0, 2)
                 return f"{ma} Ma BP"
             else:
@@ -428,8 +428,8 @@ class IndraTime:
                 year, month, day, hour, minute, second, microsecond = (
                     IndraTime.julian_to_time(jd)
                 )
-                if year < 0:
-                    year = year + 1
+                # if year < 0:
+                #    year = year + 1
                 ma = round((1950 - year) / 1000000000.0, 3)
                 return f"{ma} Ga BP"
         else:
