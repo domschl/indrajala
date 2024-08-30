@@ -249,9 +249,22 @@ class IndraTime:
                 jdt = IndraTime.time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
+            elif pt.endswith(" ga bp") or pt.endswith(" ga"):
+                ga = float(pt.split(" ")[0])
+                year = 1950 - ga * 1000000000.0
+                month = 1
+                day = 1
+                hour = 0
+                minute = 0
+                second = 0
+                microsecond = 0
+                jdt = IndraTime.time_to_julian(
+                    year, month, day, hour, minute, second, microsecond
+                )
             elif (
                 pt.endswith(" kya bp")
                 or pt.endswith(" kyr bp")
+                or pt.endswith(" ka")
                 or pt.endswith(" kyr")
                 or pt.endswith(" kya")
             ):
@@ -391,7 +404,7 @@ class IndraTime:
                 bp = 1950 - year
                 # bp = int((1721423.5 - jd) / 365.25)
                 return f"{bp} BP"
-            elif jd > 1721423.5 - 1000000000 * 365.25:
+            elif jd > 1721423.5 - 100000000 * 365.25:
                 # kya BP
                 year, month, day, hour, minute, second, microsecond = (
                     IndraTime.julian_to_time(jd)
@@ -401,16 +414,24 @@ class IndraTime:
                 kya = round((1950 - year) / 1000.0, 2)
                 # kya = int((1721423.5 - jd) / (1000 * 365.25))
                 return f"{kya} kya BP"
-            else:
-                # ma BP
+            elif jd > 1721423.5 - 10000000000 * 365.25:
+                # Ma BP
                 year, month, day, hour, minute, second, microsecond = (
                     IndraTime.julian_to_time(jd)
                 )
                 if year < 0:
                     year = year + 1
                 ma = round((1950 - year) / 1000000.0, 2)
-                # ma = int((1721423.5 - jd) / (1000000 * 365.25))
                 return f"{ma} Ma BP"
+            else:
+                # Ga BP
+                year, month, day, hour, minute, second, microsecond = (
+                    IndraTime.julian_to_time(jd)
+                )
+                if year < 0:
+                    year = year + 1
+                ma = round((1950 - year) / 1000000000.0, 3)
+                return f"{ma} Ga BP"
         else:
             # AD
             # dt = IndraTime.julian2datetime(jd)
