@@ -263,6 +263,7 @@ class IndraTime:
                 )
             elif (
                 pt.endswith(" kya bp")
+                or pt.endswith(" ka bp")
                 or pt.endswith(" kyr bp")
                 or pt.endswith(" ka")
                 or pt.endswith(" kyr")
