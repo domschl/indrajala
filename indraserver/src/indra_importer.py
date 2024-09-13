@@ -1,4 +1,4 @@
-import json
+import logging
 import time
 import os
 
@@ -56,7 +56,9 @@ class IndraProcess(IndraProcessCore):
 
     def init_downloads(self):
         for dir in self.data_sources_directories:
-            downloader = IndraDownloader(cache_dir=self.data_cache_directory)
+            downloader = IndraDownloader(
+                cache_dir=self.data_cache_directory, logger=self.log
+            )
             self.downloaders.append(downloader)
             self.log.info(f"Data sources directory: {dir}")
             dfs = downloader.get_datasets(data_sources_dir=dir)
