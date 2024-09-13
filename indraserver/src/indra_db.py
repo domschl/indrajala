@@ -32,7 +32,11 @@ class IndraProcess(IndraProcessCore):
             zmq_send_queue_port,
             mode="single",
         )
-        self.set_throttle(1)  # Max 1 message per sec to inbound
+        self.throttle = config_data["throttle"]
+        if self.throttle is not None and self.throttle > 0:
+            self.set_throttle(
+                self.throttle
+            )  # Max self.throttle message per sec to inbound  # XXX Why?
         self.database = os.path.expanduser(config_data["database"])
         self.database_directory = os.path.dirname(self.database)
         if os.path.exists(self.database_directory) is False:

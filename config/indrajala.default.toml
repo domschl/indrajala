@@ -49,6 +49,7 @@
     subscriptions = []
     database = "{{data_directory}}/db/indrajala.db"
     commit_delay_sec = 0.0
+    throttle = 0
 
 [[async_http]]
     active = true
@@ -154,7 +155,7 @@
     bfs_kenn = "check https://odlinfo.bfs.de/ODL/DE/service/datenschnittstelle/datenschnittstelle_node.html"
 
 [[indra_k_index_noaa]]
-    active = true
+    active = false
     name = "k_index_noaa.1"
     # zeromq_port = 8092
     # zeromq_host = "localhost"
@@ -164,7 +165,7 @@
     run_condition = "default"
 
 [[indra_weather_dwd]]
-    active = true
+    active = false
     name = "weather_forecast.1"
     subscriptions = []
     loglevel = "debug"
