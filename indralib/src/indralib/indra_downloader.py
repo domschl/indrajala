@@ -260,13 +260,24 @@ class IndraDownloader:
     def get(
         self,
         url,
+        alt_url=None,
         transforms=None,
         user_agent=None,
         resolve_redirects=True,
     ):
         cache_filename = None
         cache_path = None
-        if resolve_redirects is True:
+        if self.use_cache is True:
+            if url in self.cache_info:
+                cache_filename = self.cache_info[url]["cache_filename"]
+                cache_path = os.path.join(self.cache_dir, cache_filename)
+                cache_time = self.cache_info[url]["time"]
+            elif alt_url is not None:
+                if alt_url in self.cache_info:
+                    cache_filename = self.cache_info[alt_url]["cache_filename"]
+                    cache_path = os.path.join(self.cache_dir, cache_filename)
+                    cache_time = self.cache_info[alt_url]["time"]
+        if cache_filename is None and resolve_redirects is True:
             try:
                 # self.log.info(f"Test for redirect: {url}")
                 r = requests.get(url, allow_redirects=True)
@@ -276,7 +287,7 @@ class IndraDownloader:
                     url = r.url
             except Exception as e:
                 self.log.info(f"Could not resolve redirects {e}")
-        if self.use_cache is True:
+        if cache_filename is None and self.use_cache is True:
             if url in self.cache_info:
                 cache_filename = self.cache_info[url]["cache_filename"]
                 cache_path = os.path.join(self.cache_dir, cache_filename)
@@ -417,8 +428,13 @@ class IndraDownloader:
                     self.log.info(f"indra_imports: {indra_imports}")
                 else:
                     indra_imports = None
+                if "data_source_alt" in data_desc["citation"]:
+                    alt_url = data_desc["citation"]["data_source_alt"]
+                else:
+                    alt_url = None
                 data_dicts = self.get(
                     data_desc["citation"]["data_source"],
+                    alt_url=alt_url,
                     transforms=data_desc["datasets"],
                     user_agent=ua,
                     resolve_redirects=use_redirect,

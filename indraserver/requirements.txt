@@ -13,3 +13,5 @@ beautifulsoup4
 lxml
 jupyterlab
 matplotlib
+openpyxl
+

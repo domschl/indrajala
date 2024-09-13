@@ -11,6 +11,7 @@ indra_domain = "$event/geodata/paleo/{indra_id}/icecore"
 version = ""
 redirect = true
 data_source = "https://doi.pangaea.de/10.1594/PANGAEA.472488?format=textfile"
+data_source_alt = "https://www.sidc.be/SILSO/DATA/SN_m_tot_V2.0.txt"
 related_publications = [
     "https://doi.pangaea.de/10.1594/PANGAEA.472488",
     "https://en.wikipedia.org/wiki/European_Project_for_Ice_Coring_in_Antarctica",
