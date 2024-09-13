@@ -57,7 +57,7 @@ class IndraProcess(IndraProcessCore):
     def init_downloads(self):
         for dir in self.data_sources_directories:
             downloader = IndraDownloader(
-                cache_dir=self.data_cache_directory, logger=self.log
+                cache_dir=self.data_cache_directory, logger=None
             )
             self.downloaders.append(downloader)
             self.log.info(f"Data sources directory: {dir}")
