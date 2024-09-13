@@ -15,8 +15,8 @@ publication_date = "2015-02-04"
 last_update = ""
 publisher = "Geophysical Research Letters"
 id = "DOI: 10.1002/2014GL061957"
-indra_id = "antarctica2015bereiter"
-indra_domain = "$event/geodata/paleo/{indra_id}/icecore"
+# indra_id = "antarctica2015bereiter"
+# indra_domain = "$event/geodata/paleo/{indra_id}/icecore"
 version = ""
 data_source = "https://www.ncei.noaa.gov/pub/data/paleo/icecore/antarctica/antarctica2015co2composite.txt"
 related_publications = [
@@ -28,6 +28,9 @@ tags = ['co2', 'icecore', 'antarctica', 'composite']
 
 [datasets]
 CO2_800k_composite = [
+    "meta['domain'] = '$event/reconstruction/co2/climate/icecore_antartica_epica_c_800k'",
+    "meta['from_id'] = 'antarctica2015bereiter'",
+    "meta['data_type'] = 'number/float/ppm'",
     "decode('utf-8')",
     "extract_lines(138,2039)",
     "pandas_csv_separator('\t')",

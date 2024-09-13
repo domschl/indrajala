@@ -64,6 +64,10 @@ class IndraProcess(IndraProcessCore):
             dfs = downloader.get_datasets(data_sources_dir=dir)
             self.dfss.append(dfs)
             self.log.info(f"Data source {dir}: {len(dfs)} sub-datasets")
+            for df in dfs:
+                self.log.info(f"Sub-dataset: {df}")
+                if "metadata" in dfs[df] and "domain" in dfs[df]["metadata"]:
+                    self.log.info(f"Metadata: {dfs[df]['metadata']}")
         self.bConnectActive = True
 
     def inbound_init(self):
