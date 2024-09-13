@@ -209,32 +209,53 @@ class IndraDownloader:
         return df
 
     def single_transform(self, data, transform):
-        if transform.startswith("df['"):
+        if transform.startswith("meta['"):
+            meta = {}
+            ind = transform.find("=")
+            if ind == -1:
+                self.log.error(
+                    f"Format required: meta['key'] = value, e.g. meta['key'] = 'value'"
+                )
+                return None, None
+            left = transform[:ind].strip()
+            right = transform[ind + 1 :].strip()
+            ind = left.find("']")
+            if ind == -1:
+                self.log.error(
+                    f"Format required: meta['key'] = value, e.g. meta['key'] = 'value'"
+                )
+                return None, None
+            key = left[6:ind]
+            if right.startswith("'") and right.endswith("'"):
+                right = right[1:-1]
+            meta[key] = right
+            return data, meta
+        elif transform.startswith("df['"):
             ind = transform.find("=")
             if ind == -1:
                 self.log.error(
                     f"Format required: df['column_name'] = transform, e.g. df['column_name'] = df['column_name'].str.lower()"
                 )
-                return None
-            left = transform[:ind]
-            right = transform[ind + 1 :]
+                return None, None
+            left = transform[:ind].strip()
+            right = transform[ind + 1 :].strip()
             ind = left.find("']")
             if ind == -1:
                 self.log.error(
                     f"Format required: df['column_name'] = transform, e.g. df['column_name'] = df['column_name'].str.lower()"
                 )
-                return None
+                return None, None
             # check, if data is a dataframe
             if isinstance(data, pd.DataFrame) is False:
                 self.log.error(f"Data is not a dataframe, cannot apply transform")
-                return None
-            return self.transform_df(data, transform, left, right)
+                return None, None
+            return self.transform_df(data, transform, left, right), None
         else:
             try:
                 fn_name = transform.split("(")[0]
             except Exception as e:
                 self.log.error(f"Failed to parse transform {transform}: {e}")
-                return None
+                return None, None
             tf = getattr(self, fn_name)
             if tf is not None:
                 trs = "self." + transform
@@ -243,23 +264,28 @@ class IndraDownloader:
                     data = eval(trs)
                 except Exception as e:
                     self.log.error(f"Failed to eval {trs}: {e}")
-                    return None
-            return data
+                    return None, None
+            return data, None
 
     def transform(self, data, transforms):
         data_dict = {}
+        meta_dict = {}
         if transforms is None:
             return data
         original_data = data
         for dataset_name in transforms:
             self.log.info(f"Creating dataset {dataset_name}")
             data = original_data
+            metas = {}
             for transform in transforms[dataset_name]:
-                data = self.single_transform(data, transform)
+                data, meta = self.single_transform(data, transform)
+                if meta is not None:
+                    metas.update(meta)
             dataset = data
             if dataset is not None:
                 data_dict[dataset_name] = dataset
-        return data_dict
+                meta_dict[dataset_name] = metas
+        return data_dict, meta_dict
 
     def get(
         self,
@@ -393,8 +419,8 @@ class IndraDownloader:
                 self.log.warning(
                     f"Failed to save to cache at {cache_path} for {url}: {e}"
                 )
-        data = self.transform(data, transforms)
-        return data
+        data, meta = self.transform(data, transforms)
+        return data, meta
 
     def get_datasets(self, data_sources_dir):
         dfs = {}
@@ -449,7 +475,7 @@ class IndraDownloader:
                     alt_url = data_desc["citation"]["data_source_alt"]
                 else:
                     alt_url = None
-                data_dicts = self.get(
+                data_dicts, meta_dicts = self.get(
                     url=data_desc["citation"]["data_source"],
                     alt_url=alt_url,
                     transforms=data_desc["datasets"],
@@ -464,13 +490,12 @@ class IndraDownloader:
                 for dataset in data_dicts:
                     # print(f">>> {dataset}")
                     data = data_dicts[dataset]
-                    # if type(data)==str:
-                    #     print(data)
-                    # else:
-                    #     print(data.head())
-                    #     print("...")
-                    #     print(data.tail())
+                    meta = None
+                    if meta_dicts is not None and dataset in meta_dicts:
+                        meta = meta_dicts[dataset]
                     dfs[dataset] = {}
                     dfs[dataset]["data"] = data
                     dfs[dataset]["metadata"] = data_desc["citation"]
+                    if meta is not None:
+                        dfs[dataset]["metadata"].update(meta)
         return dfs
