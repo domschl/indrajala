@@ -20,10 +20,14 @@ import io
 
 
 class IndraDownloader:
-    def __init__(self, cache_dir="download_cache", use_cache=True):
+    def __init__(self, cache_dir="download_cache", use_cache=True, logger=None):
         self.cache_dir = cache_dir
         self.use_cache = use_cache
-        self.log = logging.getLogger("Downloader")
+        if logger is None:
+            self.log = logging.getLogger("Downloader")
+            self.log.setLevel(logging.WARNING)
+        else:
+            self.log = logger
         if use_cache is True:
             self.cache_info = {}
             if os.path.isdir(cache_dir) is False:
@@ -267,21 +271,34 @@ class IndraDownloader:
     ):
         cache_filename = None
         cache_path = None
+        self.log.debug(f"Url: >{url}<, alt_url: >{alt_url}<")
         if self.use_cache is True:
+            self.log.debug(f"Checking cache for {url}")
             if url in self.cache_info:
                 cache_filename = self.cache_info[url]["cache_filename"]
                 cache_path = os.path.join(self.cache_dir, cache_filename)
                 cache_time = self.cache_info[url]["time"]
+                self.log.debug(f"Using cache for {url}: {cache_filename}")
             elif alt_url is not None:
+                self.log.debug(f"Checking for alt_url {alt_url}")
                 if alt_url in self.cache_info:
+                    url = alt_url
                     cache_filename = self.cache_info[alt_url]["cache_filename"]
                     cache_path = os.path.join(self.cache_dir, cache_filename)
                     cache_time = self.cache_info[alt_url]["time"]
+                    self.log.debug(
+                        f"Using alt_url {alt_url} to retrieve {cache_filename}"
+                    )
+            else:
+                self.log.debug(f"Cache miss for {url}")
+        else:
+            self.log.debug("Cache is disabled.")
+        self.log.debug(f"Downloading {url}, cache_filename: {cache_filename}")
         if cache_filename is None and resolve_redirects is True:
             try:
-                # self.log.info(f"Test for redirect: {url}")
+                self.log.warning(f"Test for redirect: {url}")
                 r = requests.get(url, allow_redirects=True)
-                # self.log.info(f"ReqInfo: {r}")
+                self.log.warning(f"ReqInfo: {r}")
                 if r.url != url:
                     self.log.warning(f"Redirect resolved: {url}->{r.url}")
                     url = r.url
@@ -433,7 +450,7 @@ class IndraDownloader:
                 else:
                     alt_url = None
                 data_dicts = self.get(
-                    data_desc["citation"]["data_source"],
+                    url=data_desc["citation"]["data_source"],
                     alt_url=alt_url,
                     transforms=data_desc["datasets"],
                     user_agent=ua,
