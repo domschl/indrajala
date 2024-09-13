@@ -6,8 +6,8 @@ publication_date = "2006"
 last_update = ""
 publisher = "European Project for Ice Coring in Antarctica (EPICA)"
 id = "https://doi.pangaea.de/10.1594/PANGAEA.472488"
-indra_id = "epicadomec2006monnin"
-indra_domain = "$event/geodata/paleo/{indra_id}/icecore"
+#indra_id = "epicadomec2006monnin"
+#indra_domain = "$event/geodata/paleo/{indra_id}/icecore"
 version = ""
 data_source = "https://doi.pangaea.de/10.1594/PANGAEA.472488?format=textfile"
 related_publications = [
@@ -19,6 +19,9 @@ tags = ["co2", "icecore", "antarctica"]
 
 [datasets]
 DomeC2016CO2 = [
+    "meta['domain'] = '$event/reconstruction/co2/climate/icecore_antartica_epica_c_21k'",
+    "meta['from_id'] = 'antarctica2006monnin'",
+    "meta['data_type'] = 'number/float/ppm'",
     "decode('utf-8')",
     "extract_lines(20)",
     "pandas_csv_separator('\t')",

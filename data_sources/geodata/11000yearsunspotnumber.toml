@@ -23,9 +23,9 @@ tags = ['sunspots']
 
 [datasets]
 sunspots11000yrs = [
-    "meta['domain'] = '$event/geodata/paleo/solanki2004/sunspots'",
+    "meta['domain'] = '$event/reconstruction/sunspot_count/radiation/solar_solanki2004'",
     "meta['from_id'] = 'solanki2004'",
-    "meta['data_type'] = 'number/int'",
+    "meta['data_type'] = 'number/int/count'",
     "decode('latin1')",
     "extract_lines(70)",
     "pandas_csv_separator(' ')",
