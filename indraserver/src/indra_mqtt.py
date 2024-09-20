@@ -163,7 +163,7 @@ class IndraProcess(IndraProcessCore):
             "omu/earthstate/#": {
                 "location": "home",
                 "measurements": {
-                    "magnetic_field": (
+                    "magnetic_field_strength": (
                         "mag_field_total",
                         "number/float/magnetic_field/muT",
                         "magnetic_field",
