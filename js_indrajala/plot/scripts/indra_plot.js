@@ -406,7 +406,7 @@ function plotPage(currentUser) {
         return `${context}: ${meas_type} @${location}`;
     }
 
-    getUniqueDomains("$event/measurement%", "%", (result) => {
+    getUniqueDomains("$event/measurement%", null, (result) => {
         for (let i = 0; i < plotTypes.length; i++) {
             let option = document.createElement('option');
             option.value = plotTypes[i].value;
