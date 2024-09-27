@@ -446,9 +446,8 @@ function plotPage(currentUser) {
                     plotTypes[sel].chart_init();
                 }
             } else {
-                measurementChart(plotTypeSelect.text);
-                console.log('Selected measurement:', plotTypeSelect.text);
-                // chart.data.datasets[0].label = plotTypeSelect.text;
+                let text = titleFromDomain(plotTypeSelect.value);
+                measurementChart(text);
             }
             if (sel > 0) {
                 if (sel < plotTypes.length) {
