@@ -372,7 +372,7 @@ function plotPage(currentUser) {
     }
 
     let plotTypes = [
-        { value: 'none', name: 'Select Application', subscription: null, chart_init: null, msg_event: null },
+        //{ value: 'none', name: 'Select Application', subscription: null, chart_init: null, msg_event: null },
         {
             value: 'aiMon', name: 'AI monitor', subscription: '$event/ml/model/train/+/+/+/record', chart_init: aiMonChart, msg_event: aiMonitorEvent,
             pData: {
@@ -414,6 +414,8 @@ function plotPage(currentUser) {
             option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
             plotTypeSelect.appendChild(option);
         }
+        // sort result
+        result.sort();
         for (let i = 0; i < result.length; i++) {
             let option = document.createElement('option');
             option.value = result[i];
@@ -421,6 +423,7 @@ function plotPage(currentUser) {
             option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
             plotTypeSelect.appendChild(option);
         }
+
         plotTypeSelect.addEventListener('change', function () {
             console.log('Selected plot type:', plotTypeSelect.value);
             let sel = plotTypeSelect.selectedIndex;
