@@ -126,48 +126,68 @@ class IndraProcess(IndraProcessCore):
             "omu/enviro-master/#": {
                 "location": "home_balkon_env",
                 "measurements": {
-                    "temperature": (
-                        "temperature",
-                        "number/float/temperature/celsius",
-                        "climate",
-                    ),
-                    "humidity": (
-                        "humidity",
-                        "number/float/humidity/percentage",
-                        "climate",
-                    ),
-                    "illuminance": (
-                        "illuminance",
-                        "number/float/illuminance/lux",
-                        "radiation",
-                    ),
-                    "pressureNN": ("pressure", "number/float/pressure/hpa", "climate"),
-                    "gamma1minavg": (
-                        "gamma_radiation_1min_avg",
-                        "number/float/radiation/gamma/1minavg",
-                        "radiation",
-                    ),
-                    "gamma10minavg": (
-                        "gamma_radiation_10min_avt",
-                        "number/float/radiation/gamma/10minavg",
-                        "radiation",
-                    ),
-                    "frequency": (
-                        "geiger_radiation",
-                        "number/float/frequency/hz",
-                        "radiation",
-                    ),
-                    "unitrain": ("rain", "number/float/rain/unit", "climate"),
+                    "temperature": {
+                        "measurement": "temperature",
+                        "data_type": "number/float/temperature/celsius",
+                        "context": "climate",
+                    },
+                    "humidity": {
+                        "measurement": "humidity",
+                        "data_type": "number/float/humidity/percentage",
+                        "context": "climate",
+                    },
+                    "illuminance": {
+                        "measurement": "illuminance",
+                        "data_type": "number/float/illuminance/lux",
+                        "context": "radiation",
+                    },
+                    "pressureNN": {
+                        "measurement": "pressure",
+                        "data_type": "number/float/pressure/hpa",
+                        "context": "climate",
+                    },
+                    "gamma1minavg": {
+                        "measurement": "gamma_radiation_1min_avg",
+                        "data_type": "number/float/radiation/gamma/1minavg",
+                        "context": "radiation",
+                    },
+                    "gamma10minavg": {
+                        "measurement": "gamma_radiation_10min_avt",
+                        "data_type": "number/float/radiation/gamma/10minavg",
+                        "context": "radiation",
+                    },
+                    "frequency": {
+                        "measurement": "geiger_radiation",
+                        "data_type": "number/float/frequency/hz",
+                        "context": "radiation",
+                    },
+                    "unitrain": {
+                        "measurement": "rain",
+                        "data_type": "number/float/rain/unit",
+                        "context": "climate",
+                    },
                 },
             },
-            "omu/earthstate/#": {
-                "location": "home",
+            "omu/earthstate2/MAG-1/#": {
+                "location": "home/HMC-1",
                 "measurements": {
-                    "magnetic_field_strength": (
-                        "mag_field_total",
-                        "number/float/magnetic_field/muT",
-                        "magnetic_field",
-                    ),
+                    "magnetic_field_strength": {
+                        "measurement": "mag_field_total",
+                        "data_type": "number/float/magnetic_field/muT",
+                        "context": "magnetic_field",
+                        "renormalization_factor": 1.0 / 6.666,
+                    },
+                },
+            },
+            "omu/earthstate2/MAG-2/#": {
+                "location": "home/QMC-1",
+                "measurements": {
+                    "magnetic_field_strength": {
+                        "measurement": "mag_field_total",
+                        "data_type": "number/float/magnetic_field/muT",
+                        "context": "magnetic_field",
+                        "renormalization_factor": 1.0,
+                    },
                 },
             },
         }
@@ -193,6 +213,24 @@ class IndraProcess(IndraProcessCore):
                         o_measurement, o_data_type, o_context = cont_locs[cl][
                             "measurements"
                         ][measurement]
+                        o_measurement = cont_locs[cl]["measurements"][measurement][
+                            "measurement"
+                        ]
+                        o_data_type = cont_locs[cl]["measurements"][measurement][
+                            "data_type"
+                        ]
+                        o_context = cont_locs[cl]["measurements"][measurement][
+                            "context"
+                        ]
+                        if (
+                            "renormalization_factor"
+                            in cont_locs[cl]["measurements"][measurement]
+                        ):
+                            factor = cont_locs[cl]["measurements"][measurement][
+                                "renormalization_factor"
+                            ]
+                        else:
+                            factor = 1.0
                         found = True
                         break
                     break
@@ -204,8 +242,12 @@ class IndraProcess(IndraProcessCore):
                 ev.from_id = f"{self.name}/{topic}"
                 ev.data_type = o_data_type
                 ev.to_scope = "world"
+
                 try:
-                    ev.data = json.dumps(float(message))
+                    if factor != 1.0:
+                        ev.data = json.dumps(float(ev.data) * factor)
+                    else:
+                        ev.data = json.dumps(float(message))
                 except Exception as e:
                     self.log.warning(f"Failed to convert data {message} for {topic}")
                     return
