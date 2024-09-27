@@ -210,9 +210,6 @@ class IndraProcess(IndraProcessCore):
                 if IndraEvent.mqcmp(topic, cl):
                     o_location = cont_locs[cl]["location"]
                     if measurement in cont_locs[cl]["measurements"]:
-                        o_measurement, o_data_type, o_context = cont_locs[cl][
-                            "measurements"
-                        ][measurement]
                         o_measurement = cont_locs[cl]["measurements"][measurement][
                             "measurement"
                         ]
