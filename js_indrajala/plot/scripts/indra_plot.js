@@ -374,7 +374,7 @@ function plotPage(currentUser) {
     }
 
     let plotTypes = [
-        //{ value: 'none', name: 'Select Application', subscription: null, chart_init: null, msg_event: null },
+        { value: 'none', name: 'Select Application', subscription: null, chart_init: null, msg_event: null },
         {
             value: 'aiMon', name: 'AI monitor', subscription: '$event/ml/model/train/+/+/+/record', chart_init: aiMonChart, msg_event: aiMonitorEvent,
             pData: {
@@ -440,8 +440,10 @@ function plotPage(currentUser) {
                 chart.destroy();
                 chart = null;
             }
-            if (sel < plotTypes.length && plotTypes[sel].chart_init !== null) {
-                plotTypes[sel].chart_init();
+            if (sel < plotTypes.length) {
+                if (plotTypes[sel].chart_init !== null) {
+                    plotTypes[sel].chart_init();
+                }
             } else {
                 measurementChart();
                 chart.data.datasets[0].label = plotTypeSelect.text;
