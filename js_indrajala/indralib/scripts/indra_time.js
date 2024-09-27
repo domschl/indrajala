@@ -87,7 +87,9 @@ export class IndraTime {
     }
 
     static datetimeNowToJulian() {
-        return this.datetimeToJulian(new Date());
+        //UTC time!
+        let dt = new Date();
+        return this.timeToJulian(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), dt.getUTCHours(), dt.getUTCMinutes(), dt.getUTCSeconds(), dt.getUTCMilliseconds() * 1000);
     }
 
     static julianToISO(jd) {
