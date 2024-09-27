@@ -464,8 +464,7 @@ function plotPage(currentUser) {
 
         // Add select element for duration: all, 1h, 4h, 24h, 7d, 30d
         const durationSelect = document.createElement('select');
-        durationSelect.classList.add('selectBox');
-        durationSelect.classList.add('small-right-select');
+        durationSelect.classList.add('selectBoxRight');
         durationSelect.classList.add('margin-bottom');
         let durations = ['All', '1h', '4h', '24h', '7d', '30d'];
         for (let i = 0; i < durations.length; i++) {

@@ -240,15 +240,25 @@ const indraStyleDict = {
         'border-radius': '3px',
         'cursor': 'pointer',
         'height': '40px',
-        'width': '100%',
+        'width': '80%',
         'font-size': '16px',  // This prevents iOS from zooming in on input fields 
         'appearance': 'none', // No fancy 3D gradient
     },
     'select option': {
         'background-color': white_std,
     },
-    '.small-right-select': {
+    '.selectBoxRight': {
+        'display': 'flex',
+        'align-items': 'center',
+        'justify-content': 'space-between',
+        'padding': '10px',
+        'border': '1px solid ' + gray_std,
+        'border-radius': '3px',
+        'cursor': 'pointer',
+        'height': '40px',
         'width': '20%',
+        'font-size': '16px',  // This prevents iOS from zooming in on input fields 
+        'appearance': 'none', // No fancy 3D gradient
     },
     '.separator': {
         'width': '100%',
