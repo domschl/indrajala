@@ -257,6 +257,7 @@ function plotPage(currentUser) {
         //let chart = Chart.getChart(plotCanvas);
         chart.data.labels = x;
         chart.data.datasets[0].data = y;
+        chart.data.datasets[0].label = plot_desc;
         chart.update();
         console.log(`Received measure event ${mode}`);
     }
@@ -269,7 +270,7 @@ function plotPage(currentUser) {
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'Measurement',
+                    //label: 'Measurement',
                     data: [],
                     borderWidth: 1,
                     pointRadius: 0,
@@ -446,7 +447,7 @@ function plotPage(currentUser) {
                 }
             } else {
                 measurementChart();
-                chart.data.datasets[0].label = plotTypeSelect.text;
+                // chart.data.datasets[0].label = plotTypeSelect.text;
             }
             if (sel > 0) {
                 if (sel < plotTypes.length) {
