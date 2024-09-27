@@ -78,7 +78,8 @@ export class IndraTime {
     // create JS Date object from Julian date
     static julianToDatetime(jd) {
         let [year, month, day, hour, minute, second, microsecond] = this.julianToTime(jd);
-        return new Date.UTC(year, month - 1, day, hour, minute, second, microsecond / 1000);
+        let dtutc = Date.UTC(year, month - 1, day, hour, minute, second, microsecond / 1000);
+        return new Date(dtutc);
     }
 
     // create Julian date from JS Date object
