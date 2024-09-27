@@ -83,7 +83,7 @@ export class IndraTime {
 
     // create Julian date from JS Date object
     static datetimeToJulian(dt) {
-        return this.timeToJulian(dt.getFullYear(), dt.getMonth() + 1, dt.getDate(), dt.getHours(), dt.getMinutes(), dt.getSeconds(), dt.getMilliseconds() * 1000);
+        return this.timeToJulian(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), dt.getUTCHours(), dt.getUTCMinutes(), dt.getUTCSeconds(), dt.getUTCMilliseconds() * 1000);
     }
 
     static datetimeNowToJulian() {
