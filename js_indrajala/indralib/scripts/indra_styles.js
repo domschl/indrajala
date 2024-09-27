@@ -247,6 +247,9 @@ const indraStyleDict = {
     'select option': {
         'background-color': white_std,
     },
+    '.small-right-select': {
+        'width': '20%',
+    },
     '.separator': {
         'width': '100%',
         'height': '1px',
