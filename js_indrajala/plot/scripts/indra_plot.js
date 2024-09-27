@@ -95,6 +95,7 @@ function plotPage(currentUser) {
     let curSubscription = null;
 
     let plotData = null;
+    let plotStartTimeOffset = null;
 
     function aiMonitorEvent(data) {
         console.log('AI Monitor event:', data);
@@ -455,7 +456,12 @@ function plotPage(currentUser) {
                         y: []
                     };
                     curSubscription = plotTypeSelect.value;
-                    getHistory(curSubscription, null, null, 1000, "Sample", (data) => { measurementEvent(data, 0, curSubscription); });
+                    if (plotStartTimeOffset !== null) {
+                        startTime = IndraTime.datetimeNowToJulian() - plotStartTimeOffset;
+                    } else {
+                        startTime = null;
+                    }
+                    getHistory(curSubscription, startTime, null, 1000, "Sample", (data) => { measurementEvent(data, 0, curSubscription); });
                     subscribe(curSubscription, (data) => { measurementEvent(data, 1); });
                 }
             }
@@ -466,14 +472,23 @@ function plotPage(currentUser) {
         const durationSelect = document.createElement('select');
         durationSelect.classList.add('selectBoxRight');
         durationSelect.classList.add('margin-bottom');
-        let durations = ['All', '1h', '4h', '24h', '7d', '30d'];
+        let durations = [['All', null], ['1h', 1 / 24.0], ['4h', 4 / 24.0], ['24h', 1.0], ['7d', 7.0], ['30d', 30.0]];
         for (let i = 0; i < durations.length; i++) {
             let option = document.createElement('option');
-            option.value = durations[i];
-            option.text = durations[i];
+            option.value = durations[i][1];
+            option.text = durations[i][0];
             option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
             durationSelect.appendChild(option);
         }
+
+        durationSelect.addEventListener('change', function () {
+            console.log('Selected duration:', durationSelect.value);
+            plotStartTimeOffset = durationSelect.value;
+            // XXX redraw chart, send 'change' to plotTypeSelect
+            let event = new Event('change');
+            plotTypeSelect.dispatchEvent(event);
+        });
+
         selectLine.appendChild(durationSelect);
         plotDiv.appendChild(selectLine);
 
