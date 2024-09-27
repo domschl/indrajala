@@ -169,7 +169,7 @@ class IndraProcess(IndraProcessCore):
                 },
             },
             "omu/earthstate2/MAG-1/#": {
-                "location": "home/HMC-1",
+                "location": "home_az_hmc1",
                 "measurements": {
                     "magnetic_field_strength": {
                         "measurement": "mag_field_total",
@@ -180,7 +180,7 @@ class IndraProcess(IndraProcessCore):
                 },
             },
             "omu/earthstate2/MAG-2/#": {
-                "location": "home/QMC-1",
+                "location": "home_az_qmc1",
                 "measurements": {
                     "magnetic_field_strength": {
                         "measurement": "mag_field_total",
