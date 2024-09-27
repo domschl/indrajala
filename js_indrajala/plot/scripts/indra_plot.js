@@ -17,7 +17,7 @@ import { IndraTime } from '../../indralib/scripts/indra_time.js';
 import "./node_modules/chart.js/dist/chart.umd.js";
 //import "./node_modules/moment/dist/moment.js";
 import './node_modules/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.js';
-import { pl } from 'date-fns/locale';
+//import { pl } from 'date-fns/locale';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
