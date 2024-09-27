@@ -240,7 +240,7 @@ const indraStyleDict = {
         'border-radius': '3px',
         'cursor': 'pointer',
         'height': '40px',
-        'width': '80%',
+        'width': '100%',
         'font-size': '16px',  // This prevents iOS from zooming in on input fields 
         'appearance': 'none', // No fancy 3D gradient
     },
@@ -256,7 +256,7 @@ const indraStyleDict = {
         'border-radius': '3px',
         'cursor': 'pointer',
         'height': '40px',
-        'width': '20%',
+        'width': '80px',
         'font-size': '16px',  // This prevents iOS from zooming in on input fields 
         'appearance': 'none', // No fancy 3D gradient
     },
