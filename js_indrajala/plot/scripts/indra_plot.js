@@ -257,12 +257,12 @@ function plotPage(currentUser) {
         //let chart = Chart.getChart(plotCanvas);
         chart.data.labels = x;
         chart.data.datasets[0].data = y;
-        chart.data.datasets[0].label = plot_desc;
+        //chart.data.datasets[0].label = plot_desc;
         chart.update();
         console.log(`Received measure event ${mode}`);
     }
 
-    function measurementChart() {
+    function measurementChart(description) {
         const skipped = (ctx, value) => ctx.p0.skip || ctx.p1.skip ? value : undefined;
         const down = (ctx, value) => ctx.p0.parsed.y > ctx.p1.parsed.y ? value : undefined;
         chart = new Chart(plotCanvas, {
@@ -270,7 +270,7 @@ function plotPage(currentUser) {
             data: {
                 labels: [],
                 datasets: [{
-                    //label: 'Measurement',
+                    label: description,
                     data: [],
                     borderWidth: 1,
                     pointRadius: 0,
@@ -446,7 +446,7 @@ function plotPage(currentUser) {
                     plotTypes[sel].chart_init();
                 }
             } else {
-                measurementChart();
+                measurementChart(plotTypeSelect.text);
                 // chart.data.datasets[0].label = plotTypeSelect.text;
             }
             if (sel > 0) {
