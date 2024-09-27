@@ -212,7 +212,7 @@ class IndraProcess(IndraProcessCore):
             for cl in cont_locs:
                 if IndraEvent.mqcmp(topic, cl):
                     if measurement in cont_locs[cl]["measurements"]:
-                        o_location = cont_locs[cl]["location"].copy()
+                        tmp_loc = cont_locs[cl]["location"]
                         o_measurement = cont_locs[cl]["measurements"][measurement][
                             "measurement"
                         ]
@@ -235,7 +235,9 @@ class IndraProcess(IndraProcessCore):
                             "location_postfix"
                             in cont_locs[cl]["measurements"][measurement]
                         ):
-                            o_location = f"{o_location}_{cont_locs[cl]['measurements'][measurement]['location_postfix']}"
+                            o_location = f"{tmp_loc}_{cont_locs[cl]['measurements'][measurement]['location_postfix']}"
+                        else:
+                            o_location = tmp_loc
                         found = True
                         break
                     break
