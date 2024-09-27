@@ -169,24 +169,26 @@ class IndraProcess(IndraProcessCore):
                 },
             },
             "omu/earthstate2/MAG-1/#": {
-                "location": "home_az_hmc1",
+                "location": "home_az",
                 "measurements": {
                     "magnetic_field_strength": {
                         "measurement": "mag_field_total",
                         "data_type": "number/float/magnetic_field/muT",
                         "context": "magnetic_field",
                         "renormalization_factor": 1.0 / 6.666,
+                        "location_postfix": "hmc1",
                     },
                 },
             },
             "omu/earthstate2/MAG-2/#": {
-                "location": "home_az_qmc1",
+                "location": "home_az",
                 "measurements": {
                     "magnetic_field_strength": {
                         "measurement": "mag_field_total",
                         "data_type": "number/float/magnetic_field/muT",
                         "context": "magnetic_field",
                         "renormalization_factor": 1.0,
+                        "location_postfix": "qmc1",
                     },
                 },
             },
@@ -198,9 +200,9 @@ class IndraProcess(IndraProcessCore):
             if len(ti) != 5:
                 self.log.error(f"Internal parser assumption failure on {topic}")
                 return
-            device = ti[1]
-            sensor = ti[2]
-            measurement = ti[4]
+            device = ti[1]  # hostname
+            sensor = ti[2]  # sensor instance name
+            measurement = ti[4]  # measurement name
             o_context = None
             o_location = None
             o_measurement = None
@@ -233,6 +235,8 @@ class IndraProcess(IndraProcessCore):
                     break
             if found is True:
                 ev = IndraEvent()
+                if "location_postfix" in cont_locs[cl]["measurements"][measurement]:
+                    o_location = f"{o_location}_{cont_locs[cl]['measurements'][measurement]['location_postfix']}"
                 ev.domain = (
                     f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
                 )
