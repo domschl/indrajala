@@ -86,6 +86,10 @@ export class IndraTime {
         return this.timeToJulian(dt.getFullYear(), dt.getMonth() + 1, dt.getDate(), dt.getHours(), dt.getMinutes(), dt.getSeconds(), dt.getMilliseconds() * 1000);
     }
 
+    static datetimeNowToJulian() {
+        return this.datetimeToJulian(new Date());
+    }
+
     static julianToISO(jd) {
         let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToTime(jd);
         return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}.${String(microsecond).padStart(6, '0')}Z`;

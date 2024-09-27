@@ -454,6 +454,20 @@ function plotPage(currentUser) {
         });
         plotDiv.appendChild(plotTypeSelect);
 
+        // Add select element for duration: all, 1h, 4h, 24h, 7d, 30d
+        const durationSelect = document.createElement('select');
+        durationSelect.classList.add('selectBox');
+        durationSelect.classList.add('margin-bottom');
+        let durations = ['All', '1h', '4h', '24h', '7d', '30d'];
+        for (let i = 0; i < durations.length; i++) {
+            let option = document.createElement('option');
+            option.value = durations[i];
+            option.text = durations[i];
+            option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
+            durationSelect.appendChild(option);
+        }
+        plotDiv.appendChild(durationSelect);
+
         const plotPane = document.createElement('div');
         plotPane.classList.add('pane');
         plotPane.classList.add('plot-pane');
