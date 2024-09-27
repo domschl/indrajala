@@ -447,6 +447,7 @@ function plotPage(currentUser) {
                 }
             } else {
                 measurementChart(plotTypeSelect.text);
+                console.log('Selected measurement:', plotTypeSelect.text);
                 // chart.data.datasets[0].label = plotTypeSelect.text;
             }
             if (sel > 0) {
