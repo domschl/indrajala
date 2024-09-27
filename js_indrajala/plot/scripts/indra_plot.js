@@ -444,6 +444,7 @@ function plotPage(currentUser) {
                 plotTypes[sel].chart_init();
             } else {
                 measurementChart();
+                chart.data.datasets[0].label = plotTypeSelect.text;
             }
             if (sel > 0) {
                 if (sel < plotTypes.length) {
