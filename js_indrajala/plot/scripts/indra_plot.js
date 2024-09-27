@@ -414,8 +414,9 @@ function plotPage(currentUser) {
             option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
             plotTypeSelect.appendChild(option);
         }
-        // sort result
-        result.sort();
+        // sort result by titleFromDomain()
+        result.sort((a, b) => titleFromDomain(a).localeCompare(titleFromDomain(b)));
+
         for (let i = 0; i < result.length; i++) {
             let option = document.createElement('option');
             option.value = result[i];
