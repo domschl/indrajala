@@ -175,7 +175,7 @@ class IndraProcess(IndraProcessCore):
                         "measurement": "mag_field_total",
                         "data_type": "number/float/magnetic_field/muT",
                         "context": "magnetic_field",
-                        "renormalization_factor": 1.0 / 6.666,
+                        "renormalization_factor": 0.15,  # 1.0 / 6.666,
                         "location_postfix": "hmc1",
                     },
                 },
@@ -252,7 +252,7 @@ class IndraProcess(IndraProcessCore):
 
                 try:
                     if factor != 1.0:
-                        ev.data = json.dumps(float(ev.data) * factor)
+                        ev.data = json.dumps(float(message) * factor)
                     else:
                         ev.data = json.dumps(float(message))
                 except Exception as e:
