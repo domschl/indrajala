@@ -456,10 +456,9 @@ function plotPage(currentUser) {
                         y: []
                     };
                     curSubscription = plotTypeSelect.value;
+                    let startTime = null;
                     if (plotStartTimeOffset !== null) {
                         startTime = IndraTime.datetimeNowToJulian() - plotStartTimeOffset;
-                    } else {
-                        startTime = null;
                     }
                     getHistory(curSubscription, startTime, null, 1000, "Sample", (data) => { measurementEvent(data, 0, curSubscription); });
                     subscribe(curSubscription, (data) => { measurementEvent(data, 1); });
