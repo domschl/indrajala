@@ -17,6 +17,7 @@ import { IndraTime } from '../../indralib/scripts/indra_time.js';
 import "./node_modules/chart.js/dist/chart.umd.js";
 //import "./node_modules/moment/dist/moment.js";
 import './node_modules/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.js';
+import { pl } from 'date-fns/locale';
 
 // Wait for DOMContentLoaded event (frickel, frickel)
 document.addEventListener('DOMContentLoaded', function () {
@@ -388,6 +389,9 @@ function plotPage(currentUser) {
         },
     ];
 
+    const selectLine = document.createElement('div');
+    selectLine.classList.add('button-line');
+
     const plotTypeSelect = document.createElement('select');
     plotTypeSelect.classList.add('selectBox');
     plotTypeSelect.classList.add('margin-bottom');
@@ -456,7 +460,7 @@ function plotPage(currentUser) {
                 }
             }
         });
-        plotDiv.appendChild(plotTypeSelect);
+        buttonLine.appendChild(plotTypeSelect);
 
         // Add select element for duration: all, 1h, 4h, 24h, 7d, 30d
         const durationSelect = document.createElement('select');
@@ -470,7 +474,8 @@ function plotPage(currentUser) {
             option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
             durationSelect.appendChild(option);
         }
-        plotDiv.appendChild(durationSelect);
+        buttonLine.appendChild(durationSelect);
+        plotDiv.appendChild(buttonLine);
 
         const plotPane = document.createElement('div');
         plotPane.classList.add('pane');
