@@ -248,10 +248,11 @@ const indraStyleDict = {
         'background-color': white_std,
     },
     '.selectBoxRight': {
-        'display': 'flex',
+        'display': 'bock',
         'align-items': 'center',
         'justify-content': 'space-between',
         'padding': '10px',
+        'margin-left': '10px',
         'border': '1px solid ' + gray_std,
         'border-radius': '3px',
         'cursor': 'pointer',
