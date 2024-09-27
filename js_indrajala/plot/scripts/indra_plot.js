@@ -460,7 +460,7 @@ function plotPage(currentUser) {
                 }
             }
         });
-        buttonLine.appendChild(plotTypeSelect);
+        selectLine.appendChild(plotTypeSelect);
 
         // Add select element for duration: all, 1h, 4h, 24h, 7d, 30d
         const durationSelect = document.createElement('select');
@@ -474,8 +474,8 @@ function plotPage(currentUser) {
             option.style.backgroundColor = color_scheme['light']['background'];  // Chrome just throws this away
             durationSelect.appendChild(option);
         }
-        buttonLine.appendChild(durationSelect);
-        plotDiv.appendChild(buttonLine);
+        selectLine.appendChild(durationSelect);
+        plotDiv.appendChild(selectLine);
 
         const plotPane = document.createElement('div');
         plotPane.classList.add('pane');
