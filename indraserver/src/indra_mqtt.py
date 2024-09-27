@@ -203,6 +203,7 @@ class IndraProcess(IndraProcessCore):
             device = ti[1]  # hostname
             sensor = ti[2]  # sensor instance name
             measurement = ti[4]  # measurement name
+            # domain_wildcard = f"omu/+/+/sensor/{measurement}"
             o_context = None
             o_location = None
             o_measurement = None
@@ -210,8 +211,8 @@ class IndraProcess(IndraProcessCore):
             found = False
             for cl in cont_locs:
                 if IndraEvent.mqcmp(topic, cl):
-                    o_location = cont_locs[cl]["location"]
                     if measurement in cont_locs[cl]["measurements"]:
+                        o_location = cont_locs[cl]["location"]
                         o_measurement = cont_locs[cl]["measurements"][measurement][
                             "measurement"
                         ]
@@ -230,13 +231,16 @@ class IndraProcess(IndraProcessCore):
                             ]
                         else:
                             factor = 1.0
+                        if (
+                            "location_postfix"
+                            in cont_locs[cl]["measurements"][measurement]
+                        ):
+                            o_location = f"{o_location}_{cont_locs[cl]['measurements'][measurement]['location_postfix']}"
                         found = True
                         break
                     break
             if found is True:
                 ev = IndraEvent()
-                if "location_postfix" in cont_locs[cl]["measurements"][measurement]:
-                    o_location = f"{o_location}_{cont_locs[cl]['measurements'][measurement]['location_postfix']}"
                 ev.domain = (
                     f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
                 )
