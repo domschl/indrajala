@@ -372,9 +372,7 @@ class IndraClient:
     async def get_unique_domains(self, domain=None, data_type=None):
         """Get unique domains"""
         if domain is None:
-            domain = "$event/%"
-        if data_type is None:
-            data_type = "%"
+            domain = "$event/measurement%"
         cmd = {}
         if domain is not None:
             cmd["domain"] = domain
