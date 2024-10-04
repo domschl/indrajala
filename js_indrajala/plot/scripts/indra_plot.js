@@ -201,7 +201,7 @@ function plotPage(currentUser) {
             }
         }
 
-        now_jd = IndraTime.datetimeNowToJulian()
+        let now_jd = IndraTime.datetimeNowToJulian()
         // Remove elements (x,y) that are earlier than now_jd - plotStartTimeOffset:
         for (let i = 0; i < plotData.x.length; i++) {
             if (plotData.x[i] < now_jd - plotStartTimeOffset) {
