@@ -45,6 +45,14 @@ class IndraProcess(IndraProcessCore):
         self.last_commit = 0
         self.commit_delay_sec = config_data["commit_delay_sec"]
         self.epsilon = config_data["epsilon"]
+        if "page_size" in config_data:
+            self.page_size = config_data["page_size"]
+        else:
+            self.page_size = 4096
+        if "cache_size_pages" in config_data:
+            self.cache_size_pages = config_data["cache_size_pages"]
+        else:
+            self.cache_size_pages = 10000
         self.bUncommitted = False
         self.commit_timer_thread = None
         self.sessions = {}
@@ -204,7 +212,7 @@ class IndraProcess(IndraProcessCore):
         # if user in self.sessions:
         #     return self.sessions[user]["session_id"]
         session_id = str(uuid.uuid4())
-        self.log.info(f"Creating session {session_id} for {user}")
+        self.log.info(f"Creating session {session_id} for {user}, {time.time()}")
         self.sessions[session_id] = {
             "user": user,
             "last_access": time.time(),
@@ -221,6 +229,7 @@ class IndraProcess(IndraProcessCore):
         ev.data_type = "session_info"
         ev.data = json.dumps(session_info)
         self.event_send(ev)
+        self.log.info(f"Created session {session_id} for user {user}, {time.time()}")
         return session_id
 
     def _remove_session(self, session_id, from_id):
@@ -371,16 +380,18 @@ class IndraProcess(IndraProcessCore):
         except sqlite3.Error as e:
             self.log.error(f"Failed to read kv-record: {e}")
             return None
-        self.log.info(f"Read {key} in {time.time() - start_time:.4f} sec")
+        self.log.info(f"Read {key} in {time.time() - start_time:.4f} sec at {time.time()}")
         return value
 
     def _verify_kv(self, key: str, value: str):
+        self.log.info(f"Verifying {key}, {time.time()}")
         if self._is_secure_key(key) is False:
             return False
         encr_pw = self._read_kv(key)
         if encr_pw is None or len(encr_pw) == 0 or len(encr_pw[0]) != 2:
             return False
         if self.check_password(value, encr_pw[0][1]) is True:
+            self.log.info(f"Verified {key}, {time.time()}")
             return True
         return False
 
@@ -402,12 +413,12 @@ class IndraProcess(IndraProcessCore):
         # This line sets the page size of the memory to 4096 bytes. This is the size of a single page in the memory.
         # You can change this if you want to, but please be aware that the page size must be a power of 2.
         # For example, 1024, 2048, 4096, 8192, 16384, etc.
-        if self._db_pragma("page_size", "4096") is False:
+        if self._db_pragma("page_size", f"{self.page_size}") is False:
             opt = False
 
         # This is the number of pages that will be cached in memory. If you have a lot of memory, you can increase
         # this number to improve performance. If you have a small amount of memory, you can decrease this number to free up memory.
-        if self._db_pragma("cache_size", "1000000") is False:
+        if self._db_pragma("cache_size", f"{self.cache_size_pages}") is False:
             opt = False
 
         # This means that the database will be synced to disk after each transaction. If you don't want this, you can set it to off.
