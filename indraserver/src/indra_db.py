@@ -196,7 +196,8 @@ class IndraProcess(IndraProcessCore):
 
         Warning: this is SLOW by design, to prevent brute-force attacks. 200ms(!) per check.
         If use_hash_cache is true (in config), results of the hashing operation are cached in memory,
-        to speed up repeated checks of the same password, at cost of security.
+        to speed up repeated checks of the same password, at (some theoretical) cost of security, since
+        no brute-force protection is applied to the cache. For production use, set use_hash_cache to False (default).
 
         Args:
             key (str): The key to be checked.
