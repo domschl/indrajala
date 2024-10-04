@@ -56,7 +56,7 @@ class IndraProcess(IndraProcessCore):
         if "use_hash_cache" in config_data:
             self.use_hash_cache = config_data["use_hash_cache"]
         else:
-            self.use_hash_cache = True
+            self.use_hash_cache = False
                 
         self.bUncommitted = False
         self.commit_timer_thread = None

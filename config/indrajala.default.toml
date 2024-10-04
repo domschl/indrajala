@@ -50,6 +50,9 @@
     database = "{{data_directory}}/db/indrajala.db"
     commit_delay_sec = 0.0
     throttle = 0
+    use_hash_cache = false
+    page_size = 4096
+    cache_size_pages = 10000
 
 [[async_http]]
     active = true
