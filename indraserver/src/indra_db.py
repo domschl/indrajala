@@ -206,6 +206,7 @@ class IndraProcess(IndraProcessCore):
             bool: True if the plain password matches the hashed password, False otherwise.
         """
         if self.use_hash_cache is True and self.hash_cache is not None and plain_password in self.hash_cache:
+            self.log.info("Using hash cache")
             if self.hash_cache[plain_password] != hashed_password:
                 return False
             return True
