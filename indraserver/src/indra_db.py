@@ -814,6 +814,8 @@ class IndraProcess(IndraProcessCore):
                     post_filter = True
                 sql_cmd += ";"
                 if post_filter is True and self.unique_domains_cache is not None:
+                    t_start = datetime.datetime.now(tz=datetime.timezone.utc)
+                    self.log.info(f"Executing {sql_cmd} with {q_params}, using cache")
                     res_list = self.unique_domains_cache
                 else:
                     t_start = datetime.datetime.now(tz=datetime.timezone.utc)
