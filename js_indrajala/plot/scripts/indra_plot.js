@@ -187,10 +187,15 @@ function plotPage(currentUser) {
             let context = doms[3];
             let location = doms[4];
             let plot_desc = `${meas_type}, ${context}, ${location}`;
-            let yi = JSON.parse(data.data);
-            let xi = data.time_jd_start; // IndraTime.julianToDatetime(data.time_jd_start);
-            plotData.x.push(xi);
-            plotData.y.push(yi);
+            try {
+                let yi = JSON.parse(data.data);
+                let xi = data.time_jd_start; // IndraTime.julianToDatetime(data.time_jd_start);
+                plotData.x.push(xi);
+                plotData.y.push(yi);
+            } catch (e) {
+                console.error(`Error parsing data from ${domain}: ${e}`);
+                return;
+            }
         } else {  // History event, bulk update
             for (let tup in data) {
                 let jd = data[tup][0];
