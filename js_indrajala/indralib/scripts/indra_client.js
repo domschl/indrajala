@@ -324,9 +324,12 @@ export function getUniqueDomains(domain = null, dataType = null, uniqueDomainHan
             console.log('Unique domains:', value);
         }
     }
-    let cmd = {
-        domain: domain,
-        data_type: dataType,
+    let cmd = {};
+    if (domain !== null) {
+        cmd.domain = domain;
+    }
+    if (dataType !== null) {
+        cmd.data_type = dataType;
     };
     let ie = new IndraEvent();
     ie.domain = "$trx/db/req/uniquedomains";
