@@ -809,7 +809,7 @@ class IndraProcess(IndraProcessCore):
                         op2 = "="
                         q_params.append(dt)
                         sql_cmd += f" AND data_type {op2} ?"
-                else
+                else:
                     post_filter = True
                 sql_cmd += ";"
                 t_start = datetime.datetime.now(tz=datetime.timezone.utc)
