@@ -484,7 +484,7 @@ function plotPage(currentUser) {
         const durationSelect = document.createElement('select');
         durationSelect.classList.add('selectBoxRight');
         durationSelect.classList.add('margin-bottom');
-        let durations = [['All', null], ['1m', 1.0 / 24.0 / 60.0], ['10m', 1.0 / 24.0 / 6.0]['1h', 1.0 / 24.0], ['4h', 4.0 / 24.0], ['24h', 1.0], ['7d', 7.0], ['30d', 30.0]];
+        let durations = [['All', null], ['1m', 1.0 / 24.0 / 60.0], ['10m', 1.0 / 24.0 / 6.0], ['1h', 1.0 / 24.0], ['4h', 4.0 / 24.0], ['24h', 1.0], ['7d', 7.0], ['30d', 30.0]];
         for (let i = 0; i < durations.length; i++) {
             let option = document.createElement('option');
             option.value = durations[i][1];
