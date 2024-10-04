@@ -50,6 +50,7 @@ class IndraProcess(IndraProcessCore):
         self.sessions = {}
         self.subscribe(["$trx/db/#", "$trx/kv/#", "$event/#"])
         self._get_secure_key_names(config_data)
+        self.unique_domains_cache = None
 
     def start_commit_timer(self):
         if self.commit_delay_sec > 0.0:
@@ -812,11 +813,15 @@ class IndraProcess(IndraProcessCore):
                 else:
                     post_filter = True
                 sql_cmd += ";"
-                t_start = datetime.datetime.now(tz=datetime.timezone.utc)
-                self.log.info(f"Executing {sql_cmd} with {q_params}")
-                self.cur.execute(sql_cmd, q_params)
-                result = self.cur.fetchall()
-                res_list = [x[0] for x in result]
+                if post_filter is True and self.unique_domains_cache is not None:
+                    res_list = self.unique_domains_cache
+                else:
+                    t_start = datetime.datetime.now(tz=datetime.timezone.utc)
+                    self.log.info(f"Executing {sql_cmd} with {q_params}")
+                    self.cur.execute(sql_cmd, q_params)
+                    result = self.cur.fetchall()
+                    res_list = [x[0] for x in result]
+                    self.unique_domains_cache = res_list
                 if post_filter is True and "domain" in rq_data:
                     filter = rq_data["domain"].split("%")[0]
                     res_list = [x for x in res_list if x.startswith(filter)]
@@ -894,7 +899,8 @@ class IndraProcess(IndraProcessCore):
                         f"$trx/db/req/del from {ev.from_id} failed, requires either an array `uuid4s` or an array `domains` as key(s)",
                     )
                     return
-
+                if num_deleted > 0:
+                    self.unique_domains_cache = None
                 rev = IndraEvent()
                 rev.domain = ev.from_id
                 rev.from_id = self.name
@@ -1012,6 +1018,7 @@ class IndraProcess(IndraProcessCore):
                             f"Multiple records found for domain={rq['domain']} and time_jd_start={rq['time_jd_start']}, NOT UPDATED!"
                         )
                 self._check_commit()
+                self.unique_domains_cache = None
                 rev = IndraEvent()
                 rev.domain = ev.from_id
                 rev.from_id = self.name
