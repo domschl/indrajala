@@ -355,9 +355,11 @@ class IndraProcess(IndraProcessCore):
         """Read a value(s) from the database"""
         if "%" in key:
             op1 = "LIKE"
+            lim = ""
         else:
             op1 = "="
-        cmd = f"SELECT key, value FROM indra_kv WHERE key {op1} ? LIMIT 1;"
+            lim = " LIMIT 1"
+        cmd = f"SELECT key, value FROM indra_kv WHERE key {op1} ?{lim};"
         try:
             self.cur.execute(cmd, [key])
             result = self.cur.fetchall()
