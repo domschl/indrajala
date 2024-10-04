@@ -92,6 +92,15 @@ function sendTransaction(ie) {
 }
 
 export function indraLogin(username, password, loginResult) {
+    /* Send login request to server
+     * @param {string} username
+     * @param {string} password
+     * @param {function} loginResult - callback function
+     * @returns {boolean} - true if promise was sent, false otherwise
+     *
+     * WARNING: this function uses salted hashs on server-side, and processing takes about 200ms on server!
+     * So expect a delay in response.
+     */
     const cmd = {
         key: `entity/indrajala/user/${username}/password`,
         value: password,
