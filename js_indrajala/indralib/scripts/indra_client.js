@@ -315,9 +315,6 @@ export function getUniqueDomains(domain = null, dataType = null, uniqueDomainHan
     if (domain === null) {
         domain = "$event/measurement%";
     }
-    if (dataType === null) {
-        dataType = "%";
-    }
     if (uniqueDomainHandler === null) {
         console.log('No handler for unique domains!');
         uniqueDomainHandler = (value) => {

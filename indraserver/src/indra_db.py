@@ -793,7 +793,7 @@ class IndraProcess(IndraProcessCore):
                 sql_cmd = f"SELECT DISTINCT domain FROM indra_events"
                 post_filter = False
                 if "data_type" in rq_data:
-                    self.log.warning("Inefficient SQL query, data_type breaks optimization")
+                    self.log.warning("Inefficient SQL query, uniqueDomain with data_type breaks optimization")
                     if "domain" in rq_data:
                         d = rq_data["domain"]
                         if "%" in d:
