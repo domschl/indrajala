@@ -190,7 +190,7 @@ class IndraProcess(IndraProcessCore):
         hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
         return hashed_password.decode("utf-8")
 
-    def check_password(self, plain_password: str, hashed_password: str):
+    def check_password(self, key: str, plain_password: str, hashed_password: str):
         """
         Check if a plain password matches a hashed password.
 
@@ -199,15 +199,17 @@ class IndraProcess(IndraProcessCore):
         to speed up repeated checks of the same password, at cost of security.
 
         Args:
+            key (str): The key to be checked.
             plain_password (str): The plain password to be checked.
             hashed_password (str): The hashed password to compare against.
 
         Returns:
             bool: True if the plain password matches the hashed password, False otherwise.
         """
+        hash_key = f"{key}:{plain_password}"
         if self.use_hash_cache is True and self.hash_cache is not None and plain_password in self.hash_cache:
             self.log.info("Using hash cache")
-            if self.hash_cache[plain_password] != hashed_password:
+            if self.hash_cache[hash_key] != hashed_password:
                 return False
             return True
         try:
@@ -220,9 +222,9 @@ class IndraProcess(IndraProcessCore):
         if self.hash_cache is None:
             self.hash_cache = {}
             if checked is True:
-                self.hash_cache[plain_password] = hashed_password
+                self.hash_cache[hash_key] = hashed_password
             else:
-                self.hash_cache[plain_password] = None
+                self.hash_cache[hash_key] = None
         return checked
 
     def _create_session(self, key, from_id):
@@ -413,7 +415,7 @@ class IndraProcess(IndraProcessCore):
         encr_pw = self._read_kv(key)
         if encr_pw is None or len(encr_pw) == 0 or len(encr_pw[0]) != 2:
             return False
-        if self.check_password(value, encr_pw[0][1]) is True:
+        if self.check_password(key, value, encr_pw[0][1]) is True:
             self.log.info(f"Verified {key}, {time.time()}")
             return True
         return False
@@ -583,7 +585,7 @@ class IndraProcess(IndraProcessCore):
             if (
                 len(cur_pwd) > 0
                 and len(cur_pwd[0]) == 2
-                and self.check_password(admin_pw, cur_pwd[0][1]) is True
+                and self.check_password("entity/indrajala/user/admin/password", admin_pw, cur_pwd[0][1]) is True
             ):
                 self.log.warning(
                     f"Admin user {admin_user} password is still set to default, please change it!"
