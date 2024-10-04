@@ -375,10 +375,11 @@ class IndraClient:
             domain = "$event/%"
         if data_type is None:
             data_type = "%"
-        cmd = {
-            "domain": domain,
-            "data_type": data_type,
-        }
+        cmd = {}
+        if domain is not None:
+            cmd["domain"] = domain
+        if data_type is not None:
+            cmd["data_type"] = data_type
         ie = IndraEvent()
         ie.domain = "$trx/db/req/uniquedomains"
         ie.from_id = "ws/python"
