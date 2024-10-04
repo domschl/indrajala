@@ -407,7 +407,7 @@ class IndraProcess(IndraProcessCore):
 
         # This is the number of pages that will be cached in memory. If you have a lot of memory, you can increase
         # this number to improve performance. If you have a small amount of memory, you can decrease this number to free up memory.
-        if self._db_pragma("cache_size", "10000") is False:
+        if self._db_pragma("cache_size", "1000000") is False:
             opt = False
 
         # This means that the database will be synced to disk after each transaction. If you don't want this, you can set it to off.
