@@ -357,7 +357,7 @@ class IndraProcess(IndraProcessCore):
             op1 = "LIKE"
         else:
             op1 = "="
-        cmd = f"SELECT key, value FROM indra_kv WHERE key {op1} ?;"
+        cmd = f"SELECT key, value FROM indra_kv WHERE key {op1} ? LIMIT 1;"
         try:
             self.cur.execute(cmd, [key])
             result = self.cur.fetchall()
@@ -376,7 +376,7 @@ class IndraProcess(IndraProcessCore):
         encr_pw = self._read_kv(key)
         if encr_pw is None or len(encr_pw) == 0 or len(encr_pw[0]) != 2:
             return False
-        if self.check_password(value, self._read_kv(key)[0][1]) is True:
+        if self.check_password(value, encr_pw[0][1]) is True:
             return True
         return False
 
