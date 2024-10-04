@@ -791,27 +791,35 @@ class IndraProcess(IndraProcessCore):
                     return
                 q_params = []
                 sql_cmd = f"SELECT DISTINCT domain FROM indra_events"
-                if "domain" in rq_data:
-                    d = rq_data["domain"]
-                    if "%" in d:
-                        op1 = "LIKE"
-                    else:
-                        op1 = "="
-                    q_params.append(d)
-                    sql_cmd += f" WHERE domain {op1} ?"
+                post_filter = False
                 if "data_type" in rq_data:
+                    self.log.warning("Inefficient SQL query, data_type breaks optimization")
+                    if "domain" in rq_data:
+                        d = rq_data["domain"]
+                        if "%" in d:
+                            op1 = "LIKE"
+                        else:
+                            op1 = "="
+                        q_params.append(d)
+                        sql_cmd += f" WHERE domain {op1} ?"
                     dt = rq_data["data_type"]
                     if "%" in dt:
                         op2 = "LIKE"
                     else:
                         op2 = "="
-                    q_params.append(dt)
-                    sql_cmd += f" AND data_type {op2} ?"
+                        q_params.append(dt)
+                        sql_cmd += f" AND data_type {op2} ?"
+                else
+                    post_filter = True
+                sql_cmd += ";"
                 t_start = datetime.datetime.now(tz=datetime.timezone.utc)
                 self.log.info(f"Executing {sql_cmd} with {q_params}")
                 self.cur.execute(sql_cmd, q_params)
                 result = self.cur.fetchall()
                 res_list = [x[0] for x in result]
+                if post_filter is True and "domain" in rq_data:
+                    filter = rq_data["domain"].split("%")[0]
+                    res_list = [x for x in res_list if x.startswith(filter)]
                 rev = IndraEvent()
                 rev.domain = ev.from_id
                 rev.from_id = self.name
