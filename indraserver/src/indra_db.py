@@ -360,6 +360,7 @@ class IndraProcess(IndraProcessCore):
             op1 = "="
             lim = " LIMIT 1"
         cmd = f"SELECT key, value FROM indra_kv WHERE key {op1} ?{lim};"
+        start_time = time.time()
         try:
             self.cur.execute(cmd, [key])
             result = self.cur.fetchall()
@@ -370,6 +371,7 @@ class IndraProcess(IndraProcessCore):
         except sqlite3.Error as e:
             self.log.error(f"Failed to read kv-record: {e}")
             return None
+        self.log.info(f"Read {key} in {time.time() - start_time:.4f} sec")
         return value
 
     def _verify_kv(self, key: str, value: str):
