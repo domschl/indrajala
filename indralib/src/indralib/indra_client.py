@@ -521,6 +521,15 @@ class IndraClient:
         return await self.send_event(ie)
 
     async def login_wait(self, username, password):
+        # Login and return the auth_hash session_id.
+        #
+        #  @param username: username
+        #  @param password: password
+        #  @return: auth_hash or None
+        #        
+        #  WARNING: this function is SLOW, since login uses salted hashes on server-side
+        #  which require about 200ms to compute
+        #  so expect a delay of about 200ms + transport time (about 50ms min.)
         future = await self.login(username, password)
         result = await future
         if result.data_type.startswith("error") is True:

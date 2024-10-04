@@ -53,12 +53,18 @@ class IndraProcess(IndraProcessCore):
             self.cache_size_pages = config_data["cache_size_pages"]
         else:
             self.cache_size_pages = 10000
+        if "use_hash_cache" in config_data:
+            self.use_hash_cache = config_data["use_hash_cache"]
+        else:
+            self.use_hash_cache = True
+                
         self.bUncommitted = False
         self.commit_timer_thread = None
         self.sessions = {}
         self.subscribe(["$trx/db/#", "$trx/kv/#", "$event/#"])
         self._get_secure_key_names(config_data)
         self.unique_domains_cache = None
+        self.hash_cache = None
 
     def start_commit_timer(self):
         if self.commit_delay_sec > 0.0:
@@ -188,6 +194,10 @@ class IndraProcess(IndraProcessCore):
         """
         Check if a plain password matches a hashed password.
 
+        Warning: this is SLOW by design, to prevent brute-force attacks. 200ms(!) per check.
+        If use_hash_cache is true (in config), results of the hashing operation are cached in memory,
+        to speed up repeated checks of the same password, at cost of security.
+
         Args:
             plain_password (str): The plain password to be checked.
             hashed_password (str): The hashed password to compare against.
@@ -195,6 +205,10 @@ class IndraProcess(IndraProcessCore):
         Returns:
             bool: True if the plain password matches the hashed password, False otherwise.
         """
+        if self.use_hash_cache is True and self.hash_cache is not None and plain_password in self.hash_cache:
+            if self.hash_cache[plain_password] != hashed_password:
+                return False
+            return True
         try:
             checked = bcrypt.checkpw(
                 plain_password.encode("utf-8"), hashed_password.encode("utf-8")
@@ -202,6 +216,12 @@ class IndraProcess(IndraProcessCore):
         except Exception as e:
             self.log.error(f"Failed to check password: {e}")
             return False
+        if self.hash_cache is None:
+            self.hash_cache = {}
+            if checked is True:
+                self.hash_cache[plain_password] = hashed_password
+            else:
+                self.hash_cache[plain_password] = None
         return checked
 
     def _create_session(self, key, from_id):
@@ -316,6 +336,7 @@ class IndraProcess(IndraProcessCore):
                  VALUES (
                     :seq_no, :key, :value);
               """
+        self.hash_cache = None
         try:
             self.cur.execute(
                 cmd,
@@ -346,6 +367,7 @@ class IndraProcess(IndraProcessCore):
 
     def _delete_kv(self, key: str):
         """Delete a key/value pair from the database"""
+        self.hash_cache = None
         if "%" in key:
             op1 = "LIKE"
         else:
