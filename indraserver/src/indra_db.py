@@ -230,10 +230,10 @@ class IndraProcess(IndraProcessCore):
             return False
         if self.hash_cache is None:
             self.hash_cache = {}
-            if checked is True:
-                self.hash_cache[hash_key] = hashed_password
-            else:
-                self.hash_cache[hash_key] = None
+        if checked is True:
+            self.hash_cache[hash_key] = hashed_password
+        else:
+            self.hash_cache[hash_key] = None
         return checked
 
     def _create_session(self, key, from_id):
