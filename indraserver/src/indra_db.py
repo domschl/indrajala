@@ -212,6 +212,8 @@ class IndraProcess(IndraProcessCore):
             if self.hash_cache[hash_key] != hashed_password:
                 return False
             return True
+        else:
+            self.log.info(f"Not using hash cache: {self.use_hash_cache}, {self.hash_cache}, {plain_password in self.hash_cache}")
         try:
             checked = bcrypt.checkpw(
                 plain_password.encode("utf-8"), hashed_password.encode("utf-8")
