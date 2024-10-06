@@ -592,9 +592,10 @@ class IndraTime:
         minute = int(parts[1])
         parts = parts[2].split(".")
         second = int(parts[0])
-        microsecond = int(parts[1][:-1])
-        # if microsecond == None:
-        #     microsecond = 0
+        if len(parts) == 1:
+            microsecond = 0
+        else:
+            microsecond = int(parts[1])
         return IndraTime.discrete_time_to_julian(
             year, month, day, hour, minute, second, microsecond
         )
