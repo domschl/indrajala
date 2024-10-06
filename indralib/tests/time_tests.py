@@ -3,6 +3,7 @@ import sys
 import os
 import json
 import math
+import datetime
 
 path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src/")
 print(path)
@@ -21,7 +22,7 @@ def cmp_time(d1: str, d2: str):
     return d1 == d2
 
 
-def do_tests(data, data2):
+def do_tests(data, data2, data3):
     result = {
                 "num_ok": 0,
                 "num_failed": 0,
@@ -79,6 +80,42 @@ def do_tests(data, data2):
             result["num_failed"] += 1
             err_msg = f"Error: {jd1} != {jd3} at test {d["Event"]}"
             result["errors"].append(err_msg)
+
+    for d in data3:
+        iso = d["date"]
+        fractional_year = d["frac_year"]
+        dt = datetime.datetime.fromisoformat(iso)
+        jd = IndraTime.ISO_to_julian(iso)
+        dt_from_frac = IndraTime.fractional_year_to_datetime(fractional_year)
+        jd_from_frac = IndraTime.fractional_year_to_julian(fractional_year)
+        frac_from_jd = IndraTime.julian_to_fractional_year(jd)
+        frac_from_dt = IndraTime.datetime_to_fractional_year(dt)
+
+        if math.isclose(dt, dt_from_frac, abs_tol=0.0001):
+            result["num_ok"] += 1
+        else:
+            result["num_failed"] += 1
+            err_msg = f"Error: {dt} != {dt_from_frac} at test {iso} in fractional_year_to_datetime"
+            result["errors"].append(err_msg)
+        if math.isclose(jd, jd_from_frac, abs_tol=0.0001):
+            result["num_ok"] += 1
+        else:
+            result["num_failed"] += 1
+            err_msg = f"Error: {jd} != {jd_from_frac} at test {iso} in fractional_year_to_julian"
+            result["errors"].append(err_msg)
+        if math.isclose(fractional_year, frac_from_jd, abs_tol=0.0001):
+            result["num_ok"] += 1
+        else:
+            result["num_failed"] += 1
+            err_msg = f"Error: {fractional_year} != {frac_from_jd} at test {iso} in julian_to_fractional_year"
+            result["errors"].append(err_msg)
+        if math.isclose(fractional_year, frac_from_dt, abs_tol=0.0001):
+            result["num_ok"] += 1
+        else:
+            result["num_failed"] += 1
+            err_msg = f"Error: {fractional_year} != {frac_from_dt} at test {iso} in datetime_to_fractional_year"
+            result["errors"].append(err_msg)
+
     return result
 
 # for d in data:
@@ -93,8 +130,10 @@ with open(os.path.join(folder, "normalized_jd_time_data.json")) as f:
     data1 = json.load(f)
 with open(os.path.join(folder, "normalized_bp_time_data.json")) as f:
     data2 = json.load(f)
+with open(os.path.join(folder, "normalized_wp_decimal_time.json")) as f:
+    data3 = json.load(f)
 
-result = do_tests(data1, data2)
+result = do_tests(data1, data2, data3)
 
 print("#$#$# Result #$#$#")
 print(json.dumps(result, indent=2))
