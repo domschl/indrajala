@@ -54,10 +54,10 @@ class IndraProcess(IndraProcessCore):
         rev.from_id = self.name
         rev.uuid4 = ev.uuid4
         rev.to_scope = ev.domain
-        rev.time_jd_start = IndraTime.datetime2julian(
+        rev.time_jd_start = IndraTime.datetime_to_julian(
             datetime.datetime.now(tz=datetime.timezone.utc)
         )
-        rev.time_jd_end = IndraTime.datetime2julian(
+        rev.time_jd_end = IndraTime.datetime_to_julian(
             datetime.datetime.now(tz=datetime.timezone.utc)
         )
         rev.data_type = "error/invalid"
@@ -174,10 +174,10 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraTime.datetime2julian(
+                rev.time_jd_start = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
-                rev.time_jd_end = IndraTime.datetime2julian(
+                rev.time_jd_end = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "session/new"
@@ -207,10 +207,10 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraTime.datetime2julian(
+                rev.time_jd_start = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
-                rev.time_jd_end = IndraTime.datetime2julian(
+                rev.time_jd_end = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "session/end"
@@ -225,10 +225,10 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraTime.datetime2julian(
+                rev.time_jd_start = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
-                rev.time_jd_end = IndraTime.datetime2julian(
+                rev.time_jd_end = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "session/list"
@@ -422,10 +422,10 @@ class IndraProcess(IndraProcessCore):
                     rev.parent_uuid4 = cur_session
                     rev.data = ev.data
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraTime.datetime2julian(
+                    rev.time_jd_start = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraTime.datetime2julian(
+                    rev.time_jd_end = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.uuid4 = str(uuid.uuid4())

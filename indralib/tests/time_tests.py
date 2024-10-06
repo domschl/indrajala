@@ -29,9 +29,9 @@ def do_tests(data, data2):
                 "errors": []
             };
     for d in data:
-        d["indra_text"] = IndraTime.julian2ISO(d["JulianDate"])
-        d["indra_jd"] = IndraTime.ISO2julian(d["indra_text"])
-        d["indra_human"] = IndraTime.julian_2_string_time(d["JulianDate"])
+        d["indra_text"] = IndraTime.julian_to_ISO(d["JulianDate"])
+        d["indra_jd"] = IndraTime.ISO_to_julian(d["indra_text"])
+        d["indra_human"] = IndraTime.julian_to_string_time(d["JulianDate"])
         res = ""
         it = d["indra_text"]
         if it.endswith(" BC"):
@@ -60,8 +60,8 @@ def do_tests(data, data2):
     for d in data2:
         gr = d["Gregorian year"]
         bp = d["BP year"]
-        jd1 = IndraTime.string_time_2_julian(gr)[0]
-        jd2 = IndraTime.string_time_2_julian(bp)[0]
+        jd1 = IndraTime.string_time_to_julian(gr)[0]
+        jd2 = IndraTime.string_time_to_julian(bp)[0]
         bpf = int(bp.split(" ")[0])
         year = 1950 - bpf
         month = 1
@@ -70,7 +70,7 @@ def do_tests(data, data2):
         minute = 0
         second = 0
         microsecond = 0
-        jd3 = jdt = IndraTime.time_to_julian(
+        jd3 = jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
         if math.isclose(jd1, jd3, abs_tol=0.0001):
