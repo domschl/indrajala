@@ -250,7 +250,7 @@ class IndraTime:
         """
         Convert datetime to fractional year
 
-        This method uses the Julian year definition, a year of 365.25 days, see \ref fractional_year_to_datetime
+        This method uses the Julian year definition, a year of 365.25 days, see fractional_year_to_datetime
         for further discussion.
 
         Note: naive datetime objects are not accepted, as they are ambiguous, please set a timezone.

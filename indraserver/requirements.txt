@@ -14,4 +14,4 @@ lxml
 jupyterlab
 matplotlib
 openpyxl
-
+sphinx
