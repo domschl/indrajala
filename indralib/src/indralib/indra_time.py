@@ -570,6 +570,13 @@ class IndraTime:
         parts = iso.split("T")
         if len(parts) != 2:
             raise ValueError(f"Invalid ISO 8601 string: {iso}")
+        if parts[1][-1] == "Z":
+            parts[1] = parts[1][:-1]
+        if "+" in parts[1] or "-" in parts[1]:
+            raise ValueError(f"Only UTC time is supported: {iso}")
+        if parts[1][-1] not in "0123456789":
+            raise ValueError(f"Invalid ISO 8601 string: {iso}")
+
         date = parts[0]
         time = parts[1]
         if date[0] == "-":
