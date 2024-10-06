@@ -91,7 +91,7 @@ def do_tests(data, data2, data3):
         frac_from_jd = IndraTime.julian_to_fractional_year(jd)
         frac_from_dt = IndraTime.datetime_to_fractional_year(dt)
 
-        if math.isclose(dt, dt_from_frac, abs_tol=0.0001):
+        if math.isclose(datetime.datetime.timestamp(dt), datetime.datetime.timestamp(dt_from_frac), abs_tol=0.0001):
             result["num_ok"] += 1
         else:
             result["num_failed"] += 1
