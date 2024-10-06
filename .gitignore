@@ -27,6 +27,6 @@ package-lock.json
 indra_creds.json
 data/
 
-
+# At some point, produced documentation should be checked in.
 docs/jsdoc/
 docs/pydoc/build/
