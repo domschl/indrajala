@@ -3,11 +3,19 @@ import math
 
 
 class IndraTime:
+    """Class for converting between different time representations
+
+    The Indra libraries use Julian dates for representing time internally, as they are
+    easy to work with and can represent any date in the distant past or future. This class
+    provides methods for converting between Julian dates and other time representations,
+    such as datetime objects, fractional years, and string times.
+    """
+
     @staticmethod
     def datetime_to_julian(dt: datetime.datetime) -> float:
         """Convert datetime to Julian date
 
-        Note: datetime must have a timezone!
+        Note: datetime object must have a timezone!
         Should work over the entire range of datetime, starting with year 1.
 
         :param dt: datetime object
@@ -268,29 +276,36 @@ class IndraTime:
         :param fy: fractional year
         :return: Julian date
         """
-        # Do not use datetime or fractional_year_to_datetime!
-        # no datetime because it's invalid for dates before 1 AD
         # convert fractional year to Julian date
         # 1 AD is JD 1721423.5
         # 1 year is 365.25 days
-        jd = 1721423.5 + (fy - 1) * 365.25
+        # Use datetime_to_fractional_year() to convert datetime to fractional year for dates after 1 AD
+        if fy < 1:
+            jd = 1721423.5 + (fy - 1) * 365.25
+        else:
+            dt = IndraTime.fractional_year_to_datetime(fy)
+            jd = IndraTime.datetime_to_julian(dt)
         return jd
 
     @staticmethod
     def julian_to_fractional_year(jd: float) -> float:
         """Convert Julian date to fractional year
 
-        Note: fracyear fy is well defined for dates before 1AD, which are not representable in datetime.
+        Note: fracyear fy is well defined for dates before 1AD,
+        which are not representable in datetime.
 
         :param jd: Julian date
         :return: fractional year
         """
-        # Do not use datetime or fractional_year_to_datetime!
-        # no datetime because it's invalid for dates before 1 AD
         # convert Julian date to fractional year
         # 1 AD is JD 1721423.5
         # 1 year is 365.25 days
-        fy = 1 + (jd - 1721423.5) / 365.25
+        jd_yr1 = 1721423.5
+        if jd < jd_yr1:
+            fy = 1 + (jd - 1721423.5) / 365.25
+        else:
+            dt = IndraTime.julian_to_datetime(jd)
+            fy = IndraTime.datetime_to_fractional_year(dt)
         return fy
 
     @staticmethod
