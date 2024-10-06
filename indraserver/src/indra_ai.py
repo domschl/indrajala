@@ -202,10 +202,10 @@ class IndraProcess(IndraProcessCore):
         rev.from_id = self.name
         rev.uuid4 = ev.uuid4
         rev.to_scope = ev.domain
-        rev.time_jd_start = IndraTime.datetime2julian(
+        rev.time_jd_start = IndraTime.datetime_to_julian(
             datetime.datetime.now(tz=datetime.timezone.utc)
         )
-        rev.time_jd_end = IndraTime.datetime2julian(
+        rev.time_jd_end = IndraTime.datetime_to_julian(
             datetime.datetime.now(tz=datetime.timezone.utc)
         )
         rev.data_type = "error/invalid"
@@ -232,7 +232,7 @@ class IndraProcess(IndraProcessCore):
                     return
             text = sentiment_data["text"]
             rev = IndraEvent()
-            rev.time_jd_start = IndraTime.datetime2julian(
+            rev.time_jd_start = IndraTime.datetime_to_julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
             result = self.pipeline(text)
@@ -240,7 +240,7 @@ class IndraProcess(IndraProcessCore):
             rev.from_id = self.name
             rev.uuid4 = ev.uuid4
             rev.to_scope = ev.domain
-            rev.time_jd_end = IndraTime.datetime2julian(
+            rev.time_jd_end = IndraTime.datetime_to_julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
             rev.data_type = "sentiment"
@@ -265,7 +265,7 @@ class IndraProcess(IndraProcessCore):
                     return
             text = f"<2{translation_data['lang_code']}> {translation_data['text']}"
             rev = IndraEvent()
-            rev.time_jd_start = IndraTime.datetime2julian(
+            rev.time_jd_start = IndraTime.datetime_to_julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
             inputs = self.tokenizer.encode(text, return_tensors="pt").to(self.device)
@@ -277,7 +277,7 @@ class IndraProcess(IndraProcessCore):
             rev.from_id = self.name
             rev.uuid4 = ev.uuid4
             rev.to_scope = ev.domain
-            rev.time_jd_end = IndraTime.datetime2julian(
+            rev.time_jd_end = IndraTime.datetime_to_julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
             rev.data_type = "translation"
@@ -308,7 +308,7 @@ class IndraProcess(IndraProcessCore):
             text = conversation_data["text"]
             max_length = conversation_data["max_length"]
             rev = IndraEvent()
-            rev.time_jd_start = IndraTime.datetime2julian(
+            rev.time_jd_start = IndraTime.datetime_to_julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
             input_ids = self.tokenizer(text, return_tensors="pt").to(self.device)
@@ -317,7 +317,7 @@ class IndraProcess(IndraProcessCore):
             rev.from_id = self.name
             rev.uuid4 = ev.uuid4
             rev.to_scope = ev.domain
-            rev.time_jd_end = IndraTime.datetime2julian(
+            rev.time_jd_end = IndraTime.datetime_to_julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
             rev.data_type = "chat_reply"
@@ -344,7 +344,7 @@ class IndraProcess(IndraProcessCore):
                     )
                     return
             rev = IndraEvent()
-            rev.time_jd_start = IndraTime.datetime2julian(
+            rev.time_jd_start = IndraTime.datetime_to_julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
             message = chat_msg["message"]
@@ -392,7 +392,7 @@ class IndraProcess(IndraProcessCore):
             rev.from_id = self.name
             rev.uuid4 = ev.uuid4
             rev.to_scope = ev.domain
-            rev.time_jd_end = IndraTime.datetime2julian(
+            rev.time_jd_end = IndraTime.datetime_to_julian(
                 datetime.datetime.now(tz=datetime.timezone.utc)
             )
             rev.data_type = "chat_msg"

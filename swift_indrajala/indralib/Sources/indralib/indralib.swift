@@ -281,7 +281,7 @@ public class IndraEvent: Codable {
       }
     } else {
       // AD
-      // dt = IndraTime.julian2datetime(jd)
+      // dt = IndraTime.julian_to_datetime(jd)
       // let (year, month, day, hour, minute, second, microsecond) = julianToTime(jd: jd)
       let (year, month, day, _, _, _, _) = julianToTime(jd: jd)
       if month == 1 && day == 1 && year < 1900 {

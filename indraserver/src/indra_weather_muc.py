@@ -99,7 +99,7 @@ class IndraProcess(IndraProcessCore):
             return False
 
         try:
-            jd = IndraTime.datetime2julian(dt)
+            jd = IndraTime.datetime_to_julian(dt)
             data = {}
             time_data = {}
             time_data["time"] = dt

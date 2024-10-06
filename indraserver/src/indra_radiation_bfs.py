@@ -99,8 +99,8 @@ class IndraProcess(IndraProcessCore):
                     end_measure = props["end_measure"][:-1] + ".000"
                     for k in data.keys():
                         ie = IndraEvent()
-                        ie.time_jd_start = IndraTime.ISO2julian(start_measure)
-                        ie.time_jd_end = IndraTime.ISO2julian(end_measure)
+                        ie.time_jd_start = IndraTime.ISO_to_julian(start_measure)
+                        ie.time_jd_end = IndraTime.ISO_to_julian(end_measure)
                         # f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
                         if k in meass:
                             ie.domain = f"$event/measurement/{meass[k][0]}/{o_context}/{o_location}"
