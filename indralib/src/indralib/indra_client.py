@@ -301,7 +301,7 @@ class IndraClient:
     @staticmethod
     def get_current_time_jd():
         cdt = datetime.datetime.now(timezone.utc)
-        dt_jd = IndraTime.datetime2julian(cdt)
+        dt_jd = IndraTime.datetime_to_julian(cdt)
         return dt_jd
 
     @staticmethod
@@ -633,6 +633,6 @@ class IndraClient:
         dt = []
         y = []
         for t, yv in result:
-            dt.append(IndraTime.julian2datetime(t))
+            dt.append(IndraTime.julian_to_datetime(t))
             y.append(yv)
         return dt, y

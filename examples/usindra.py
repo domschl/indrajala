@@ -33,7 +33,9 @@ async def tester():
         domain="$event/measurement/temperature/climate/home"
     )
     if temp is not None:
-        print(f"Temp: {temp.data} at {IndraEvent.julian2datetime(temp.time_jd_start)}")
+        print(
+            f"Temp: {temp.data} at {IndraEvent.julian_to_datetime(temp.time_jd_start)}"
+        )
     else:
         print(f"Not found!")
     hist = await cl.get_wait_history(

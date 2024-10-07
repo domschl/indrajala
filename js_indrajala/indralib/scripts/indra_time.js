@@ -1,8 +1,32 @@
 "use strict";
 
 
+/**
+ * Class representing IndraTime utilities.
+ * @class
+ */
 export class IndraTime {
-    static timeToJulianGregorian(year, month, day, hour, minute, second, microsecond) {
+    /**
+     * Converts a given date and time to Julian date using the extended Gregorian calendar.
+     * 
+     * Note: the extended Gregorian calendar is a proleptic Gregorian calendar that extends 
+     * the Gregorian calendar to dates before its introduction in 1582. In most cases, the
+     * Julian calendar is used for dates before 1582, for this see the discreteTimeToJulian function.
+     * 
+     * @param {number} year - The year.
+     * @param {number} month - The month (1-12).
+     * @param {number} day - The day (1-31).
+     * @param {number} hour - The hour (0-23).
+     * @param {number} minute - The minute (0-59).
+     * @param {number} second - The second (0-59).
+     * @param {number} microsecond - The microsecond (0-999999).
+     * @returns {number} The Julian date.
+     * @example
+     * let julianDate = IndraTime.discreteTimeToJulianGregorianExtended(2023, 10, 5, 12, 0, 0, 0);
+     * console.log(julianDate);
+     * @see discreteTimeToJulian
+     */
+    static discreteTimeToJulianGregorianExtended(year, month, day, hour, minute, second, microsecond) {
         let a = Math.floor((14 - month) / 12);
         let y = year + 4800 - a;
         let m = month + 12 * a - 3;
@@ -11,7 +35,7 @@ export class IndraTime {
         return jd + jd_frac;
     }
 
-    static julianToTime(jd) {
+    static julianToDiscreteTime(jd) {
         let z = Math.floor(jd + 0.5);
         let f = jd + 0.5 - z;
         let a = z;
@@ -35,7 +59,7 @@ export class IndraTime {
         return [year, month, Math.floor(day), hour, minute, second, microsecond];
     }
 
-    static timeToJulian(year, month, day, hour, minute, second, microsecond) {
+    static discreteTimeToJulian(year, month, day, hour, minute, second, microsecond) {
         if (year == 0) {
             print("There is no year 0 in the Gregorian calendar.");
             return null;
@@ -77,24 +101,24 @@ export class IndraTime {
 
     // create JS Date object from Julian date
     static julianToDatetime(jd) {
-        let [year, month, day, hour, minute, second, microsecond] = this.julianToTime(jd);
+        let [year, month, day, hour, minute, second, microsecond] = this.julianToDiscreteTime(jd);
         let dtutc = Date.UTC(year, month - 1, day, hour, minute, second, microsecond / 1000);
         return new Date(dtutc);
     }
 
     // create Julian date from JS Date object
     static datetimeToJulian(dt) {
-        return this.timeToJulian(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), dt.getUTCHours(), dt.getUTCMinutes(), dt.getUTCSeconds(), dt.getUTCMilliseconds() * 1000);
+        return this.discreteTimeToJulian(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), dt.getUTCHours(), dt.getUTCMinutes(), dt.getUTCSeconds(), dt.getUTCMilliseconds() * 1000);
     }
 
     static datetimeNowToJulian() {
         //UTC time!
         let dt = new Date();
-        return this.timeToJulian(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), dt.getUTCHours(), dt.getUTCMinutes(), dt.getUTCSeconds(), dt.getUTCMilliseconds() * 1000);
+        return this.discreteTimeToJulian(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate(), dt.getUTCHours(), dt.getUTCMinutes(), dt.getUTCSeconds(), dt.getUTCMilliseconds() * 1000);
     }
 
     static julianToISO(jd) {
-        let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToTime(jd);
+        let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToDiscreteTime(jd);
         return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}.${String(microsecond).padStart(6, '0')}Z`;
     }
 
@@ -122,14 +146,14 @@ export class IndraTime {
         parts = parts[2].split(".");
         let second = parseInt(parts[0]);
         let microsecond = parseInt(parts[1].substring(0, parts[1].length - 1));
-        return this.timeToJulian(year, month, day, hour, minute, second, microsecond);
+        return this.discreteTimeToJulian(year, month, day, hour, minute, second, microsecond);
     }
 
     static julianToStringTime(jd) {
         if (jd < 1721423.5) {  // 1 AD
             if (jd > 1721423.5 - 13000 * 365.25) {
                 // BC
-                let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToTime(jd);
+                let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToDiscreteTime(jd);
                 year = 1 - year;
                 return `${year} BC`;
             } else if (jd > 1721423.5 - 100000 * 365.25) {
@@ -143,7 +167,7 @@ export class IndraTime {
             }
         } else {
             // AD
-            let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToTime(jd);
+            let [year, month, day, hour, minute, second, microsecond] = IndraTime.julianToDiscreteTime(jd);
             if (month === 1 && day === 1 && year < 1900) {
                 return `${year}`;
             } else if (day === 1 && year < 1900) {
@@ -154,7 +178,7 @@ export class IndraTime {
         }
     }
 
-    static stringTime2Julian(timeStr) {
+    static stringTimeToJulian(timeStr) {
         timeStr = timeStr.trim();
         // lower case
         timeStr = timeStr.toLowerCase();
@@ -228,7 +252,7 @@ export class IndraTime {
                 if (day < 1 || day > 31) {
                     day = 1;
                 }
-                jdt = IndraTime.timeToJulian(year, month, day, hour, minute, second, microsecond);
+                jdt = IndraTime.discreteTimeToJulian(year, month, day, hour, minute, second, microsecond);
             }
             results.push(jdt);
         }

@@ -3,6 +3,7 @@ import sys
 import os
 import json
 import math
+import datetime
 
 path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src/")
 print(path)
@@ -21,7 +22,7 @@ def cmp_time(d1: str, d2: str):
     return d1 == d2
 
 
-def do_tests(data, data2):
+def do_tests(data, data2, data3):
     result = {
                 "num_ok": 0,
                 "num_failed": 0,
@@ -29,9 +30,9 @@ def do_tests(data, data2):
                 "errors": []
             };
     for d in data:
-        d["indra_text"] = IndraTime.julian2ISO(d["JulianDate"])
-        d["indra_jd"] = IndraTime.ISO2julian(d["indra_text"])
-        d["indra_human"] = IndraTime.julian_2_string_time(d["JulianDate"])
+        d["indra_text"] = IndraTime.julian_to_ISO(d["JulianDate"])
+        d["indra_jd"] = IndraTime.ISO_to_julian(d["indra_text"])
+        d["indra_human"] = IndraTime.julian_to_string_time(d["JulianDate"])
         res = ""
         it = d["indra_text"]
         if it.endswith(" BC"):
@@ -60,8 +61,8 @@ def do_tests(data, data2):
     for d in data2:
         gr = d["Gregorian year"]
         bp = d["BP year"]
-        jd1 = IndraTime.string_time_2_julian(gr)[0]
-        jd2 = IndraTime.string_time_2_julian(bp)[0]
+        jd1 = IndraTime.string_time_to_julian(gr)[0]
+        jd2 = IndraTime.string_time_to_julian(bp)[0]
         bpf = int(bp.split(" ")[0])
         year = 1950 - bpf
         month = 1
@@ -70,7 +71,7 @@ def do_tests(data, data2):
         minute = 0
         second = 0
         microsecond = 0
-        jd3 = jdt = IndraTime.time_to_julian(
+        jd3 = jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
         if math.isclose(jd1, jd3, abs_tol=0.0001):
@@ -79,6 +80,42 @@ def do_tests(data, data2):
             result["num_failed"] += 1
             err_msg = f"Error: {jd1} != {jd3} at test {d["Event"]}"
             result["errors"].append(err_msg)
+
+    for d in data3:
+        iso = d["date"]
+        fractional_year = d["frac_year"]
+        dt = datetime.datetime.fromisoformat(iso)
+        jd = IndraTime.ISO_to_julian(iso)
+        dt_from_frac = IndraTime.fractional_year_to_datetime(fractional_year)
+        jd_from_frac = IndraTime.fractional_year_to_julian(fractional_year)
+        frac_from_jd = IndraTime.julian_to_fractional_year(jd)
+        frac_from_dt = IndraTime.datetime_to_fractional_year(dt)
+
+        if math.isclose(datetime.datetime.timestamp(dt), datetime.datetime.timestamp(dt_from_frac), abs_tol=0.0001):
+            result["num_ok"] += 1
+        else:
+            result["num_failed"] += 1
+            err_msg = f"Error: {dt} != {dt_from_frac} at test {iso} in fractional_year_to_datetime"
+            result["errors"].append(err_msg)
+        if math.isclose(jd, jd_from_frac, abs_tol=0.0001):
+            result["num_ok"] += 1
+        else:
+            result["num_failed"] += 1
+            err_msg = f"Error: {jd} != {jd_from_frac} at test {iso} in fractional_year_to_julian"
+            result["errors"].append(err_msg)
+        if math.isclose(fractional_year, frac_from_jd, abs_tol=0.0001):
+            result["num_ok"] += 1
+        else:
+            result["num_failed"] += 1
+            err_msg = f"Error: {fractional_year} != {frac_from_jd} at test {iso} in julian_to_fractional_year"
+            result["errors"].append(err_msg)
+        if math.isclose(fractional_year, frac_from_dt, abs_tol=0.0001):
+            result["num_ok"] += 1
+        else:
+            result["num_failed"] += 1
+            err_msg = f"Error: {fractional_year} != {frac_from_dt} at test {iso} in datetime_to_fractional_year"
+            result["errors"].append(err_msg)
+
     return result
 
 # for d in data:
@@ -93,8 +130,10 @@ with open(os.path.join(folder, "normalized_jd_time_data.json")) as f:
     data1 = json.load(f)
 with open(os.path.join(folder, "normalized_bp_time_data.json")) as f:
     data2 = json.load(f)
+with open(os.path.join(folder, "normalized_wp_decimal_time.json")) as f:
+    data3 = json.load(f)
 
-result = do_tests(data1, data2)
+result = do_tests(data1, data2, data3)
 
 print("#$#$# Result #$#$#")
 print(json.dumps(result, indent=2))

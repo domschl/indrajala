@@ -57,7 +57,7 @@ class IndraProcess(IndraProcessCore):
             self.use_hash_cache = config_data["use_hash_cache"]
         else:
             self.use_hash_cache = False
-                
+
         self.bUncommitted = False
         self.commit_timer_thread = None
         self.sessions = {}
@@ -208,7 +208,11 @@ class IndraProcess(IndraProcessCore):
             bool: True if the plain password matches the hashed password, False otherwise.
         """
         hash_key = f"{key}:{plain_password}"
-        if self.use_hash_cache is True and self.hash_cache is not None and hash_key in self.hash_cache:
+        if (
+            self.use_hash_cache is True
+            and self.hash_cache is not None
+            and hash_key in self.hash_cache
+        ):
             self.log.info("Using hash cache")
             if self.hash_cache[hash_key] != hashed_password:
                 return False
@@ -415,7 +419,9 @@ class IndraProcess(IndraProcessCore):
         except sqlite3.Error as e:
             self.log.error(f"Failed to read kv-record: {e}")
             return None
-        self.log.info(f"Read {key} in {time.time() - start_time:.4f} sec at {time.time()}")
+        self.log.info(
+            f"Read {key} in {time.time() - start_time:.4f} sec at {time.time()}"
+        )
         return value
 
     def _verify_kv(self, key: str, value: str):
@@ -595,7 +601,10 @@ class IndraProcess(IndraProcessCore):
             if (
                 len(cur_pwd) > 0
                 and len(cur_pwd[0]) == 2
-                and self.check_password("entity/indrajala/user/admin/password", admin_pw, cur_pwd[0][1]) is True
+                and self.check_password(
+                    "entity/indrajala/user/admin/password", admin_pw, cur_pwd[0][1]
+                )
+                is True
             ):
                 self.log.warning(
                     f"Admin user {admin_user} password is still set to default, please change it!"
@@ -647,10 +656,10 @@ class IndraProcess(IndraProcessCore):
         rev.from_id = self.name
         rev.uuid4 = ev.uuid4
         rev.to_scope = ev.domain
-        rev.time_jd_start = IndraTime.datetime2julian(
+        rev.time_jd_start = IndraTime.datetime_to_julian(
             datetime.datetime.now(tz=datetime.timezone.utc)
         )
-        rev.time_jd_end = IndraTime.datetime2julian(
+        rev.time_jd_end = IndraTime.datetime_to_julian(
             datetime.datetime.now(tz=datetime.timezone.utc)
         )
         rev.data_type = "error/invalid"
@@ -756,8 +765,8 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraTime.datetime2julian(t_start)
-                rev.time_jd_end = IndraTime.datetime2julian(
+                rev.time_jd_start = IndraTime.datetime_to_julian(t_start)
+                rev.time_jd_end = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "vector/tuple/jd/float"
@@ -803,8 +812,8 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraTime.datetime2julian(t_start)
-                rev.time_jd_end = IndraTime.datetime2julian(
+                rev.time_jd_start = IndraTime.datetime_to_julian(t_start)
+                rev.time_jd_end = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 if result and len(result) == 1:
@@ -844,7 +853,9 @@ class IndraProcess(IndraProcessCore):
                 sql_cmd = f"SELECT DISTINCT domain FROM indra_events"
                 post_filter = False
                 if "data_type" in rq_data:
-                    self.log.warning("Inefficient SQL query, uniqueDomain with data_type breaks optimization")
+                    self.log.warning(
+                        "Inefficient SQL query, uniqueDomain with data_type breaks optimization"
+                    )
                     if "domain" in rq_data:
                         d = rq_data["domain"]
                         if "%" in d:
@@ -882,8 +893,8 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraTime.datetime2julian(t_start)
-                rev.time_jd_end = IndraTime.datetime2julian(
+                rev.time_jd_start = IndraTime.datetime_to_julian(t_start)
+                rev.time_jd_end = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "vector/string"
@@ -958,8 +969,8 @@ class IndraProcess(IndraProcessCore):
                 rev.from_id = self.name
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
-                rev.time_jd_start = IndraTime.datetime2julian(t_start)
-                rev.time_jd_end = IndraTime.datetime2julian(
+                rev.time_jd_start = IndraTime.datetime_to_julian(t_start)
+                rev.time_jd_end = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "number/int"
@@ -982,7 +993,7 @@ class IndraProcess(IndraProcessCore):
                     )
                 valid = True
                 inv_err = ""
-                ut_start = IndraTime.datetime2julian(
+                ut_start = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 for rq in rq_data:
@@ -1077,7 +1088,7 @@ class IndraProcess(IndraProcessCore):
                 rev.uuid4 = ev.uuid4
                 rev.to_scope = ev.domain
                 rev.time_jd_start = ut_start
-                rev.time_jd_end = IndraTime.datetime2julian(
+                rev.time_jd_end = IndraTime.datetime_to_julian(
                     datetime.datetime.now(tz=datetime.timezone.utc)
                 )
                 rev.data_type = "number/int"
@@ -1115,10 +1126,10 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraTime.datetime2julian(
+                    rev.time_jd_start = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraTime.datetime2julian(
+                    rev.time_jd_end = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "string"
@@ -1159,10 +1170,10 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraTime.datetime2julian(
+                    rev.time_jd_start = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraTime.datetime2julian(
+                    rev.time_jd_end = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "vector/string"
@@ -1201,10 +1212,10 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraTime.datetime2julian(
+                    rev.time_jd_start = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraTime.datetime2julian(
+                    rev.time_jd_end = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "string"
@@ -1230,10 +1241,10 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraTime.datetime2julian(
+                    rev.time_jd_start = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraTime.datetime2julian(
+                    rev.time_jd_end = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "string"
@@ -1275,10 +1286,10 @@ class IndraProcess(IndraProcessCore):
                     rev.from_id = self.name
                     rev.uuid4 = ev.uuid4
                     rev.to_scope = ev.domain
-                    rev.time_jd_start = IndraTime.datetime2julian(
+                    rev.time_jd_start = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
-                    rev.time_jd_end = IndraTime.datetime2julian(
+                    rev.time_jd_end = IndraTime.datetime_to_julian(
                         datetime.datetime.now(tz=datetime.timezone.utc)
                     )
                     rev.data_type = "string"
