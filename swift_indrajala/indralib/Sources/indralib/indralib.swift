@@ -1,5 +1,6 @@
 import Foundation
 
+/// A class representing an Indra event.
 public class IndraEvent: Codable {
   var domain: String = ""
   var from_id: String = ""
@@ -7,14 +8,16 @@ public class IndraEvent: Codable {
   var parent_uuid4: String = ""
   var seq_no: Int = 0
   var to_scope: String = ""
-  var time_jd_start: Double = Date().timeIntervalSince1970  // XXX Julian date! Wrong!
+  var time_jd_start: Double = 0.0
   var data_type: String = ""
   var data: String = ""
   var auth_hash: String = ""
   var time_jd_end: Double?
 
   init() {
-    // No initialization logic required
+    // get current time (utc):
+    let now = Date()
+    time_jd_start = IndraEvent.dateToJulian(date: now)
   }
 
   public func to_json() -> String? {
@@ -257,6 +260,40 @@ public class IndraEvent: Codable {
       microsecond: microsecond)
   }
 
+  public static func dateToJulian(date: Date) -> Double {
+    // UTC!
+    let calendar = Calendar.current
+    //convert to UTC
+    let date = date.addingTimeInterval(TimeInterval(NSTimeZone.local.secondsFromGMT()))
+
+    let year = calendar.component(.year, from: date)
+    let month = calendar.component(.month, from: date)
+    let day = calendar.component(.day, from: date)
+    let hour = calendar.component(.hour, from: date)
+    let minute = calendar.component(.minute, from: date)
+    let second = calendar.component(.second, from: date)
+    let microsecond = calendar.component(.nanosecond, from: date) / 1000
+    let jd = timeToJulian(
+      year: year, month: month, day: day, hour: hour, minute: minute, second: second,
+      microsecond: microsecond)!
+    return jd
+  }
+
+  public static func julianToDate(jd: Double) -> Date {
+    let (year, month, day, hour, minute, second, microsecond) = julianToTime(jd: jd)
+    var components = DateComponents()
+    components.year = year
+    components.month = month
+    components.day = day
+    components.hour = hour
+    components.minute = minute
+    components.second = second
+    components.nanosecond = microsecond * 1000
+    components.timeZone = TimeZone(abbreviation: "UTC")
+    let calendar = Calendar.current
+    return calendar.date(from: components)!
+  }
+
   public static func julianToStringTime(jd: Double) -> String {
     // Convert Julian date to string time
     // this uses datetime for 1 AD and later,
@@ -281,7 +318,7 @@ public class IndraEvent: Codable {
       }
     } else {
       // AD
-      // dt = IndraTime.julian2datetime(jd)
+      // dt = IndraTime.julian_to_datetime(jd)
       // let (year, month, day, hour, minute, second, microsecond) = julianToTime(jd: jd)
       let (year, month, day, _, _, _, _) = julianToTime(jd: jd)
       if month == 1 && day == 1 && year < 1900 {

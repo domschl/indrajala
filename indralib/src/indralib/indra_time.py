@@ -3,11 +3,19 @@ import math
 
 
 class IndraTime:
+    """Class for converting between different time representations
+
+    The Indra libraries use Julian dates for representing time internally, as they are
+    easy to work with and can represent any date in the distant past or future. This class
+    provides methods for converting between Julian dates and other time representations,
+    such as datetime objects, fractional years, and string times.
+    """
+
     @staticmethod
-    def datetime2julian(dt: datetime.datetime):
+    def datetime_to_julian(dt: datetime.datetime) -> float:
         """Convert datetime to Julian date
 
-        Note: datetime must have a timezone!
+        Note: datetime object must have a timezone!
         Should work over the entire range of datetime, starting with year 1.
 
         :param dt: datetime object
@@ -23,13 +31,35 @@ class IndraTime:
         minute = dt.minute
         second = dt.second
         microsecond = dt.microsecond
-        return IndraTime.time_to_julian(
+        return IndraTime.discrete_time_to_julian(
             year, month, day, hour, minute, second, microsecond
         )
 
     @staticmethod
-    def time_to_julian_gregorian(year, month, day, hour, minute, second, microsecond):
-        # Convert (extended) Gregorian date to Julian date
+    def discrete_time_to_julian_gregorian_extended(
+        year: int,
+        month: int,
+        day: int,
+        hour: int,
+        minute: int,
+        second: int,
+        microsecond: int,
+    ) -> float:
+        """Convert (extended) Gregorian date to Julian date
+
+        Note: this method assumed the validity of the Gregorian calendar for all dates,
+        including those before 1582, which is not historically correct. In most cases,
+        the method `discrete_time_to_julian` should be used instead.
+
+        :param year: year
+        :param month: month (1-12)
+        :param day: day (1-31)
+        :param hour: hour (0-23)
+        :param minute: minute (0-59)
+        :param second: second (0-59)
+        :param microsecond: microsecond (0-999999)
+        :return: float Julian date
+        """
         if month <= 2:
             year -= 1
             month += 12
@@ -40,8 +70,12 @@ class IndraTime:
         return jd
 
     @staticmethod
-    def julian_to_time(jd):
-        """Convert Julian date to discrete time"""
+    def julian_to_discrete_time(jd: float) -> tuple:
+        """Convert Julian date to discrete time tuple
+
+        :param jd: Julian date
+        :return: tuple of (year, month, day, hour, minute, second, microsecond)
+        """
         jd = jd + 0.5
         Z = math.floor(jd)
         F = jd - Z
@@ -79,20 +113,42 @@ class IndraTime:
         )
 
     @staticmethod
-    def time_to_julian(year, month, day, hour, minute, second, microsecond):
-        """Convert discrete time to Julian date, assume Julian calendar for time < 1582 otherwise Gregorian calendar"""
+    def discrete_time_to_julian(
+        year: int,
+        month: int,
+        day: int,
+        hour: int,
+        minute: int,
+        second: int,
+        microsecond: int,
+    ) -> float:
+        """Convert discrete time to Julian date, assuming Julian calendar for time < 1582
+        and Gregorian calendar otherwise
+
+        Notes: The new Gregorian calendar was developed by Aloysius Lilius (about 1510 - 1576) and
+        Christophorus Clavius (1537/38 - 1612). It was established by a papal bull of
+        Pope Gregor XIII that Thursday, October 4th, 1582, should be followed by
+        Friday, October 15th, 1582. This shifted the date of the vernal equinox to its proper date.
+        (`More info <https://www.ptb.de/cms/en/ptb/fachabteilungen/abt4/fb-44/ag-441/realisation-of-legal-time-in-germany/gregorian-calendar.html>`)
+
+
+        :param year: year
+        :param month: month (1-12)
+        :param day: day (1-31)
+        :param hour: hour (0-23)
+        :param minute: minute (0-59)
+        :param second: second (0-59)
+        :param microsecond: microsecond (0-999999)
+        :return: float Julian date
+        """
         # if year == 0:
         #     print(
-        #         f"Bad date at time_to_julian(): {year}-{month:02}-{day:02} {hour:02}:{minute:02}:{second:02}.{microsecond:06}"
+        #         f"Bad date at discrete_time_to_julian(): {year}-{month:02}-{day:02} {hour:02}:{minute:02}:{second:02}.{microsecond:06}"
         #     )
         #     print(
-        #         "There is no year 0 in julian calendar! Use time_to_julian_gregorian for continuous use of extended Gregorian calendar."
+        #         "There is no year 0 in julian calendar! Use discrete_time_to_julian_gregorian_extended for continuous use of extended Gregorian calendar."
         #     )
         # return None
-        # The new calendar was developed by Aloysius Lilius (about 1510 - 1576) and Christophorus Clavius (1537/38 - 1612).
-        # It was established by a papal bull of Pope Gregor XIII that Thursday, October 4th, 1582, should be followed by Friday, October 15th, 1582.
-        # This shifted the date of the vernal equinox to its proper date.
-        # (https://www.ptb.de/cms/en/ptb/fachabteilungen/abt4/fb-44/ag-441/realisation-of-legal-time-in-germany/gregorian-calendar.html)
         if year == 1582 and month == 10 and day > 4 and day < 15:
             print(
                 "The dates 5 - 14 Oct 1582 do not exist in the Gregorian calendar! Use to_time_gd for continuous juse of extended Gregorian calendar."
@@ -138,10 +194,16 @@ class IndraTime:
         return jd
 
     @staticmethod
-    def julian2datetime(jd):
-        """Convert Julian date to datetime"""
-        year, month, day, hour, minute, second, microsecond = IndraTime.julian_to_time(
-            jd
+    def julian_to_datetime(jd: float) -> datetime.datetime:
+        """Convert Julian date to datetime
+
+        Note: datetime is only valid for dates after 1 AD, and before 9999 AD!
+
+        :param jd: Julian date
+        :return: datetime
+        """
+        year, month, day, hour, minute, second, microsecond = (
+            IndraTime.julian_to_discrete_time(jd)
         )
         dt = datetime.datetime(
             year,
@@ -156,8 +218,10 @@ class IndraTime:
         return dt
 
     @staticmethod
-    def fracyear2datetime(fy):
+    def fractional_year_to_datetime(fy: float) -> datetime.datetime:
         """Convert fractional year to datetime
+
+        Note: datetime is only valid for dates after 1 AD, and before 9999 AD!
 
         Scientific decimal time is based on the definition that a “Julian year” is exactly 365.25 days long.
 
@@ -168,9 +232,9 @@ class IndraTime:
 
         This routines uses the Julian year definition, a year of 365.25 days, and is thus not Gregorian.
 
-        See: https://en.wikipedia.org/w/index.php?title=Decimal_time
+        See: `Wikipedia Decimal time <https://en.wikipedia.org/w/index.php?title=Decimal_time>`
 
-        :param fy: fractional year
+        :param fy: fractional year, e.g. 2020.5
         :return: datetime
         """
         year = int(fy)
@@ -182,11 +246,11 @@ class IndraTime:
         return dt
 
     @staticmethod
-    def datetime2fracyear(dt):
+    def datetime_to_fractional_year(dt: datetime.datetime) -> float:
         """
         Convert datetime to fractional year
 
-        This method uses the Julian year definition, a year of 365.25 days, see \ref fracyear2datetime
+        This method uses the Julian year definition, a year of 365.25 days, see fractional_year_to_datetime
         for further discussion.
 
         Note: naive datetime objects are not accepted, as they are ambiguous, please set a timezone.
@@ -204,7 +268,7 @@ class IndraTime:
         ).total_seconds() / (365.25 * 24 * 60 * 60)
 
     @staticmethod
-    def fracyear2julian(fy):
+    def fractional_year_to_julian(fy: float) -> float:
         """Convert fractional year to Julian date
 
         Note: fracyear fy is well defined for dates before 1AD, which are not representable in datetime.
@@ -212,18 +276,53 @@ class IndraTime:
         :param fy: fractional year
         :return: Julian date
         """
-        # Do not use datetime or fracyear2datetime!
-        year = int(fy)
-        rem = fy - year
-        # no datetime!
+        # convert fractional year to Julian date
+        # 1 AD is JD 1721423.5
+        # 1 year is 365.25 days
+        # Use datetime_to_fractional_year() to convert datetime to fractional year for dates after 1 AD
+        if fy < 1:
+            jd = 1721423.5 + (fy - 1) * 365.25
+        else:
+            dt = IndraTime.fractional_year_to_datetime(fy)
+            jd = IndraTime.datetime_to_julian(dt)
+        return jd
 
     @staticmethod
-    def string_time_2_julian(time_str):
+    def julian_to_fractional_year(jd: float) -> float:
+        """Convert Julian date to fractional year
+
+        Note: fracyear fy is well defined for dates before 1AD,
+        which are not representable in datetime.
+
+        :param jd: Julian date
+        :return: fractional year
+        """
+        # convert Julian date to fractional year
+        # 1 AD is JD 1721423.5
+        # 1 year is 365.25 days
+        jd_yr1 = 1721423.5
+        if jd < jd_yr1:
+            fy = 1 + (jd - 1721423.5) / 365.25
+        else:
+            dt = IndraTime.julian_to_datetime(jd)
+            fy = IndraTime.datetime_to_fractional_year(dt)
+        return fy
+
+    @staticmethod
+    def string_time_to_julian(time_str: str) -> float:
         """Convert string time to Julian date
 
         Time can be interval or point in time, interval-separator is " - "
         A point in time is either "YYYY-MM-DD", "YYYY-MM", or "YYYY" or "YYYY BC" or
-        "N kya BP" or "N BP"
+        "N kya BP" or "N BP". Valid prefices are "N kya BP", "N ka BP", "N kyr BP", "N ka",
+        "N kyr", "N kya", "N BP", "N BC", "N AD", "N ma BP", "N ga BP", "N ma", "N ga".
+
+        Examples for points in time: "2020-01-01", "2020-01", "2020", "2020 BC", "1000 BP", "1000 kya BP"
+        Examples for intervals: "2020-01-01 - 2021-01-01", "2020-01 - 2021-01", "2020 - 2021",
+        "2021 BC - 2020 BC", "1001 BP - 1000 BP", "1001 kya BP - 1000 kya BP"
+
+        Note that intervals are <earlier date> - <later date>, and that the earlier date is
+        the first date in the string, which is not always intuitive for BC and BP dates!
 
         :param time_str: string time
         :return: tuple of Julian dates, second is None if point in time
@@ -246,7 +345,7 @@ class IndraTime:
                 minute = 0
                 second = 0
                 microsecond = 0
-                jdt = IndraTime.time_to_julian(
+                jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
             elif pt.endswith(" ga bp") or pt.endswith(" ga"):
@@ -258,7 +357,7 @@ class IndraTime:
                 minute = 0
                 second = 0
                 microsecond = 0
-                jdt = IndraTime.time_to_julian(
+                jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
             elif (
@@ -281,7 +380,7 @@ class IndraTime:
                 minute = 0
                 second = 0
                 microsecond = 0
-                jdt = IndraTime.time_to_julian(
+                jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
             elif pt.endswith(" bp"):
@@ -296,7 +395,7 @@ class IndraTime:
                 minute = 0
                 second = 0
                 microsecond = 0
-                jdt = IndraTime.time_to_julian(
+                jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
             elif pt.endswith(" bc"):
@@ -335,7 +434,7 @@ class IndraTime:
                         raise ValueError(f"Invalid date format: {pt}")
                 else:
                     raise ValueError(f"Invalid date format: {pt}")
-                jdt = IndraTime.time_to_julian(
+                jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
             else:
@@ -369,18 +468,21 @@ class IndraTime:
                         raise ValueError(f"Invalid date format: {pt}")
                 else:
                     raise ValueError(f"Invalid date format: {pt}")
-                jdt = IndraTime.time_to_julian(
+                jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
             results.append(jdt)
         return tuple(results)
 
     @staticmethod
-    def julian_2_string_time(jd):
+    def julian_to_string_time(jd: float) -> str:
         """Convert Julian date to string time
 
-        this uses datetime for 1 AD and later,
-        and BC dates between 1 AD and 13000 BP and BP or kya BP dates for older
+        This converts arbitrary Julian dates to string time. Dates after 13000 BC are formatted as BC, or
+        AD dates (ommitting the 'AD' postfix). Earlier dates are expressed as BP (before present), kya BP,
+        Ma BP, Ga BP, or Ga BP. See `string_time_to_julian` for more information about the supported formats.
+
+        Example output: "2020-01-01", "2020-01", "2020", "2020 BC", "1000 BP", "1000 kya BP"
 
         :param jd: Julian date
         :return: string time
@@ -390,7 +492,7 @@ class IndraTime:
             if jd > 1721423.5 - 13000 * 365.25:
                 # BC
                 year, month, day, hour, minute, second, microsecond = (
-                    IndraTime.julian_to_time(jd)
+                    IndraTime.julian_to_discrete_time(jd)
                 )
                 # bc = int((1721423.5 - jd) / 365.25) + 1
                 year = 1 - year
@@ -398,7 +500,7 @@ class IndraTime:
             elif jd > 1721423.5 - 100000 * 365.25:
                 # BP
                 year, month, day, hour, minute, second, microsecond = (
-                    IndraTime.julian_to_time(jd)
+                    IndraTime.julian_to_discrete_time(jd)
                 )
                 # if year < 0:
                 #    year = year + 1
@@ -408,7 +510,7 @@ class IndraTime:
             elif jd > 1721423.5 - 100000000 * 365.25:
                 # kya BP
                 year, month, day, hour, minute, second, microsecond = (
-                    IndraTime.julian_to_time(jd)
+                    IndraTime.julian_to_discrete_time(jd)
                 )
                 # if year < 0:
                 #     year = year + 1
@@ -418,7 +520,7 @@ class IndraTime:
             elif jd > 1721423.5 - 10000000000 * 365.25:
                 # Ma BP
                 year, month, day, hour, minute, second, microsecond = (
-                    IndraTime.julian_to_time(jd)
+                    IndraTime.julian_to_discrete_time(jd)
                 )
                 # if year < 0:
                 #     year = year + 1
@@ -427,7 +529,7 @@ class IndraTime:
             else:
                 # Ga BP
                 year, month, day, hour, minute, second, microsecond = (
-                    IndraTime.julian_to_time(jd)
+                    IndraTime.julian_to_discrete_time(jd)
                 )
                 # if year < 0:
                 #    year = year + 1
@@ -435,9 +537,9 @@ class IndraTime:
                 return f"{ma} Ga BP"
         else:
             # AD
-            # dt = IndraTime.julian2datetime(jd)
+            # dt = IndraTime.julian_to_datetime(jd)
             year, month, day, hour, minute, second, microsecond = (
-                IndraTime.julian_to_time(jd)
+                IndraTime.julian_to_discrete_time(jd)
             )
             if month == 1 and day == 1 and year < 1900:
                 return str(year)
@@ -447,24 +549,34 @@ class IndraTime:
                 return f"{year}-{month:02}-{day:02}"
 
     @staticmethod
-    def julian2ISO(jd):
+    def julian_to_ISO(jd: float) -> str:
         """Convert Julian date to extended ISO 8601 string
 
-        Note: length of year is not limited to 4 digits, below 1000 AD, shorted and longer years may be used. No leading zeros are used, and year may be negative.
+        Note: length of year is not limited to 4 digits, below 1000 AD, shorted and longer years may be used.
+        No leading zeros for years are used, and year may be negative. Only UTC time is supported.
         """
-        year, month, day, hour, minute, second, microsecond = IndraTime.julian_to_time(
-            jd
+        year, month, day, hour, minute, second, microsecond = (
+            IndraTime.julian_to_discrete_time(jd)
         )
         return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
 
     @staticmethod
-    def ISO2julian(iso):
+    def ISO_to_julian(iso: str) -> float:
         """Convert extended ISO 8601 string to Julian date
+
         Year may be negative and longer or shorter than 4 digits. Only UTC time is supported.
+        See `julian_to_ISO` for more information.
         """
         parts = iso.split("T")
         if len(parts) != 2:
             raise ValueError(f"Invalid ISO 8601 string: {iso}")
+        if parts[1][-1] == "Z":
+            parts[1] = parts[1][:-1]
+        if "+" in parts[1] or "-" in parts[1]:
+            raise ValueError(f"Only UTC time is supported: {iso}")
+        if parts[1][-1] not in "0123456789":
+            raise ValueError(f"Invalid ISO 8601 string: {iso}")
+
         date = parts[0]
         time = parts[1]
         if date[0] == "-":
@@ -480,9 +592,10 @@ class IndraTime:
         minute = int(parts[1])
         parts = parts[2].split(".")
         second = int(parts[0])
-        microsecond = int(parts[1][:-1])
-        # if microsecond == None:
-        #     microsecond = 0
-        return IndraTime.time_to_julian(
+        if len(parts) == 1:
+            microsecond = 0
+        else:
+            microsecond = int(parts[1])
+        return IndraTime.discrete_time_to_julian(
             year, month, day, hour, minute, second, microsecond
         )

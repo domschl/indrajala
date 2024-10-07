@@ -27,7 +27,7 @@ class IndraEvent:
         self.parent_uuid4 = ""
         self.seq_no = 0
         self.to_scope = ""
-        self.time_jd_start = IndraTime.datetime2julian(
+        self.time_jd_start = IndraTime.datetime_to_julian(
             datetime.datetime.now(tz=datetime.timezone.utc)
         )
         self.data_type = ""
@@ -92,9 +92,9 @@ class IndraEvent:
         return False
 
     # @staticmethod
-    # def datetime2julian(dt: datetime.datetime):
-    #     return IndraTime.datetime2julian(dt)
+    # def datetime_to_julian(dt: datetime.datetime):
+    #     return IndraTime.datetime_to_julian(dt)
 
     # @staticmethod
-    # def julian2datetime(jd):
-    #     return IndraTime.julian2datetime(jd)
+    # def julian_to_datetime(jd):
+    #     return IndraTime.julian_to_datetime(jd)

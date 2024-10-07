@@ -92,8 +92,8 @@ class IndraProcess(IndraProcessCore):
         upd = 0
         for d in data:
             utc_iso = d["time_tag"] + ".000"
-            jd = IndraTime.ISO2julian(utc_iso)
-            dt = IndraTime.julian2datetime(jd)
+            jd = IndraTime.ISO_to_julian(utc_iso)
+            dt = IndraTime.julian_to_datetime(jd)
             if self.last_event_time is not None and dt <= self.last_event_time:
                 continue
             ie = IndraEvent()
@@ -143,7 +143,7 @@ class IndraProcess(IndraProcessCore):
                 self.last_event_time = None  # First run, no history
             else:
                 last_event = json.loads(ev.data)
-                self.last_event_time = IndraTime.julian2datetime(
+                self.last_event_time = IndraTime.julian_to_datetime(
                     last_event["time_jd_start"]
                 )
             self.last_event_time_init = True
