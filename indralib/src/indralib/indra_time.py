@@ -1,5 +1,6 @@
 import datetime
 import math
+from typing import Union
 
 
 class IndraTime:
@@ -12,7 +13,7 @@ class IndraTime:
     """
 
     @staticmethod
-    def datetime_to_julian(dt: datetime.datetime) -> float:
+    def datetime_to_julian(dt: datetime.datetime) -> Union[float, None]:
         """Convert datetime to Julian date
 
         Note: datetime object must have a timezone!
@@ -121,7 +122,7 @@ class IndraTime:
         minute: int,
         second: int,
         microsecond: int,
-    ) -> float:
+    ) -> Union[float, None]:
         """Convert discrete time to Julian date, assuming Julian calendar for time < 1582
         and Gregorian calendar otherwise
 
@@ -268,7 +269,7 @@ class IndraTime:
         ).total_seconds() / (365.25 * 24 * 60 * 60)
 
     @staticmethod
-    def fractional_year_to_julian(fy: float) -> float:
+    def fractional_year_to_julian(fy: float) -> Union[float, None]:
         """Convert fractional year to Julian date
 
         Note: fracyear fy is well defined for dates before 1AD, which are not representable in datetime.
@@ -309,7 +310,7 @@ class IndraTime:
         return fy
 
     @staticmethod
-    def string_time_to_julian(time_str: str) -> float:
+    def string_time_to_julian(time_str: str) -> Union[tuple[Union[float, None], Union[float, None]], tuple[Union[float, None]]]:
         """Convert string time to Julian date
 
         Time can be interval or point in time, interval-separator is " - "
@@ -338,7 +339,7 @@ class IndraTime:
             jdt = None
             if pt.endswith(" ma bp") or pt.endswith(" ma"):
                 ma = float(pt.split(" ")[0])
-                year = 1950 - ma * 1000000.0
+                year = int(1950 - ma * 1000000.0)
                 month = 1
                 day = 1
                 hour = 0
@@ -350,7 +351,7 @@ class IndraTime:
                 )
             elif pt.endswith(" ga bp") or pt.endswith(" ga"):
                 ga = float(pt.split(" ")[0])
-                year = 1950 - ga * 1000000000.0
+                year = int(1950 - ga * 1000000000.0)
                 month = 1
                 day = 1
                 hour = 0
@@ -373,7 +374,7 @@ class IndraTime:
                 # 1 kya BP is 1000 years before 1950
                 # 1950 is JD 2433282.5
                 # jdt = 2433282.5 - kya * 1000.0 * 365.25
-                year = 1950 - kya * 1000.0
+                year = int(1950 - kya * 1000.0)
                 month = 1
                 day = 1
                 hour = 0
@@ -561,7 +562,7 @@ class IndraTime:
         return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
 
     @staticmethod
-    def ISO_to_julian(iso: str) -> float:
+    def ISO_to_julian(iso: str) -> Union[float, None]:
         """Convert extended ISO 8601 string to Julian date
 
         Year may be negative and longer or shorter than 4 digits. Only UTC time is supported.
