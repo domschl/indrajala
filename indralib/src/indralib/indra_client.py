@@ -68,7 +68,7 @@ class IndraClient:
             return self.websocket
         self.trx = {}
         self.uri = Profiles.get_uri(self.profile)
-        if self.profile["TLS"] is True:
+        if self.profile is not None and self.profile["TLS"] is True:
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             if self.profile["ca_authority"] is not None:
                 try:
@@ -79,6 +79,8 @@ class IndraClient:
                     )
                     self.websocket = None
                     return None
+        else:
+            ssl_ctx = None
         try:
             self.websocket = await websockets.connect(self.uri, ssl=ssl_ctx)
         except Exception as e:
@@ -94,7 +96,7 @@ class IndraClient:
 
     async def fn_recv_task(self):
         """Receive task"""
-        while True:
+        while self.websocket is not None:
             try:
                 message = await self.websocket.recv()
                 if self.verbose is True:
@@ -134,15 +136,15 @@ class IndraClient:
                 self.log.error(
                     "Indrajala send_event(): connection data not initialized!"
                 )
-            return False
+            return None
         if self.websocket is None:
             self.log.error(
                 "Websocket not initialized, please call init_connection() first!"
             )
-            return False
+            return None
         if isinstance(event, IndraEvent) is False:
             self.log.error("Please provide an IndraEvent object!")
-            return False
+            return None
         if event.domain.startswith("$trx/") is True:
             replyEventFuture = asyncio.futures.Future()
             fRec = {
@@ -226,7 +228,8 @@ class IndraClient:
         ie.domain = "$cmd/subs"
         ie.from_id = "ws/python"
         ie.data_type = "vector/string"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         if isinstance(domains, list) is True:
             ie.data = json.dumps(domains)
         else:
@@ -251,7 +254,8 @@ class IndraClient:
         ie.domain = "$cmd/unsubs"
         ie.from_id = "ws/python"
         ie.data_type = "vector/string"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         if isinstance(domains, list) is True:
             ie.data = json.dumps(domains)
         else:
@@ -278,7 +282,8 @@ class IndraClient:
         ie.domain = "$trx/db/req/history"
         ie.from_id = "ws/python"
         ie.data_type = "historyrequest"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         if self.verbose is True:
             self.log.info(f"Sending: {ie.to_json()}")
@@ -288,6 +293,8 @@ class IndraClient:
         self, domain, start_time=None, end_time=None, sample_size=None, mode="Sample"
     ):
         future = await self.get_history(domain, start_time, end_time, sample_size, mode)
+        if future is None:
+            return None
         hist_result = await future
         return json.loads(hist_result.data)
 
@@ -357,12 +364,15 @@ class IndraClient:
         ie.domain = "$trx/db/req/last"
         ie.from_id = "ws/python"
         ie.data_type = "json/reqlast"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps({"domain": domain})
         return await self.send_event(ie)
 
     async def get_wait_last_event(self, domain):
         future = await self.get_last_event(domain)
+        if future is None:
+            return None
         last_result = await future
         if last_result.data is not None and last_result.data != "":
             return IndraEvent.from_json(last_result.data)
@@ -382,22 +392,25 @@ class IndraClient:
         ie.domain = "$trx/db/req/uniquedomains"
         ie.from_id = "ws/python"
         ie.data_type = "uniquedomainsrequest"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
     async def get_wait_unique_domains(self, domain=None, data_type=None):
         future = await self.get_unique_domains(domain, data_type)
+        if future is None:
+            return None
         domain_result = await future
         return json.loads(domain_result.data)
 
     async def delete_recs(self, domains=None, uuid4s=None):
         if domains is None and uuid4s is None:
             self.log.error("Please provide a domain or uuid4s")
-            return False
+            return None
         if domains is not None and uuid4s is not None:
             self.log.error("Please provide either a domain or uuid4s")
-            return False
+            return None
         cmd = {
             "domains": domains,
             "uuid4s": uuid4s,
@@ -406,12 +419,15 @@ class IndraClient:
         ie.domain = "$trx/db/req/del"
         ie.from_id = "ws/python"
         ie.data_type = "json/reqdel"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
     async def delete_recs_wait(self, domains=None, uuid4s=None):
         future = await self.delete_recs(domains, uuid4s)
+        if future is None:
+            return None
         result = await future
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
@@ -428,12 +444,15 @@ class IndraClient:
         ie.domain = "$trx/db/req/update"
         ie.from_id = "ws/python"
         ie.data_type = "json/requpdate"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
     async def update_recs_wait(self, recs):
         future = await self.update_recs(recs)
+        if future is None:
+            return None
         result = await future
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
@@ -450,12 +469,15 @@ class IndraClient:
         ie.domain = "$trx/kv/req/write"
         ie.from_id = "ws/python"
         ie.data_type = "kvwrite"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
     async def kv_write_wait(self, key, value):
         future = await self.kv_write(key, value)
+        if future is None:
+            return None
         result = await future
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
@@ -471,13 +493,16 @@ class IndraClient:
         ie.domain = "$trx/kv/req/read"
         ie.from_id = "ws/python"
         ie.data_type = "kvread"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         self.log.debug("Sending kv_read")
         return await self.send_event(ie)
 
     async def kv_read_wait(self, key):
         future = await self.kv_read(key)
+        if future is None:
+            return None
         result = await future
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
@@ -493,12 +518,15 @@ class IndraClient:
         ie.domain = "$trx/kv/req/delete"
         ie.from_id = "ws/python"
         ie.data_type = "kvdelete"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
     async def kv_delete_wait(self, key):
         future = await self.kv_delete(key)
+        if future is None:
+            return None
         result = await future
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
@@ -516,7 +544,8 @@ class IndraClient:
         ie.domain = "$trx/kv/req/login"
         ie.from_id = "ws/python"
         ie.data_type = "kvverify"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
@@ -526,11 +555,13 @@ class IndraClient:
         #  @param username: username
         #  @param password: password
         #  @return: auth_hash or None
-        #        
+        #
         #  WARNING: this function is SLOW, since login uses salted hashes on server-side
         #  which require about 200ms to compute
         #  so expect a delay of about 200ms + transport time (about 50ms min.)
         future = await self.login(username, password)
+        if future is None:
+            return None
         result = await future
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
@@ -548,13 +579,16 @@ class IndraClient:
         ie = IndraEvent()
         ie.domain = "$trx/kv/req/logout"
         ie.from_id = "ws/python"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data_type = ""
         ie.data = ""
         return await self.send_event(ie)
 
     async def logout_wait(self):
         future = await self.logout()
+        if future is None:
+            return False
         result = await future
         if result.data_type.startswith("error") is True:
             self.log.error(f"Error: {result.data}")
@@ -573,7 +607,8 @@ class IndraClient:
         ie.domain = f"$log/{level}"
         ie.from_id = f"ws/python/{module_name}"
         ie.data_type = "log"
-        ie.auth_hash = self.session_id
+        if self.session_id is not None:
+            ie.auth_hash = self.session_id
         ie.data = json.dumps(message)
         return await self.send_event(ie)
 

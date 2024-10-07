@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 from queue import Queue
+from typing import Union
 
 from indralib.indra_event import IndraEvent
 
@@ -43,7 +44,7 @@ class IndraModule:
 
     def receiver_worker_thread(self):
         while self.active is True:
-            rec_msg: IndraEvent = self.receive_message()
+            rec_msg: Union[IndraEvent, None] = self.receive_message()
             if rec_msg is not None:
                 self.central_queue.put(rec_msg)
             else:
@@ -63,7 +64,7 @@ class IndraModule:
     def send_message(self, msg: IndraEvent):
         return None
 
-    def receive_message(self) -> IndraEvent:
+    def receive_message(self) -> Union[IndraEvent, None]:
         return None
 
 
