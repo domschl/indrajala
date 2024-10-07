@@ -12,6 +12,7 @@ import datetime
 import requests
 import tomllib as toml
 import uuid
+from typing import Callable
 
 from indralib.indra_event import IndraEvent
 import io
@@ -176,13 +177,16 @@ class IndraDownloader:
         return pd.read_excel(data_bio, skiprows=skiprow_list)
 
     def pandas_excel_worksheet_subset(
-        self, worksheet_name, include_rows, include_columns
+        self, worksheet_name, include_rows: tuple[int, int], include_columns
     ):
         data = self.tf_data
+        lmb: Callable[[object], bool] = lambda x: isinstance(
+            x, int
+        ) and x + 1 not in range(include_rows[0], include_rows[1] + 1)
         return pd.read_excel(
             data,
             sheet_name=worksheet_name,
-            skiprows=lambda x: x + 1 not in range(include_rows[0], include_rows[1] + 1),
+            skiprows=lmb,
             usecols=include_columns,
         )
 
@@ -369,8 +373,9 @@ class IndraDownloader:
                 url_comps = fn.rsplit("=", 1)
             cache_filename = url_comps[-1]
             cache_path = os.path.join(self.cache_dir, cache_filename)
+        data = None
         if self.use_cache is True:
-            if os.path.exists(cache_path):
+            if cache_path is not None and os.path.exists(cache_path):
                 dl = False
                 try:
                     with open(cache_path, "rb") as f:
@@ -380,7 +385,7 @@ class IndraDownloader:
                     self.log.error(f"Failed to read cache {cache_path} for {url}: {e}")
                 if dl is True:
                     self.log.info(f"Read {url} from cache at {cache_path}")
-                    if len(data) > 0:
+                    if data is not None and len(data) > 0:
                         data = self.transform(data, transforms)
                         return data
                     else:
@@ -410,7 +415,7 @@ class IndraDownloader:
                 self.log.error(f"Failed to download from {url}: {e}")
                 return None
         self.log.info(f"Download from {url}: OK.")
-        if self.use_cache is True:
+        if self.use_cache is True and cache_path is not None:
             try:
                 with open(cache_path, "wb") as f:
                     f.write(data)
