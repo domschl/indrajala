@@ -166,6 +166,12 @@ class IndraProcess(IndraProcessCore):
                         "data_type": "number/float/rain/unit",
                         "context": "climate",
                     },
+                    "magnetic_field_strength": {
+                        "measurement": "mag_field_total",
+                        "data_type": "number/float/magnetic_field/muT",
+                        "context": "magnetic_field",
+                        "renormalization_factor": 1.0,
+                    },
                 },
             },
             "omu/earthstate2/MAG-1/#": {
@@ -208,6 +214,7 @@ class IndraProcess(IndraProcessCore):
             o_location = None
             o_measurement = None
             o_data_type = None
+            factor = 1.0
             found = False
             for cl in cont_locs:
                 if IndraEvent.mqcmp(topic, cl):
@@ -247,7 +254,8 @@ class IndraProcess(IndraProcessCore):
                     f"$event/measurement/{o_measurement}/{o_context}/{o_location}"
                 )
                 ev.from_id = f"{self.name}/{topic}"
-                ev.data_type = o_data_type
+                if o_data_type is not None:
+                    ev.data_type = o_data_type
                 ev.to_scope = "world"
 
                 try:
