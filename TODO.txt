@@ -1,3 +1,4 @@
 - <https://uhoreg.gitlab.io/matrix-tutorial/index.html>
 - ollama vs llama
 - REST
+- getKpindex.py integ.
