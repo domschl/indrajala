@@ -2,3 +2,5 @@
 - ollama vs llama
 - REST
 - getKpindex.py integ.
+- Bluesky atproto
+- Labplot
