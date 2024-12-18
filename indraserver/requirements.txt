@@ -15,3 +15,5 @@ jupyterlab
 matplotlib
 openpyxl
 sphinx
+tomlq
+
