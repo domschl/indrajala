@@ -12,3 +12,5 @@ data_directory="${data_directory/#\~/$HOME}"
 echo "Using data_directory: >$data_directory<"
 
 rsync -avh --exclude "deploy_web.sh" ./ $data_directory/web/ --delete
+
+echo "Check if npm install in plot/scripts is up-to-date"
