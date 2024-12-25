@@ -133,13 +133,13 @@ class IndraProcess(IndraProcessCore):
             return web.FileResponse(os.path.join(self.web_root, "index.html"))
 
     def add_api_routes(self):
-        self.app.add_routes([web.get("/api/v1", self.api_handler)])
-        self.app.add_routes([web.post("/api/v1", self.api_handler)])
+        self.app.add_routes([web.get("/api/v1/version", self.api_handler)])
+        self.app.add_routes([web.post("/api/v1/indraevent", self.api_handler)])
 
     async def api_handler(self, request):
         if request.method == "GET":
             self.log.debug(f"GET: {request.path}")
-            if request.path == "/api/v1":
+            if request.path == "/api/v1/version":
                 return web.json_response(
                     {"status": "ok", "message": "IndraServer API v1"}
                 )
@@ -149,7 +149,7 @@ class IndraProcess(IndraProcessCore):
                 )
         elif request.method == "POST":
             self.log.debug(f"POST: {request.path}")
-            if request.path == "/api/v1":
+            if request.path == "/api/v1/indraevent":
                 try:
                     data = await request.json()
                     if "event" in data:
