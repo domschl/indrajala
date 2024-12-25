@@ -63,6 +63,7 @@ class IndraProcess(IndraProcessCore):
         self.app.add_routes([web.get("/", self.web_root_handler)])
         self.app.add_routes([web.get("/index.html", self.web_root_handler)])
         self.app.add_routes([web.get("/favicon.ico", self.web_root_handler)])
+        self.add_api_routes()
         for static_app in self.static_apps:
             prefix = static_app[0]
             path = static_app[1]
@@ -130,6 +131,49 @@ class IndraProcess(IndraProcessCore):
             return web.FileResponse(os.path.join(self.web_root, "favicon.ico"))
         else:
             return web.FileResponse(os.path.join(self.web_root, "index.html"))
+
+    def add_api_routes(self):
+        self.app.add_routes([web.get("/api/v1", self.api_handler)])
+        self.app.add_routes([web.post("/api/v1", self.api_handler)])
+
+    async def api_handler(self, request):
+        if request.method == "GET":
+            self.log.debug(f"GET: {request.path}")
+            if request.path == "/api/v1":
+                return web.json_response(
+                    {"status": "ok", "message": "IndraServer API v1"}
+                )
+            else:
+                return web.json_response(
+                    {"status": "error", "message": "Invalid API path"}
+                )
+        elif request.method == "POST":
+            self.log.debug(f"POST: {request.path}")
+            if request.path == "/api/v1":
+                try:
+                    data = await request.json()
+                    if "event" in data:
+                        ev = IndraEvent.from_json(data["event"])
+                        self.event_send(ev)
+                        return web.json_response(
+                            {"status": "ok", "message": "Event sent"}
+                        )
+                    else:
+                        return web.json_response(
+                            {"status": "error", "message": "No event in POST data"}
+                        )
+                except Exception as e:
+                    return web.json_response(
+                        {"status": "error", "message": f"POST error: {e}"}
+                    )
+            else:
+                return web.json_response(
+                    {"status": "error", "message": "Invalid API path"}
+                )
+        else:
+            return web.json_response(
+                {"status": "error", "message": "Invalid HTTP method"}
+            )
 
     async def websocket_handler(self, request):
         ws = web.WebSocketResponse()
