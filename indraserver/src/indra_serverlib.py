@@ -286,8 +286,9 @@ class IndraProcessCore:
                 except queue.Empty:
                     ev = None
             if ev is not None:
+                self.log.info(f"EVENT {ev.domain} at {self.name}")
                 if self.state_cache is not None:
-                    self._update_state_cache(self, ev)
+                    self._update_state_cache(ev)
                 if ev.domain.startswith("$self") is False:
                     self.log.debug(f"Received: {ev.domain}")
                 if ev.domain == "$cmd/quit":
@@ -322,7 +323,7 @@ class IndraProcessCore:
         bActive = True
         # self.log.info("Async handler started")
         await self.async_init()
-        while bActive:
+        while bActive is True:
             if self.send_queue.empty() is False:
                 ev = self.send_queue.get()
                 if ev.domain == "$cmd/quit":
@@ -331,6 +332,8 @@ class IndraProcessCore:
                     self.log.info("Terminating async handler")
                     return
                 else:
+                    if self.state_cache is not None:
+                        self._update_state_cache(ev)
                     await self.async_outbound(ev)
             else:
                 await asyncio.sleep(0.05)
@@ -614,14 +617,16 @@ class IndraProcessCore:
         self.state_cache = {}
         self.state_cache_subscriptions = subscriptions
         for sub in subscriptions:
+            self.log.info(f"State_cache subscription {sub}")
             self.subscribe(sub)
 
     def _update_state_cache(self, ev):
         for sub in self.state_cache_subscriptions:
             if IndraEvent.mqcmp(ev.domain, sub) is True:
-                self.state_cache[ev.domain] = ev
-                self.log.debug(f"State cache updated: {ev.domain}")
+                self.state_cache[ev.domain] = ev.__dict__
+                self.log.info(f"State cache updated: {ev.domain}")
                 return
+        self.log.info(f"State cache NOT updated: {ev.domain}")
 
     def get_state_cache(self, domain):
         if domain in self.state_cache:

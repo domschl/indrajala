@@ -135,6 +135,9 @@ class IndraProcess(IndraProcessCore):
     def add_api_routes(self):
         self.app.add_routes([web.get("/api/v1/version", self.api_handler)])
         self.app.add_routes([web.get("/api/v1/state", self.api_handler)])
+        self.app.add_routes([web.get("/api/v1/state_element", self.api_handler)])
+        self.app.add_routes([web.get("/api/v1/set", self.api_handler)])
+        
         self.app.add_routes([web.post("/api/v1/indraevent", self.api_handler)])
 
     async def api_handler(self, request):
@@ -142,23 +145,110 @@ class IndraProcess(IndraProcessCore):
             self.log.debug(f"GET: {request.path}")
             if request.path == "/api/v1/version":
                 return web.json_response(
-                    {"status": "ok", "message": "IndraServer API v1"}
+                    {"status": "ok", "message": "IndraServer API v1"},
+                    status=200
                 )
             elif request.path == "/api/v1/state":
                 domain = request.query.get("domain", None)
+                if domain is None:
+                    return web.json_response(
+                        {"status": "error", "message": "Parameter `domain` required"},
+                        status=400
+                    )
                 if self.state_cache is not None:
                     ev = self.get_state_cache(domain)
                     if ev is not None:
                         return web.json_response(
-                            {"status": "ok", "message": "State found", "event": ev}
+                            {"status": "ok", "message": "State found", "event": ev},
+                            status=200
                         )
                     else:
                         return web.json_response(
-                            {"status": "ok", "message": "State not found"}
+                            {"status": "error", "message": f"State `{domain}` not found"},
+                            status=404
                         )
+                else:
+                    return web.json_response(
+                        {"status": "error", "message": "Server does not export state information, `state_cache` not configured."},
+                        status=503
+                    )                    
+            elif request.path == "/api/v1/state_element":
+                domain = request.query.get("domain", None)
+                element = request.query.get("element", None)
+                if domain is None or element is None:
+                    return web.json_response(
+                        {"status": "error", "message": "Parameters `domain` and `element` are required"},
+                        status=400
+                    )
+                if self.state_cache is not None:
+                    ev = self.get_state_cache(domain)
+                    if ev is not None:
+                        if element in ev:
+                            data = ev[element]
+                            return web.json_response(
+                                {"status": "ok", "message": f"Element {element} found", "content": data},
+                                status=200
+                            )
+                        else:
+                            return web.json_response(
+                                {"status": "error", "message": f"No element `{element}` key in event data"},
+                                status=422
+                            )
+                    else:
+                        return web.json_response(
+                            {"status": "error", "message": "State not found"},
+                            status=404
+                        )
+                else:
+                    return web.json_response(
+                        {"status": "error", "message": "Server does not export state information, `state_cache` not configured."},
+                        status=503
+                    )
+            elif request.path == "api/v1/set":
+                domain = request.query.get("domain", None)
+                data = request.query.get("data", None)
+                if domain is None or data is None:
+                    return web.json_response(
+                        {"status": "error", "message": "Parameters `domain` and `data` are required"},
+                        status=400
+                    )
+                world = False
+                for w in self.world_writable_domains:
+                    if domain.startswith(w):
+                        world = True
+                        break
+                if world is False:
+                    return web.json_response(
+                        {"status": "error", "message": "Parameters `domain` is not within world_writable_domains on this server, access denied without authentication"},
+                        status=401
+                    )
+                ev = IndraEvent()
+                ev.domain = domain
+                ev.data = data
+                try:
+                    for k in request.query:
+                        if k not in ev:
+                            return web.json_response(
+                                {"status": "error", "message": f"Parameter `{k}` is not a valid IndraEvent member"},
+                                status=400
+                            )
+                    for k in request.query:
+                        ev[k] = request.query[k]
+                except Exception as e:
+                    return web.json_response(
+                        {"status": "error", "message": f"Parameter parsing failure: {e}"},
+                        status=400
+                    )                    
+                if 'from_id' not in request.query:
+                    ev['from_id'] = self.name
+                if 'data_type' not in request.query:
+                    ev['data_type'] = 'number/float'  # XXX stupid assumption
+                self.log.info(f"Reveived REST event for {domain}")
+                self.event_send(ev)
             else:
                 return web.json_response(
-                    {"status": "error", "message": "Invalid API path"}
+                    {"status": "error", "message": "Invalid API path"},
+                    status=404
                 )
         elif request.method == "POST":
             self.log.debug(f"POST: {request.path}")
@@ -170,23 +260,28 @@ class IndraProcess(IndraProcessCore):
                         # ev = IndraEvent.from_json(data["event"])
                         # self.event_send(ev)
                         return web.json_response(
-                            {"status": "ok", "message": "Event sent"}
+                            {"status": "ok", "message": "Event sent"},
+                            status=200
                         )
                     else:
                         return web.json_response(
-                            {"status": "error", "message": "No event in POST data"}
+                            {"status": "error", "message": "No `event` key in POST data"},
+                            status=422
                         )
                 except Exception as e:
                     return web.json_response(
-                        {"status": "error", "message": f"POST error: {e}"}
+                        {"status": "error", "message": f"POST error: {e}"},
+                        status=400
                     )
             else:
                 return web.json_response(
-                    {"status": "error", "message": "Invalid API path"}
+                    {"status": "error", "message": "Invalid API path"},
+                    status=404
                 )
         else:
             return web.json_response(
-                {"status": "error", "message": "Invalid HTTP method"}
+                {"status": "error", "message": "Invalid HTTP method"},
+                status=405
             )
 
     async def websocket_handler(self, request):
@@ -252,6 +347,7 @@ class IndraProcess(IndraProcessCore):
                             continue
                     self.ws_clients[client_address]["old_from_id"] = ev.from_id
                     ev.from_id = f"{self.name}/ws/{client_address}"
+                    ev.auth_hash = ""  # Prevent hash from bleeding out
                     self.ws_clients[client_address]["from_id"] = ev.from_id
                     self.log.info(
                         f"Received (upd.): {client_address}: {ev.from_id}->{ev.domain}"
