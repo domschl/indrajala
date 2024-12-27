@@ -48,6 +48,10 @@ class IndraEvent:
         """Convert to JSON string"""
         return json.dumps(self.__dict__)
 
+    def as_dict(self):
+        """Return (jsonable) dict of object"""
+        return self.__dict__
+
     @staticmethod
     def from_json(json_str):
         """Convert from JSON string"""
