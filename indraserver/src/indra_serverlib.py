@@ -144,6 +144,12 @@ class IndraProcessCore:
         for sub in config_data["subscriptions"]:
             self.subscribe(sub)
 
+        if "state_cache" in config_data:
+            self._init_state_cache(self, config_data["state_cache"])
+        else:
+            self.state_cache = None
+            self.state_cache_subscriptions = None
+
         if transport == "zmq":
             self.log.info(
                 f"ZMQ sockets connected: Event: {self.zmq_event_socket_uri}, Send: {self.zmq_send_socket_uri}"
@@ -280,6 +286,8 @@ class IndraProcessCore:
                 except queue.Empty:
                     ev = None
             if ev is not None:
+                if self.state_cache is not None:
+                    self._update_state_cache(self, ev)
                 if ev.domain.startswith("$self") is False:
                     self.log.debug(f"Received: {ev.domain}")
                 if ev.domain == "$cmd/quit":
@@ -601,3 +609,22 @@ class IndraProcessCore:
                 time.sleep(resolution_sec)
 
         self.log.info(f"Timer scheduler of job {job_name} terminated")
+
+def _init_state_cache(self, subscriptions):
+    self.state_cache = {}
+    self.state_cache_subscriptions = subscriptions
+    for sub in subscriptions:
+        self.subscribe(sub)
+
+def _update_state_cache(self, ev):
+    for sub in self.state_cache_subscriptions:
+        if IndraEvent.mqcmp(ev.domain, sub) is True:
+            self.state_cache[ev.domain] = ev
+            self.log.debug(f"State cache updated: {ev.domain}")
+            return
+
+def get_state_cache(self, domain):
+    if domain in self.state_cache:
+        return self.state_cache[domain]
+    else:
+        return None

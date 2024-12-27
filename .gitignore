@@ -25,6 +25,7 @@ portal_apps.json
 node_modules/
 package-lock.json
 indra_creds.json
+indra_cp_config.py
 data/
 
 # At some point, produced documentation should be checked in.

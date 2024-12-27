@@ -134,6 +134,7 @@ class IndraProcess(IndraProcessCore):
 
     def add_api_routes(self):
         self.app.add_routes([web.get("/api/v1/version", self.api_handler)])
+        self.app.add_routes([web.get("/api/v1/state", self.api_handler)])
         self.app.add_routes([web.post("/api/v1/indraevent", self.api_handler)])
 
     async def api_handler(self, request):
@@ -143,6 +144,18 @@ class IndraProcess(IndraProcessCore):
                 return web.json_response(
                     {"status": "ok", "message": "IndraServer API v1"}
                 )
+            elif request.path == "/api/v1/state":
+                domain = request.query.get("domain", None)
+                if self.state_cache is not None:
+                    ev = self.get_state_cache(domain)
+                    if ev is not None:
+                        return web.json_response(
+                            {"status": "ok", "message": "State found", "event": ev}
+                        )
+                    else:
+                        return web.json_response(
+                            {"status": "ok", "message": "State not found"}
+                        )
             else:
                 return web.json_response(
                     {"status": "error", "message": "Invalid API path"}
@@ -153,8 +166,9 @@ class IndraProcess(IndraProcessCore):
                 try:
                     data = await request.json()
                     if "event" in data:
-                        ev = IndraEvent.from_json(data["event"])
-                        self.event_send(ev)
+                        self.log.info(f"API POST: {data['event']}")
+                        # ev = IndraEvent.from_json(data["event"])
+                        # self.event_send(ev)
                         return web.json_response(
                             {"status": "ok", "message": "Event sent"}
                         )
