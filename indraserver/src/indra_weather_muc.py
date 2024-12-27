@@ -1,14 +1,13 @@
 import time
-import threading
-import pandas as pd
-import bs4
 import urllib.request
+import pandas as pd  # type: ignore
+import beautifulsoup as bs4  # type: ignore
 from datetime import datetime
 import zoneinfo
 import json
 
-from indralib.indra_event import IndraEvent
-from indralib.indra_time import IndraTime
+from indralib.indra_event import IndraEvent  # type: ignore
+from indralib.indra_time import IndraTime  # type: ignore
 
 from indra_serverlib import IndraProcessCore
 

@@ -1,7 +1,6 @@
 import asyncio
 import ssl
-import aiohttp
-from aiohttp import web
+from aiohttp import web  # type: ignore
 import json
 import os
 import time
