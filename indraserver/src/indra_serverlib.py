@@ -1,12 +1,12 @@
-import multiprocessing as mp
 import queue
-import os
 import json
 import threading
 import time
 import signal
 import asyncio
-import zmq  # pyzmq
+# (comes from pyzmq:)
+import zmq  # type:ignore
+import typing
 
 try:
     import tomllib
@@ -19,11 +19,11 @@ from indralib.indra_event import IndraEvent  # type: ignore
 
 class IndraServerLog:
     def __init__(
-        self: str,
-        name,
+        self,
+        name: str,
         transport: str,
         loglevel: str,
-        event_queue: queue.Queue = None,
+            event_queue: typing.Optional[queue.Queue]=None,
         socket=None,
     ):
         self.loglevels = ["none", "error", "warning", "info", "debug"]
@@ -145,7 +145,7 @@ class IndraProcessCore:
             self.subscribe(sub)
 
         if "state_cache" in config_data:
-            self._init_state_cache(self, config_data["state_cache"])
+            self._init_state_cache(config_data["state_cache"])
         else:
             self.state_cache = None
             self.state_cache_subscriptions = None
@@ -610,21 +610,21 @@ class IndraProcessCore:
 
         self.log.info(f"Timer scheduler of job {job_name} terminated")
 
-def _init_state_cache(self, subscriptions):
-    self.state_cache = {}
-    self.state_cache_subscriptions = subscriptions
-    for sub in subscriptions:
-        self.subscribe(sub)
+    def _init_state_cache(self, subscriptions):
+        self.state_cache = {}
+        self.state_cache_subscriptions = subscriptions
+        for sub in subscriptions:
+            self.subscribe(sub)
 
-def _update_state_cache(self, ev):
-    for sub in self.state_cache_subscriptions:
-        if IndraEvent.mqcmp(ev.domain, sub) is True:
-            self.state_cache[ev.domain] = ev
-            self.log.debug(f"State cache updated: {ev.domain}")
-            return
+    def _update_state_cache(self, ev):
+        for sub in self.state_cache_subscriptions:
+            if IndraEvent.mqcmp(ev.domain, sub) is True:
+                self.state_cache[ev.domain] = ev
+                self.log.debug(f"State cache updated: {ev.domain}")
+                return
 
-def get_state_cache(self, domain):
-    if domain in self.state_cache:
-        return self.state_cache[domain]
-    else:
-        return None
+    def get_state_cache(self, domain):
+        if domain in self.state_cache:
+            return self.state_cache[domain]
+        else:
+            return None

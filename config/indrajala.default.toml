@@ -34,6 +34,7 @@
     name = "indra_mqtt.1"
     loglevel = "debug"
     subscriptions = ["mqtt/#"]
+    outbound_prefix = "inja"
     mqtt_server = "my-mqtt-server"
     mqtt_port = 1883
     mqtt_keepalive = 60
@@ -66,6 +67,7 @@
     public_key = "{{data_directory}}/certs/my-cert.pem"
     web_root = "{{data_directory}}/web"
     static_apps = [["/admin", "{{data_directory}}/web/admin"], ["/chat", "{{data_directory}}/web/chat"]]
+    state_cache = ["$event/measurement/#"]
 
 [[indra_kosync]]
     active = false
