@@ -286,7 +286,7 @@ class IndraProcessCore:
                 except queue.Empty:
                     ev = None
             if ev is not None:
-                self.log.info(f"EVENT {ev.domain} at {self.name}")
+                # self.log.info(f"EVENT {ev.domain} at {self.name}")
                 if self.state_cache is not None:
                     self._update_state_cache(ev)
                 if ev.domain.startswith("$self") is False:
@@ -624,9 +624,9 @@ class IndraProcessCore:
         for sub in self.state_cache_subscriptions:
             if IndraEvent.mqcmp(ev.domain, sub) is True:
                 self.state_cache[ev.domain] = ev.__dict__
-                self.log.info(f"State cache updated: {ev.domain}")
+                # self.log.info(f"State cache updated: {ev.domain}")
                 return
-        self.log.info(f"State cache NOT updated: {ev.domain}")
+        # self.log.info(f"State cache NOT updated: {ev.domain}")
 
     def get_state_cache(self, domain):
         if domain in self.state_cache:

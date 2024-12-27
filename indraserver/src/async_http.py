@@ -64,6 +64,7 @@ class IndraProcess(IndraProcessCore):
         self.app.add_routes([web.get("/index.html", self.web_root_handler)])
         self.app.add_routes([web.get("/favicon.ico", self.web_root_handler)])
         self.add_api_routes()
+        self.world_writeable_domains = self.config_data["world_writeable_domains"]
         for static_app in self.static_apps:
             prefix = static_app[0]
             path = static_app[1]
@@ -204,7 +205,7 @@ class IndraProcess(IndraProcessCore):
                         {"status": "error", "message": "Server does not export state information, `state_cache` not configured."},
                         status=503
                     )
-            elif request.path == "api/v1/set":
+            elif request.path == "/api/v1/set":
                 domain = request.query.get("domain", None)
                 data = request.query.get("data", None)
                 if domain is None or data is None:
@@ -213,13 +214,13 @@ class IndraProcess(IndraProcessCore):
                         status=400
                     )
                 world = False
-                for w in self.world_writable_domains:
+                for w in self.world_writeable_domains:
                     if domain.startswith(w):
                         world = True
                         break
                 if world is False:
                     return web.json_response(
-                        {"status": "error", "message": "Parameters `domain` is not within world_writable_domains on this server, access denied without authentication"},
+                        {"status": "error", "message": "Parameters `domain` is not within world_writeable_domains on this server, access denied without authentication"},
                         status=401
                     )
                 ev = IndraEvent()
@@ -227,22 +228,26 @@ class IndraProcess(IndraProcessCore):
                 ev.data = data
                 try:
                     for k in request.query:
-                        if k not in ev:
+                        if k not in ev.__dict__:
                             return web.json_response(
                                 {"status": "error", "message": f"Parameter `{k}` is not a valid IndraEvent member"},
                                 status=400
                             )
                     for k in request.query:
-                        ev[k] = request.query[k]
+                        ev.__dict__[k] = request.query[k]
                 except Exception as e:
                     return web.json_response(
                         {"status": "error", "message": f"Parameter parsing failure: {e}"},
                         status=400
                     )                    
                 if 'from_id' not in request.query:
-                    ev['from_id'] = self.name
+                    ev.__dict__['from_id'] = self.name
                 if 'data_type' not in request.query:
-                    ev['data_type'] = 'number/float'  # XXX stupid assumption
+                    ev.__dict__['data_type'] = 'number/float'  # XXX stupid assumption
+                return web.json_response(
+                    {"status": "ok", "message": f"Forwarded to {domain}"},
+                    status=200
+                )                    
                 self.log.info(f"Reveived REST event for {domain}")
                 self.event_send(ev)
             else:
@@ -389,7 +394,7 @@ class IndraProcess(IndraProcessCore):
         return ws
 
     async def async_outbound(self, ev: IndraEvent):
-        self.log.info(f"WS outbound (pre-route): {ev.domain} from {ev.from_id}")
+        self.log.debug(f"WS outbound (pre-route): {ev.domain} from {ev.from_id}")
         for client_address in self.ws_clients:
             ws = self.ws_clients[client_address]["ws"]
             route = False
