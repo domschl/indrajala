@@ -68,6 +68,7 @@
     web_root = "{{data_directory}}/web"
     static_apps = [["/admin", "{{data_directory}}/web/admin"], ["/chat", "{{data_directory}}/web/chat"]]
     state_cache = ["$event/measurement/#"]
+    world_writeable_domains = ["$event/measurement"]
 
 [[indra_kosync]]
     active = false
