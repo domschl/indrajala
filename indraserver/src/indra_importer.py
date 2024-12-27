@@ -1,10 +1,8 @@
-import logging
 import time
 import os
 
 from indralib.indra_event import IndraEvent  # type: ignore
-from indralib.indra_time import IndraTime  # type: ignore
-from indralib.indra_downloader import IndraDownloader
+from indralib.indra_downloader import IndraDownloader  # type: ignore
 
 from indra_serverlib import IndraProcessCore
 

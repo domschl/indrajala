@@ -339,7 +339,7 @@ class IndraProcessCore:
         """This function is called in async mode just before shutdown"""
         pass
 
-    async def async_outbound(self):
+    async def async_outbound(self, ev: IndraEvent):
         """This function receives an IndraEvent object in async mode that is to be transmitted outbound"""
         self.log.error(f"Process {self.name} doesn't override async_outbound function!")
 

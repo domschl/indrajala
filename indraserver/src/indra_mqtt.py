@@ -1,4 +1,4 @@
-import paho.mqtt.client as mq
+import paho.mqtt.client as mq  # type: ignore
 import json
 
 from indralib.indra_event import IndraEvent  # type: ignore
@@ -206,8 +206,8 @@ class IndraProcess(IndraProcessCore):
             if len(ti) != 5:
                 self.log.error(f"Internal parser assumption failure on {topic}")
                 return
-            device = ti[1]  # hostname
-            sensor = ti[2]  # sensor instance name
+            # device = ti[1]  # hostname
+            # sensor = ti[2]  # sensor instance name
             measurement = ti[4]  # measurement name
             # domain_wildcard = f"omu/+/+/sensor/{measurement}"
             o_context = None
@@ -264,7 +264,7 @@ class IndraProcess(IndraProcessCore):
                     else:
                         ev.data = json.dumps(float(message))
                 except Exception as e:
-                    self.log.warning(f"Failed to convert data {message} for {topic}")
+                    self.log.warning(f"Failed to convert data {message} for {topic}: {e}")
                     return
                 self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
                 self.event_send(ev)
@@ -313,7 +313,7 @@ class IndraProcess(IndraProcessCore):
                 try:
                     ev.data = json.dumps(float(message))
                 except Exception as e:
-                    self.log.warning(f"Failed to convert data {message} for {topic}")
+                    self.log.warning(f"Failed to convert data {message} for {topic}: {e}")
                     return
                 self.log.debug(f"Importing {ev.domain}, {ev.data_type}, {ev.data}")
                 self.event_send(ev)

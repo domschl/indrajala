@@ -14,7 +14,8 @@ import threading
 import json
 import time
 import signal
-import zmq
+# from pyzmq:
+import zmq  # type: ignore
 import shlex
 import sys
 
@@ -23,7 +24,7 @@ try:
 except ModuleNotFoundError:  # Python 3.10 and older:
     import tomli as tomllib  # type: ignore
 
-from indralib.indra_event import IndraEvent
+from indralib.indra_event import IndraEvent  # type: ignore
 
 INDRAJALA_VERSION = "0.1.0"
 
@@ -72,7 +73,7 @@ def main_runner(main_logger, event_queue, modules):
                     unprocessed_items = event_queue.qsize()
                 except Exception as e:
                     main_logger.error(
-                        "Your current platform doesn't support `qsize()` for multiprocessing queues, perf statistics will be invalid!"
+                        f"Your current platform doesn't support `qsize()` for multiprocessing queues, perf statistics will be invalid! {e}"
                     )
                     qsize_implemented = False
             else:

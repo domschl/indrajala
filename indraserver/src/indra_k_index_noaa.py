@@ -1,14 +1,9 @@
 import time
-import threading
-from datetime import datetime
-import zoneinfo
 import json
 import urllib.request
-import yaml
-import os
 
-from indralib.indra_event import IndraEvent
-from indralib.indra_time import IndraTime
+from indralib.indra_event import IndraEvent  # type: ignore
+from indralib.indra_time import IndraTime  # type: ignore
 
 from indra_serverlib import IndraProcessCore
 
@@ -41,7 +36,7 @@ class IndraProcess(IndraProcessCore):
             self.run_condition = config_data["run_condition"]
             self.log.warning(f"Using custom run_condition {self.run_condition}")
         else:
-            self.run_condition = f"periodic@30m"
+            self.run_condition = "periodic@30m"
         if (
             "abort_error_count" in config_data
             and config_data["abort_error_count"] != "default"

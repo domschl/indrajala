@@ -1,13 +1,12 @@
 import time
 import json
-from datetime import datetime
 from urllib.request import urlopen
-from io import StringIO, BytesIO
+from io import BytesIO
 from zipfile import ZipFile
 import xml.etree.cElementTree as et
 
-from indralib.indra_event import IndraEvent
-from indralib.indra_time import IndraTime
+from indralib.indra_event import IndraEvent  # type: ignore
+from indralib.indra_time import IndraTime  # type: ignore
 
 from indra_serverlib import IndraProcessCore
 
@@ -129,13 +128,13 @@ class IndraProcess(IndraProcessCore):
     # https://opendata.dwd.de/weather/lib/MetElementDefinition.xml
 
     def _xml_dwd_extract(self, fc):
-        l = None
+        lnk = None
         dwd_fc = {}
         for k in fc.keys():
-            if l is None:
-                l = len(fc[k])
+            if lnk is None:
+                lnk = len(fc[k])
             else:
-                if len(fc[k]) != l:
+                if len(fc[k]) != lnk:
                     print(f"Bad len: {k}")
                     return None
             if k == "timesteps":

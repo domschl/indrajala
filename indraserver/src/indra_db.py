@@ -4,9 +4,8 @@ import json
 import threading
 import datetime
 import uuid
-import bcrypt
+import bcrypt  # type: ignore
 import os
-import logging
 
 from indralib.indra_event import IndraEvent  # type: ignore
 from indralib.indra_time import IndraTime  # type: ignore
@@ -131,7 +130,7 @@ class IndraProcess(IndraProcessCore):
             else:
                 self.log.debug("No results when retrieving last seq_no, new database?")
         except Exception as e:
-            self.log.error("Failed to retrieve last seq_no from database")
+            self.log.error(f"Failed to retrieve last seq_no from database: {e}")
         if db_last_seq > self.last_state["last_seq_no"]:
             self.last_state["last_seq_no"] = db_last_seq
 
@@ -147,7 +146,7 @@ class IndraProcess(IndraProcessCore):
                     "No results when retrieving last kv seq_no, new database?"
                 )
         except Exception as e:
-            self.log.error("Failed to retrieve last kv seq_no from database")
+            self.log.error(f"Failed to retrieve last kv seq_no from database: {e}")
         if db_last_kv_seq > self.last_state["last_kv_seq_no"]:
             self.last_state["last_kv_seq_no"] = db_last_kv_seq
 
@@ -497,7 +496,7 @@ class IndraProcess(IndraProcessCore):
                  time_jd_end DOUBLE );
               """
         try:
-            ret = self.cur.execute(cmd)
+            _ = self.cur.execute(cmd)
         except sqlite3.Error as e:
             self.log.error(f"Failure to create table: {e}")
             return False
@@ -510,7 +509,7 @@ class IndraProcess(IndraProcessCore):
               """
 
         try:
-            ret = self.cur.execute(cmd)
+            _ = self.cur.execute(cmd)
         except sqlite3.Error as e:
             self.log.error(f"Failure to create table: {e}")
             return False
@@ -527,7 +526,7 @@ class IndraProcess(IndraProcessCore):
                  CREATE INDEX IF NOT EXISTS indra_events_parent_uuid4 ON indra_events (parent_uuid4);
               """
         try:
-            ret = self.cur.executescript(cmd)
+            _ = self.cur.executescript(cmd)
         except sqlite3.Error as e:
             self.log.error(f"Failure to create indices: {e}")
             return False
@@ -537,7 +536,7 @@ class IndraProcess(IndraProcessCore):
         """
 
         try:
-            ret = self.cur.executescript(cmd)
+            _ = self.cur.executescript(cmd)
         except sqlite3.Error as e:
             self.log.error(f"Failure to create indices: {e}")
             return False
@@ -687,7 +686,7 @@ class IndraProcess(IndraProcessCore):
                     rq_data = json.loads(ev.data)
                 except Exception as e:
                     self._trx_err(
-                        ev, f"Invalid $trx/db/req/history from {ev.from_id}: {ev.data}"
+                        ev, f"Invalid $trx/db/req/history from {ev.from_id}: {ev.data}: {e}"
                     )
                     return
 
@@ -782,7 +781,7 @@ class IndraProcess(IndraProcessCore):
                     rq_data = json.loads(ev.data)
                 except Exception as e:
                     self._trx_err(
-                        ev, f"Invalid $trx/db/req/last from {ev.from_id}: {ev.data}"
+                        ev, f"Invalid $trx/db/req/last from {ev.from_id}: {ev.data}: {e}"
                     )
                     return
                 rq_fields = [
@@ -832,7 +831,7 @@ class IndraProcess(IndraProcessCore):
                 except Exception as e:
                     self._trx_err(
                         ev,
-                        f"Invalid $trx/db/req/uniquedomains from {ev.from_id}: {ev.data}",
+                        f"Invalid $trx/db/req/uniquedomains from {ev.from_id}: {ev.data}: {e}",
                     )
                     return
                 rq_fields = []
@@ -850,7 +849,7 @@ class IndraProcess(IndraProcessCore):
                     )
                     return
                 q_params = []
-                sql_cmd = f"SELECT DISTINCT domain FROM indra_events"
+                sql_cmd = "SELECT DISTINCT domain FROM indra_events"
                 post_filter = False
                 if "data_type" in rq_data:
                     self.log.warning(
@@ -905,7 +904,7 @@ class IndraProcess(IndraProcessCore):
                     rq_data = json.loads(ev.data)
                 except Exception as e:
                     self._trx_err(
-                        ev, f"Invalid $trx/db/req/del {ev.from_id}: {ev.data}"
+                        ev, f"Invalid $trx/db/req/del {ev.from_id}: {ev.data}: {e}"
                     )
                     return
                 rq_fields = ["domains", "uuid4s"]
@@ -950,7 +949,7 @@ class IndraProcess(IndraProcessCore):
                         uuid4s = [rq_data["uuid4s"]]
                     # Process the uuid4s
                     for uuid4 in uuid4s:
-                        sql_cmd = f"DELETE FROM indra_events WHERE uuid4 = ?"
+                        sql_cmd = "DELETE FROM indra_events WHERE uuid4 = ?"
                         q_params = [uuid4]
                         self.log.info(f"Deleting {uuid4} via {sql_cmd}")
                         self.cur.execute(sql_cmd, q_params)
@@ -981,7 +980,7 @@ class IndraProcess(IndraProcessCore):
                     rq_data = json.loads(ev.data)
                 except Exception as e:
                     self._trx_err(
-                        ev, f"Invalid $trx/db/req/update from {ev.from_id}: {ev.data}"
+                        ev, f"Invalid $trx/db/req/update from {ev.from_id}: {ev.data}: {e}"
                     )
                     return
                 # check if rq_data is an array, (if not, make it array of size 1) and that each element is a dict with the following:
@@ -1103,7 +1102,7 @@ class IndraProcess(IndraProcessCore):
                     rq_data = json.loads(ev.data)
                 except Exception as e:
                     self._trx_err(
-                        ev, f"Invalid $trx/kv/req/write from {ev.from_id}: {ev.data}"
+                        ev, f"Invalid $trx/kv/req/write from {ev.from_id}: {ev.data}: {e}"
                     )
                     return
                 rq_fields = ["key", "value"]
@@ -1145,7 +1144,7 @@ class IndraProcess(IndraProcessCore):
                     rq_data = json.loads(ev.data)
                 except Exception as e:
                     self._trx_err(
-                        ev, f"Invalid $trx/kv/req/read from {ev.from_id}: {ev.data}"
+                        ev, f"Invalid $trx/kv/req/read from {ev.from_id}: {ev.data}: {e}"
                     )
                     return
                 print("KV-read!", rq_data)
@@ -1189,7 +1188,7 @@ class IndraProcess(IndraProcessCore):
                     rq_data = json.loads(ev.data)
                 except Exception as e:
                     self._trx_err(
-                        ev, f"Invalid $trx/kv/req/verify from {ev.from_id}: {ev.data}"
+                        ev, f"Invalid $trx/kv/req/verify from {ev.from_id}: {ev.data}: {e}"
                     )
                     return
                 rq_fields = ["key", "value"]
@@ -1262,7 +1261,7 @@ class IndraProcess(IndraProcessCore):
                     rq_data = json.loads(ev.data)
                 except Exception as e:
                     self._trx_err(
-                        ev, f"Invalid $trx/kv/req/delete from {ev.from_id}: {ev.data}"
+                        ev, f"Invalid $trx/kv/req/delete from {ev.from_id}: {ev.data}: {e}"
                     )
                     return
                 rq_fields = ["key"]
