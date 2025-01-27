@@ -1,18 +1,33 @@
 import json
 import os
 import logging
+from typing import TypedDict, NotRequired
+
+class Profile(TypedDict):
+    host: str
+    port: int
+    TLS: bool
+    name: str
+    ca_authority: NotRequired[str | None]
 
 
+class ProfileConfig(TypedDict):
+    profiles: list[Profile]
+    default_profile: str
+    default_username: str
+    default_password: str | None
+    auto_login: bool
+
+    
 class Profiles:
     def __init__(self):
-        self.log = logging.getLogger("indralib.server_config")
-        self.profiles = []
-        self.profile_file = os.path.expanduser("~/.config/indrajala/servers.json")
+        self.log: logging.Logger = logging.getLogger("indralib.server_config")
+        self.profile_file: str = os.path.expanduser("~/.config/indrajala/servers.json")
         if not os.path.exists(os.path.dirname(self.profile_file)):
             os.makedirs(os.path.dirname(self.profile_file))
         if not os.path.exists(self.profile_file):
             with open(self.profile_file, "w") as f:
-                f.write(
+                _ = f.write(
                     json.dumps(
                         {
                             "profiles": [],
@@ -26,7 +41,7 @@ class Profiles:
                 )
         with open(self.profile_file, "rb") as f:
             try:
-                raw_profiles = json.load(f)
+                raw_profiles: ProfileConfig = json.load(f)
             except Exception as e:
                 print(f"Error reading profiles: {e}")
                 raw_profiles = {
@@ -40,11 +55,11 @@ class Profiles:
             if not Profiles.check_profile(profile):
                 self.log.error(f"Invalid profile: {profile} in {self.profile_file}")
                 del raw_profiles["profiles"][index]
-        self.profiles = raw_profiles["profiles"]
-        self.default_profile = raw_profiles["default_profile"]
-        self.default_username = raw_profiles["default_username"]
-        self.default_password = raw_profiles["default_password"]
-        self.auto_login = raw_profiles["auto_login"]
+        self.profiles: list[Profile] = raw_profiles["profiles"]
+        self.default_profile: str = raw_profiles["default_profile"]
+        self.default_username: str = raw_profiles["default_username"]
+        self.default_password: str | None = raw_profiles["default_password"]
+        self.auto_login: bool = raw_profiles["auto_login"]
 
     def get_profiles(self):
         return self.profiles
@@ -52,14 +67,14 @@ class Profiles:
     def get_default_profile(self):
         return self.get_profile(self.default_profile)
 
-    def get_profile(self, profile_name):
+    def get_profile(self, profile_name: str):
         for profile in self.profiles:
             if profile["name"] == profile_name:
                 return profile
         return None
 
     @staticmethod
-    def check_profile(profile):
+    def check_profile(profile: Profile):
         mandatory_keys = ["host", "port", "TLS", "name"]
         for key in mandatory_keys:
             if key not in profile:
@@ -71,7 +86,7 @@ class Profiles:
         return True
 
     @staticmethod
-    def get_uri(profile):
+    def get_uri(profile: Profile):
         uri = "ws"
         if profile.get("TLS", False):
             uri += "s"
@@ -80,7 +95,7 @@ class Profiles:
 
     def save_profiles(self):
         # check for duplicate names
-        names = []
+        names: list[str] = []
         for profile in self.profiles:
             while profile["name"] in names:
                 new_name = profile["name"] + " (copy)"

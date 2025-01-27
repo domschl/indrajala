@@ -1,57 +1,67 @@
 import asyncio
 import websockets
+import websockets.asyncio.client
 import logging
 import ssl
 import json
 import time
 import datetime
 from datetime import timezone
+from typing import TypedDict
 
-from indralib.indra_event import IndraEvent
-from indralib.indra_time import IndraTime
-from indralib.server_config import Profiles
+from .indra_event import IndraEvent
+from .indra_time import IndraTime
+from .server_config import Profiles, Profile
 
 
+class IeFutureTable(TypedDict):
+    future: asyncio.futures.Future[IndraEvent]
+    start_time: float
+
+    
 class IndraClient:
     def __init__(
         self,
-        profile=None,
-        profile_name="default",
-        verbose=False,
-        module_name=None,
-        log_handler=None,
+        profile: Profile | None =None,
+        profile_name: str | None ="default",
+        verbose: bool =False,
+        module_name: str | None =None,
+        log_handler: logging.Handler | None =None,
     ):
-        self.log = logging.getLogger("IndraClient")
+        self.log: logging.Logger = logging.getLogger("IndraClient")
         if log_handler is not None:
             self.log.addHandler(log_handler)
         if module_name is None:
-            self.module_name = "IndraClient (python)"
+            self.module_name: str = "IndraClient (python)"
         else:
             self.module_name = module_name
-        self.websocket = None
-        self.verbose = verbose
-        self.trx = {}
-        self.recv_queue = asyncio.Queue()
+        self.websocket: websockets.asyncio.client.ClientConnection | None = None
+        self.verbose: bool = verbose
+        self.trx: dict[str, IeFutureTable] = {}
+        self.recv_queue: asyncio.Queue[IndraEvent] = asyncio.Queue()
         self.recv_task = None
-        self.initialized = False
-        self.error_shown = False
-        self.profiles = Profiles()
+        self.session_id: str | None = None
+        self.username: str | None = None
+        self.initialized: bool = False
+        self.error_shown: bool = False
+        self.profiles: Profiles = Profiles()
+        self.uri: str | None = None
         if profile is not None and Profiles.check_profile(profile) is False:
             self.log.error(f"Invalid profile {profile}")
-            self.profile = None
+            self.profile: Profile | None = None
             return
         if profile is not None:
             self.profile = profile
             self.initialized = True
         else:
-            if profile_name == "default":
+            if profile_name == "default" or profile_name is None:
                 self.profile = self.profiles.get_default_profile()
             else:
                 self.profile = self.profiles.get_profile(profile_name)
             if self.profile is not None:
                 self.initialized = True
 
-    async def init_connection(self, verbose=False):
+    async def init_connection(self, verbose: bool = False) -> websockets.asyncio.client.ClientConnection | None:
         """Initialize connection"""
         if self.initialized is False:
             self.trx = {}
@@ -67,10 +77,11 @@ class IndraClient:
                 )
             return self.websocket
         self.trx = {}
-        self.uri = Profiles.get_uri(self.profile)
+        if self.profile is not None:
+            self.uri = Profiles.get_uri(self.profile)
         if self.profile is not None and self.profile["TLS"] is True:
             ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            if self.profile["ca_authority"] is not None:
+            if 'ca_authority' in self. profile and self.profile["ca_authority"] is not None:
                 try:
                     ssl_ctx.load_verify_locations(cafile=self.profile["ca_authority"])
                 except Exception as e:
@@ -81,13 +92,16 @@ class IndraClient:
                     return None
         else:
             ssl_ctx = None
+        if self.uri is None:
+            self.log.error("URI is None")
+            return None
         try:
             self.websocket = await websockets.connect(self.uri, ssl=ssl_ctx)
         except Exception as e:
             self.log.error(f"Could not connect to {self.uri}: {e}")
             self.websocket = None
             return None
-        self.recv_queue.empty()
+        # self.recv_queue.empty()
         self.recv_task = asyncio.create_task(self.fn_recv_task())
         self.session_id = None
         self.username = None
@@ -98,7 +112,8 @@ class IndraClient:
         """Receive task"""
         while self.websocket is not None:
             try:
-                message = await self.websocket.recv()
+                message_raw = await self.websocket.recv()
+                message = str(message_raw)
                 if self.verbose is True:
                     self.log.info(f"Received message: {message}")
             except Exception as e:
@@ -108,8 +123,8 @@ class IndraClient:
             # ie = IndraEvent()
             ie = IndraEvent.from_json(message)
             if ie.uuid4 in self.trx:
-                fRec = self.trx[ie.uuid4]
-                dt = time.time() - fRec["start_time"]
+                fRec: IeFutureTable = self.trx[ie.uuid4]
+                dt: float = time.time() - fRec["start_time"]
                 if self.verbose is True:
                     self.log.info(
                         "---------------------------------------------------------------"
@@ -117,7 +132,8 @@ class IndraClient:
                     self.log.info(
                         f"Future: trx event {ie.to_scope}, uuid: {ie.uuid4}, {ie.data_type}, dt={dt}"
                     )
-                fRec["future"].set_result(ie)
+                ie_fut: asyncio.futures.Future[IndraEvent] = fRec["future"]
+                ie_fut.set_result(ie)
                 del self.trx[ie.uuid4]
             else:
                 if self.verbose is True:
@@ -128,7 +144,7 @@ class IndraClient:
         self.recv_task = None
         return
 
-    async def send_event(self, event):
+    async def send_event(self, event: IndraEvent):
         """Send event"""
         if self.initialized is False:
             if self.error_shown is False:
@@ -142,12 +158,12 @@ class IndraClient:
                 "Websocket not initialized, please call init_connection() first!"
             )
             return None
-        if isinstance(event, IndraEvent) is False:
-            self.log.error("Please provide an IndraEvent object!")
-            return None
+#        if isinstance(event, IndraEvent) is False:
+#            self.log.error("Please provide an IndraEvent object!")
+#            return None
         if event.domain.startswith("$trx/") is True:
-            replyEventFuture = asyncio.futures.Future()
-            fRec = {
+            replyEventFuture: asyncio.futures.Future[IndraEvent] | None = asyncio.futures.Future()
+            fRec: IeFutureTable = {
                 "future": replyEventFuture,
                 "start_time": time.time(),
             }
@@ -162,7 +178,7 @@ class IndraClient:
             self.initialized = False
         return replyEventFuture
 
-    async def recv_event(self, timeout=None):
+    async def recv_event(self, timeout: float | None = None):
         """Receive event"""
         if self.initialized is False:
             self.log.error("Indrajala recv_event(): connection data not initialized!")
@@ -174,7 +190,7 @@ class IndraClient:
             return None
         if timeout is None:
             try:
-                ie = await self.recv_queue.get()
+                ie: IndraEvent = await self.recv_queue.get()
             except Exception as e:
                 self.log.error(f"Could not receive message: {e}")
                 return None
@@ -211,7 +227,7 @@ class IndraClient:
         self.username = None
         return True
 
-    async def subscribe(self, domains):
+    async def subscribe(self, domains: str | list[str] | None):
         """Subscribe to domain"""
         if self.initialized is False:
             self.log.error("Indrajala subscribe(): connection data not initialized!")
@@ -237,7 +253,7 @@ class IndraClient:
         await self.websocket.send(ie.to_json())
         return True
 
-    async def unsubscribe(self, domains):
+    async def unsubscribe(self, domains: str | list[str] | None):
         """Unsubscribe from domain"""
         if self.initialized is False:
             self.log.error("Indrajala unsubscribe(): connection data not initialized!")
@@ -264,7 +280,7 @@ class IndraClient:
         return True
 
     async def get_history(
-        self, domain, start_time=None, end_time=None, sample_size=None, mode="Sample"
+        self, domain: str | None, start_time: float | None =None, end_time: float | None =None, sample_size: int | None =None, mode: str ="Sample"
     ):
         """Get history of domain
 
@@ -290,7 +306,7 @@ class IndraClient:
         return await self.send_event(ie)
 
     async def get_wait_history(
-        self, domain, start_time=None, end_time=None, sample_size=None, mode="Sample"
+        self, domain: str | None, start_time: float | None =None, end_time: float | None =None, sample_size: int | None =None, mode: str ="Sample"
     ):
         future = await self.get_history(domain, start_time, end_time, sample_size, mode)
         if future is None:
@@ -306,18 +322,18 @@ class IndraClient:
 
     @staticmethod
     async def _get_history_block(
-        username=None,
-        password=None,
-        domain=None,
-        start_time=None,
-        end_time=None,
-        verbose=False,
-        sample_size=20,
+        username: str | None = None,
+        password: str | None = None,
+        domain: str | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
+        verbose: bool = False,
+        sample_size: int = 20,
     ):
         ic = IndraClient(verbose=verbose)
         if verbose is True:
             ic.log.info(f"Connecting")
-        await ic.init_connection()
+        _ = await ic.init_connection()
         if verbose is True:
             ic.log.info("Connected to Indrajala")
         ret = await ic.login_wait(username, password)
@@ -335,8 +351,8 @@ class IndraClient:
             )
             if verbose is True:
                 ic.log.info(f"Data: {data}")
-            await ic.logout_wait()
-            await ic.close_connection()
+            _ = await ic.logout_wait()
+            _ = await ic.close_connection()
             if verbose is True:
                 ic.log.info("Logged out and closed connection")
             return data
@@ -344,13 +360,13 @@ class IndraClient:
 
     @staticmethod
     def get_history_sync(
-        username,
-        password,
-        domain,
-        start_time,
-        end_time=None,
-        sample_size=20,
-        verbose=False,
+        username: str | None,
+        password: str | None,
+        domain: str | None,
+        start_time: float | None,
+        end_time: float | None = None,
+        sample_size: int = 20,
+        verbose: bool = False,
     ):
         return asyncio.run(
             IndraClient._get_history_block(
@@ -358,7 +374,7 @@ class IndraClient:
             )
         )
 
-    async def get_last_event(self, domain):
+    async def get_last_event(self, domain: str):
         """Get last event of domain"""
         ie = IndraEvent()
         ie.domain = "$trx/db/req/last"
@@ -369,23 +385,22 @@ class IndraClient:
         ie.data = json.dumps({"domain": domain})
         return await self.send_event(ie)
 
-    async def get_wait_last_event(self, domain):
+    async def get_wait_last_event(self, domain: str):
         future = await self.get_last_event(domain)
         if future is None:
             return None
         last_result = await future
-        if last_result.data is not None and last_result.data != "":
+        if last_result.data != "":
             return IndraEvent.from_json(last_result.data)
         else:
             return None
 
-    async def get_unique_domains(self, domain=None, data_type=None):
+    async def get_unique_domains(self, domain: str | None = None, data_type: str | None = None):
         """Get unique domains"""
         if domain is None:
             domain = "$event/measurement%"
         cmd = {}
-        if domain is not None:
-            cmd["domain"] = domain
+        cmd["domain"] = domain
         if data_type is not None:
             cmd["data_type"] = data_type
         ie = IndraEvent()
@@ -397,14 +412,15 @@ class IndraClient:
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
-    async def get_wait_unique_domains(self, domain=None, data_type=None):
+    async def get_wait_unique_domains(self, domain: str | None = None, data_type: str | None = None) -> list[str] | None:
         future = await self.get_unique_domains(domain, data_type)
         if future is None:
             return None
         domain_result = await future
-        return json.loads(domain_result.data)
+        doms: list[str] | None = json.loads(domain_result.data)
+        return doms
 
-    async def delete_recs(self, domains=None, uuid4s=None):
+    async def delete_recs(self, domains: str | list[str] | None = None, uuid4s: str | list[str] | None = None):
         if domains is None and uuid4s is None:
             self.log.error("Please provide a domain or uuid4s")
             return None
@@ -424,7 +440,7 @@ class IndraClient:
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
-    async def delete_recs_wait(self, domains=None, uuid4s=None):
+    async def delete_recs_wait(self, domains: str | list[str] | None = None, uuid4s: str | list[str] | None = None):
         future = await self.delete_recs(domains, uuid4s)
         if future is None:
             return None
@@ -433,7 +449,8 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            return json.loads(result.data)
+            res = json.loads(result.data)
+            return res
 
     async def update_recs(self, recs):
         if isinstance(recs, list) is False:

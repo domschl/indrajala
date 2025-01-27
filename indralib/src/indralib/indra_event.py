@@ -1,7 +1,7 @@
 import json
 import datetime
 import uuid
-from indralib.indra_time import IndraTime
+from .indra_time import IndraTime
 
 
 # XXX  https://en.wikipedia.org/wiki/Decimal_time
@@ -21,19 +21,19 @@ class IndraEvent:
         :param auth_hash:     security auth (optional)
         :param time_jd_end:      end-of-event jd (optional)
         """
-        self.domain = ""
-        self.from_id = ""
-        self.uuid4 = str(uuid.uuid4())
-        self.parent_uuid4 = ""
-        self.seq_no = 0
-        self.to_scope = ""
-        self.time_jd_start = IndraTime.datetime_to_julian(
+        self.domain: str = ""
+        self.from_id: str = ""
+        self.uuid4: str = str(uuid.uuid4())
+        self.parent_uuid4: str = ""
+        self.seq_no: int = 0
+        self.to_scope: str = ""
+        self.time_jd_start: float | None = IndraTime.datetime_to_julian(
             datetime.datetime.now(tz=datetime.timezone.utc)
         )
-        self.data_type = ""
-        self.data = ""
-        self.auth_hash = ""
-        self.time_jd_end = None
+        self.data_type: str = ""
+        self.data: str = ""
+        self.auth_hash: str = ""
+        self.time_jd_end: float | None = None
 
     def version(self):
         return "02"
@@ -53,14 +53,14 @@ class IndraEvent:
         return self.__dict__
 
     @staticmethod
-    def from_json(json_str):
+    def from_json(json_str: str):
         """Convert from JSON string"""
         ie = IndraEvent()
         ie.__dict__ = json.loads(json_str)
         return ie
 
     @staticmethod
-    def mqcmp(pub, sub):
+    def mqcmp(pub: str, sub: str):
         """MQTT-style wildcard compare"""
         for c in ["+", "#"]:
             if pub.find(c) != -1:
@@ -94,11 +94,3 @@ class IndraEvent:
             if sub[inds] == "+" or sub[inds] == "#":
                 return True
         return False
-
-    # @staticmethod
-    # def datetime_to_julian(dt: datetime.datetime):
-    #     return IndraTime.datetime_to_julian(dt)
-
-    # @staticmethod
-    # def julian_to_datetime(jd):
-    #     return IndraTime.julian_to_datetime(jd)
