@@ -1,6 +1,5 @@
 import datetime
 import math
-from typing import Union
 
 
 class IndraTime:
@@ -13,7 +12,7 @@ class IndraTime:
     """
 
     @staticmethod
-    def datetime_to_julian(dt: datetime.datetime) -> Union[float, None]:
+    def datetime_to_julian(dt: datetime.datetime) -> float | None:
         """Convert datetime to Julian date
 
         Note: datetime object must have a timezone!
@@ -71,7 +70,7 @@ class IndraTime:
         return jd
 
     @staticmethod
-    def julian_to_discrete_time(jd: float) -> tuple:
+    def julian_to_discrete_time(jd: float) -> tuple[int, int, int, int, int, int, int]:
         """Convert Julian date to discrete time tuple
 
         :param jd: Julian date
@@ -81,11 +80,11 @@ class IndraTime:
         Z = math.floor(jd)
         F = jd - Z
         if Z < 2299161:
-            A = Z
+            a = Z
         else:
             alpha = math.floor((Z - 1867216.25) / 36524.25)
-            A = Z + 1 + alpha - math.floor(alpha / 4)
-        B = A + 1524
+            a = Z + 1 + alpha - math.floor(alpha / 4)
+        B = a + 1524
         C = math.floor((B - 122.1) / 365.25)
         D = math.floor(365.25 * C)
         E = math.floor((B - D) / 30.6001)
@@ -122,7 +121,7 @@ class IndraTime:
         minute: int,
         second: int,
         microsecond: int,
-    ) -> Union[float, None]:
+    ) -> float | None:
         """Convert discrete time to Julian date, assuming Julian calendar for time < 1582
         and Gregorian calendar otherwise
 
@@ -269,7 +268,7 @@ class IndraTime:
         ).total_seconds() / (365.25 * 24 * 60 * 60)
 
     @staticmethod
-    def fractional_year_to_julian(fy: float) -> Union[float, None]:
+    def fractional_year_to_julian(fy: float) -> float | None:
         """Convert fractional year to Julian date
 
         Note: fracyear fy is well defined for dates before 1AD, which are not representable in datetime.
@@ -310,7 +309,7 @@ class IndraTime:
         return fy
 
     @staticmethod
-    def string_time_to_julian(time_str: str) -> Union[tuple[Union[float, None], Union[float, None]], tuple[Union[float, None]]]:
+    def string_time_to_julian(time_str: str) -> tuple[float | None, float | None] | tuple[float | None]:
         """Convert string time to Julian date
 
         Time can be interval or point in time, interval-separator is " - "
@@ -331,7 +330,8 @@ class IndraTime:
         time_str = time_str.strip()
         time_str = time_str.lower()
         pts = time_str.split(" - ")
-        results = []
+        results: tuple[float | None, float | None] | tuple[float | None]
+        results = (None,)
         for point in pts:
             pt = point.strip()
             if pt.endswith(" ad"):
@@ -472,8 +472,11 @@ class IndraTime:
                 jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
-            results.append(jdt)
-        return tuple(results)
+            if results == (None,):
+                results = (jdt,)
+            else:
+                results = (results[0], jdt)
+        return results
 
     @staticmethod
     def julian_to_string_time(jd: float) -> str:
@@ -492,7 +495,7 @@ class IndraTime:
             # > 13000 BP? Use BC, else use BP, and if < 100000 BP use kya BP
             if jd > 1721423.5 - 13000 * 365.25:
                 # BC
-                year, month, day, hour, minute, second, microsecond = (
+                year, month, day, _hour, _minute, _second, _microsecond = (
                     IndraTime.julian_to_discrete_time(jd)
                 )
                 # bc = int((1721423.5 - jd) / 365.25) + 1
@@ -500,7 +503,7 @@ class IndraTime:
                 return f"{year} BC"
             elif jd > 1721423.5 - 100000 * 365.25:
                 # BP
-                year, month, day, hour, minute, second, microsecond = (
+                year, month, day, _hour, _minute, _second, _microsecond = (
                     IndraTime.julian_to_discrete_time(jd)
                 )
                 # if year < 0:
@@ -510,7 +513,7 @@ class IndraTime:
                 return f"{bp} BP"
             elif jd > 1721423.5 - 100000000 * 365.25:
                 # kya BP
-                year, month, day, hour, minute, second, microsecond = (
+                year, month, day, _hour, _minute, _second, _microsecond = (
                     IndraTime.julian_to_discrete_time(jd)
                 )
                 # if year < 0:
@@ -520,7 +523,7 @@ class IndraTime:
                 return f"{kya} kya BP"
             elif jd > 1721423.5 - 10000000000 * 365.25:
                 # Ma BP
-                year, month, day, hour, minute, second, microsecond = (
+                year, month, day, _hour, _minute, _second, _microsecond = (
                     IndraTime.julian_to_discrete_time(jd)
                 )
                 # if year < 0:
@@ -529,7 +532,7 @@ class IndraTime:
                 return f"{ma} Ma BP"
             else:
                 # Ga BP
-                year, month, day, hour, minute, second, microsecond = (
+                year, month, day, _hour, _minute, _second, _microsecond = (
                     IndraTime.julian_to_discrete_time(jd)
                 )
                 # if year < 0:
@@ -539,7 +542,7 @@ class IndraTime:
         else:
             # AD
             # dt = IndraTime.julian_to_datetime(jd)
-            year, month, day, hour, minute, second, microsecond = (
+            year, month, day, _hour, _minute, _second, _microsecond = (
                 IndraTime.julian_to_discrete_time(jd)
             )
             if month == 1 and day == 1 and year < 1900:
@@ -562,7 +565,7 @@ class IndraTime:
         return f"{year}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}.{microsecond:06}Z"
 
     @staticmethod
-    def ISO_to_julian(iso: str) -> Union[float, None]:
+    def ISO_to_julian(iso: str) -> float | None:
         """Convert extended ISO 8601 string to Julian date
 
         Year may be negative and longer or shorter than 4 digits. Only UTC time is supported.
