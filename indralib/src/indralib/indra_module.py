@@ -2,49 +2,49 @@ import logging
 import threading
 import time
 from queue import Queue
-from typing import Union
 
-from indralib.indra_event import IndraEvent
+from .indra_event import IndraEvent
 
 
 class IndraModule:
     def __init__(
         self,
         name: str,
-        central_queue: Queue,
-        module_destination_queue: Queue,
-        config_data,
-        poll_delay=0.05,
+        central_queue: Queue[IndraEvent],
+        module_destination_queue: Queue[IndraEvent],
+        config_data,  # type: ignore
+        poll_delay: float = 0.05,
     ):
-        self.name = name
-        self.log = logging.getLogger(name)
-        self.central_queue = central_queue
-        self.module_destination_queue = module_destination_queue
-        self.config = config_data
-        self.poll_delay = poll_delay
+        self.name: str = name
+        self.log: logging.Logger = logging.getLogger(name)
+        self.central_queue: Queue[IndraEvent] = central_queue
+        self.module_destination_queue: Queue[IndraEvent] = module_destination_queue
+        self.config = config_data  # type: ignore
+        self.poll_delay: float = poll_delay
         try:
-            self.loglevel = self.config["loglevel"].upper()
+            log_lev: str = str(self.config["loglevel"])
+            self.loglevel: str = 
             self.log.setLevel(self.loglevel)
         except Exception as e:
-            self.loglevel = logging.INFO
+            self.loglevel = "INFO"  # logging.INFO
             self.log.setLevel(self.loglevel)
             self.log.error(
                 f"Missing entry 'loglevel' in module config for {self.name}: {e}"
             )
 
-        self.receiver_worker_thread_handle = threading.Thread(
+        self.receiver_worker_thread_handle: threading.Thread = threading.Thread(
             target=self.receiver_worker_thread, args=(), daemon=True
         )
         self.receiver_worker_thread_handle.start()
-        self.sender_worker_thread_handle = threading.Thread(
+        self.sender_worker_thread_handle: threading.Thread = threading.Thread(
             target=self.sender_worker_thread, args=(), daemon=True
         )
         self.sender_worker_thread_handle.start()
-        self.active = True
+        self.active: bool = True
 
     def receiver_worker_thread(self):
         while self.active is True:
-            rec_msg: Union[IndraEvent, None] = self.receive_message()
+            rec_msg: IndraEvent | None = self.receive_message()
             if rec_msg is not None:
                 self.central_queue.put(rec_msg)
             else:
@@ -64,7 +64,7 @@ class IndraModule:
     def send_message(self, msg: IndraEvent):
         return None
 
-    def receive_message(self) -> Union[IndraEvent, None]:
+    def receive_message(self) -> IndraEvent | None:
         return None
 
 
@@ -72,10 +72,10 @@ class TestModule(IndraModule):
     def __init__(
         self,
         name: str,
-        central_queue: Queue,
-        module_destination_queue: Queue,
+        central_queue: Queue[IndraEvent],
+        module_destination_queue: Queue[IndraEvent],
         config_data,
-        poll_delay=0.05,
+        poll_delay: float = 0.05,
     ):
         super().__init__(
             name, central_queue, module_destination_queue, config_data, poll_delay
