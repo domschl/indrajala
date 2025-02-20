@@ -1,6 +1,7 @@
 import datetime
 import math
 
+IndraTimeInterval = tuple[float, float | None] | tuple[float]
 
 class IndraTime:
     """Class for converting between different time representations
@@ -309,7 +310,7 @@ class IndraTime:
         return fy
 
     @staticmethod
-    def string_time_to_julian(time_str: str) -> tuple[float | None, float | None] | tuple[float | None]:
+    def string_time_to_julian(time_str: str) -> IndraTimeInterval | None:
         """Convert string time to Julian date
 
         Time can be interval or point in time, interval-separator is " - "
@@ -330,8 +331,7 @@ class IndraTime:
         time_str = time_str.strip()
         time_str = time_str.lower()
         pts = time_str.split(" - ")
-        results: tuple[float | None, float | None] | tuple[float | None]
-        results = (None,)
+        results: IndraTimeInterval | None = None
         for point in pts:
             pt = point.strip()
             if pt.endswith(" ad"):
@@ -472,8 +472,11 @@ class IndraTime:
                 jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
-            if results == (None,):
-                results = (jdt,)
+            if results is None:
+                if jdt is None:
+                    return None
+                else:
+                    results = (jdt,)
             else:
                 results = (results[0], jdt)
         return results
