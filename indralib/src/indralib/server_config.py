@@ -47,6 +47,7 @@ class Profiles:
                         indent=4,
                     )
                 )
+            self.log.error("Default configuration written to {self.profile_file}, please edit!")
         with open(self.profile_file, "rb") as f:
             try:
                 raw_profiles: ProfileConfig = json.load(f)
