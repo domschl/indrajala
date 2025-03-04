@@ -23,19 +23,12 @@ class Profiles:
     def __init__(self):
         self.log: logging.Logger = logging.getLogger("indralib.server_config")
         self.profile_file: str = os.path.expanduser("~/.config/indrajala/servers.json")
-        if not os.path.exists(os.path.dirname(self.profile_file)):
-            os.makedirs(os.path.dirname(self.profile_file))
-        if not os.path.exists(self.profile_file):
-            with open(self.profile_file, "w") as f:
-                _ = f.write(
-                    json.dumps(
-                        {
-                            "profiles": [
+        def_config: ProfileConfig = {"profiles": [
                                 {
                                     "name": "default",
                                     "host": "localhost",
                                     "port": 8080,
-                                    "TLS": "false",
+                                    "TLS": False,
                                     "ca_authority": ""
                                 },
                             ],
@@ -43,7 +36,13 @@ class Profiles:
                             "default_username": "stat",
                             "default_password": None,
                             "auto_login": False,
-                        },
+                        }
+        if not os.path.exists(os.path.dirname(self.profile_file)):
+            os.makedirs(os.path.dirname(self.profile_file))
+        if not os.path.exists(self.profile_file):
+            with open(self.profile_file, "w") as f:
+                _ = f.write(
+                    json.dumps(def_config,
                         indent=4,
                     )
                 )
@@ -52,14 +51,8 @@ class Profiles:
             try:
                 raw_profiles: ProfileConfig = json.load(f)
             except Exception as e:
-                print(f"Error reading profiles: {e}")
-                raw_profiles = {
-                    "profiles": [],
-                    "default_profile": "",
-                    "default_username": "admin",
-                    "default_password": None,
-                    "auto_login": False,
-                }
+                self.log.error(f"Error reading profiles from {self.profile_file}: {e}")
+                raw_profiles = def_config
         for index, profile in enumerate(raw_profiles["profiles"]):
             if not self.check_profile(profile):
                 self.log.error(f"Invalid profile: {profile} in {self.profile_file}")
@@ -84,10 +77,6 @@ class Profiles:
 
     @staticmethod
     def check_profile(profile: Profile):
-        mandatory_keys = ["host", "port", "TLS", "name"]
-        for key in mandatory_keys:
-            if key not in profile:
-                return False
         optional_keys = ["ca_authority"]
         for key in optional_keys:
             if key not in profile:
