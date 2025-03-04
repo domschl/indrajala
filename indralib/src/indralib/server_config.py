@@ -30,9 +30,17 @@ class Profiles:
                 _ = f.write(
                     json.dumps(
                         {
-                            "profiles": [],
-                            "default_profile": "",
-                            "default_username": "admin",
+                            "profiles": [
+                                {
+                                    "name": "default",
+                                    "host": "localhost",
+                                    "port": 8080,
+                                    "TLS": "false",
+                                    "ca_authority": ""
+                                },
+                            ],
+                            "default_profile": "default",
+                            "default_username": "stat",
                             "default_password": None,
                             "auto_login": False,
                         },
@@ -52,7 +60,7 @@ class Profiles:
                     "auto_login": False,
                 }
         for index, profile in enumerate(raw_profiles["profiles"]):
-            if not Profiles.check_profile(profile):
+            if not self.check_profile(profile):
                 self.log.error(f"Invalid profile: {profile} in {self.profile_file}")
                 del raw_profiles["profiles"][index]
         self.profiles: list[Profile] = raw_profiles["profiles"]

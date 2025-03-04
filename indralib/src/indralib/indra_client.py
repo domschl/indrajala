@@ -46,7 +46,7 @@ class IndraClient:
         self.error_shown: bool = False
         self.profiles: Profiles = Profiles()
         self.uri: str | None = None
-        if profile is not None and Profiles.check_profile(profile) is False:
+        if profile is not None and Profile.check_profile(profile) is False:
             self.log.error(f"Invalid profile {profile}")
             self.profile: Profile | None = None
             return
@@ -60,6 +60,8 @@ class IndraClient:
                 self.profile = self.profiles.get_profile(profile_name)
             if self.profile is not None:
                 self.initialized = True
+            else:
+                self.log.error("Failed to load any profile!")
 
     async def init_connection(self, verbose: bool = False) -> websockets.asyncio.client.ClientConnection | None:
         """Initialize connection"""
