@@ -201,7 +201,7 @@ class IndraProcess(IndraProcessCore):
             return ret
         document = request.match_info["document"]
         self.log.info(f"Syncs {user} get progress request: {document}")
-        user_info = self.reading_state[request.headers["x-auth-user"]]
+        user_info = self.reading_state[user]
         if document not in self.md5_to_lib_entry:
             self.log.warning(f"Document {document} not found in library")
         else:
@@ -215,9 +215,11 @@ class IndraProcess(IndraProcessCore):
                 "device": "none",
             }
             self.reading_state[user]["documents"][document] = progress
+            self.log.info(f"Document {document} not found in user {user} progress, creating new entry")
             self._save_state()
         else:
             progress = user_info["documents"][document]
+            self.log.info(f"Document {document} progress: {progress}")
         return web.json_response(progress)
 
     async def syncs_put_progress_handler(self, request):
@@ -227,7 +229,7 @@ class IndraProcess(IndraProcessCore):
         data = await request.json()
         document = data["document"]
         self.log.info(f"Syncs put {user} progress request for document {document}: {data}")
-        self.reading_state[request.headers["x-auth-user"]]["documents"][document] = data
+        self.reading_state[user]["documents"][document] = data
         if document not in self.md5_to_lib_entry:
             self.log.warning(f"Document {document} not found in MetaLibrary, progress not saved as user-event")
         else:
