@@ -7,7 +7,7 @@ import json
 import time
 import datetime
 from datetime import timezone
-from typing import TypedDict
+from typing import TypedDict, cast
 
 from .indra_event import IndraEvent
 from .indra_time import IndraTime
@@ -39,14 +39,14 @@ class IndraClient:
         self.verbose: bool = verbose
         self.trx: dict[str, IeFutureTable] = {}
         self.recv_queue: asyncio.Queue[IndraEvent] = asyncio.Queue()
-        self.recv_task = None
+        self.recv_task: asyncio.Task[bool] | None = None
         self.session_id: str | None = None
         self.username: str | None = None
         self.initialized: bool = False
         self.error_shown: bool = False
         self.profiles: Profiles = Profiles()
         self.uri: str | None = None
-        if profile is not None and Profiles.check_profile(profile) is False:
+        if profile is not None and Profile.check_profile(profile) is False:
             self.log.error(f"Invalid profile {profile}")
             self.profile: Profile | None = None
             return
@@ -60,6 +60,8 @@ class IndraClient:
                 self.profile = self.profiles.get_profile(profile_name)
             if self.profile is not None:
                 self.initialized = True
+            else:
+                self.log.error("Failed to load any profile!")
 
     async def init_connection(self, verbose: bool = False) -> websockets.asyncio.client.ClientConnection | None:
         """Initialize connection"""
@@ -123,7 +125,7 @@ class IndraClient:
             # ie = IndraEvent()
             ie = IndraEvent.from_json(message)
             if ie.uuid4 in self.trx:
-                fRec: IeFutureTable = self.trx[ie.uuid4]
+                fRec: IeFutureTable = cast(IeFutureTable, self.trx[ie.uuid4])
                 dt: float = time.time() - fRec["start_time"]
                 if self.verbose is True:
                     self.log.info(
@@ -142,7 +144,7 @@ class IndraClient:
                     )
                 await self.recv_queue.put(ie)
         self.recv_task = None
-        return
+        return True
 
     async def send_event(self, event: IndraEvent):
         """Send event"""
@@ -218,7 +220,7 @@ class IndraClient:
             )
             return False
         if self.recv_task is not None:
-            self.recv_task.cancel()
+            _ = self.recv_task.cancel()
             self.recv_task = None
         await self.websocket.close()
         self.trx = {}
@@ -312,7 +314,8 @@ class IndraClient:
         if future is None:
             return None
         hist_result = await future
-        return json.loads(hist_result.data)
+        hist: list[tuple[float, float]] = json.loads(hist_result.data)
+        return hist
 
     @staticmethod
     def get_current_time_jd():
@@ -322,8 +325,8 @@ class IndraClient:
 
     @staticmethod
     async def _get_history_block(
-        username: str | None = None,
-        password: str | None = None,
+        username: str,
+        password: str,
         domain: str | None = None,
         start_time: float | None = None,
         end_time: float | None = None,
@@ -360,8 +363,8 @@ class IndraClient:
 
     @staticmethod
     def get_history_sync(
-        username: str | None,
-        password: str | None,
+        username: str,
+        password: str,
         domain: str | None,
         start_time: float | None,
         end_time: float | None = None,
@@ -449,14 +452,16 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            res = json.loads(result.data)
+            res:int = json.loads(result.data)  # Number of deleted records
             return res
 
-    async def update_recs(self, recs):
+    async def update_recs(self, recs: IndraEvent | list[IndraEvent]):
         if isinstance(recs, list) is False:
             self.log.error("Not a list")
-            recs = [recs]
-        cmd = recs
+            recsl: list[IndraEvent] = [cast(IndraEvent, recs)]
+        else:
+            recsl = cast(list[IndraEvent], recs)
+        cmd = recsl
         ie = IndraEvent()
         ie.domain = "$trx/db/req/update"
         ie.from_id = "ws/python"
@@ -464,9 +469,9 @@ class IndraClient:
         if self.session_id is not None:
             ie.auth_hash = self.session_id
         ie.data = json.dumps(cmd)
-        return await self.send_event(ie)
+        return  await self.send_event(ie)
 
-    async def update_recs_wait(self, recs):
+    async def update_recs_wait(self, recs: IndraEvent | list[IndraEvent]):
         future = await self.update_recs(recs)
         if future is None:
             return None
@@ -475,10 +480,11 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            return json.loads(result.data)
+            num_updated:int = cast(int, json.loads(result.data))
+        return num_updated
 
-    async def kv_write(self, key, value):
-        cmd = {
+    async def kv_write(self, key:str, value:str):
+        cmd: dict[str, str] = {
             "key": key,
             "value": value,
         }
@@ -491,7 +497,7 @@ class IndraClient:
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
-    async def kv_write_wait(self, key, value):
+    async def kv_write_wait(self, key:str, value:str):
         future = await self.kv_write(key, value)
         if future is None:
             return None
@@ -500,9 +506,10 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            return json.loads(result.data)
+            status: str =  json.loads(result.data)  # "OK"
+            return status
 
-    async def kv_read(self, key):
+    async def kv_read(self, key:str):
         cmd = {
             "key": key,
         }
@@ -516,7 +523,7 @@ class IndraClient:
         self.log.debug("Sending kv_read")
         return await self.send_event(ie)
 
-    async def kv_read_wait(self, key):
+    async def kv_read_wait(self, key:str) -> str | None:
         future = await self.kv_read(key)
         if future is None:
             return None
@@ -525,9 +532,10 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            return json.loads(result.data)
+            value: str = json.loads(result.data)
+            return value
 
-    async def kv_delete(self, key):
+    async def kv_delete(self, key:str):
         cmd = {
             "key": key,
         }
@@ -540,7 +548,7 @@ class IndraClient:
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
-    async def kv_delete_wait(self, key):
+    async def kv_delete_wait(self, key: str) -> str | None:
         future = await self.kv_delete(key)
         if future is None:
             return None
@@ -549,9 +557,10 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            return json.loads(result.data)
+            status: str = json.loads(result.data)
+            return status
 
-    async def login(self, username, password):
+    async def login(self, username:str, password:str):
         cmd = {
             "key": f"entity/indrajala/user/{username}/password",
             "value": password,
@@ -566,7 +575,7 @@ class IndraClient:
         ie.data = json.dumps(cmd)
         return await self.send_event(ie)
 
-    async def login_wait(self, username, password):
+    async def login_wait(self, username:str, password:str):
         # Login and return the auth_hash session_id.
         #
         #  @param username: username
@@ -613,7 +622,7 @@ class IndraClient:
         else:
             return True
 
-    async def indra_log(self, level, message, module_name=None):
+    async def indra_log(self, level:str , message:str , module_name:str | None=None):
         """Log message"""
         if module_name is None:
             module_name = self.module_name
@@ -629,26 +638,26 @@ class IndraClient:
         ie.data = json.dumps(message)
         return await self.send_event(ie)
 
-    async def debug(self, message, module_name=None):
+    async def debug(self, message: str, module_name:str | None=None):
         self.log.debug(f"Indra_log-Debug: {message}")
         return await self.indra_log("debug", message, module_name)
 
-    async def info(self, message, module_name=None):
+    async def info(self, message:str, module_name:str | None=None):
         self.log.info(f"Indra_log-Info: {message}")
         return await self.indra_log("info", message, module_name)
 
-    async def warn(self, message, module_name=None):
-        self.log.warn(f"Indra_log-Warn: {message}")
+    async def warn(self, message:str, module_name:str | None=None):
+        self.log.warning(f"Indra_log-Warn: {message}")
         return await self.indra_log("warn", message, module_name)
 
-    async def error(self, message, module_name=None):
+    async def error(self, message:str, module_name:str | None=None):
         self.log.error(f"Indra_log-Error: {message}")
         return await self.indra_log("error", message, module_name)
 
     @staticmethod
-    def get_timeseries(result):
-        dt = []
-        y = []
+    def get_timeseries(result: list[tuple[float, float]]):
+        dt: list[datetime.datetime] = []
+        y: list[float]= []
         for t, yv in result:
             dt.append(IndraTime.julian_to_datetime(t))
             y.append(yv)

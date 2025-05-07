@@ -27,6 +27,7 @@ package-lock.json
 indra_creds.json
 indra_cp_config.py
 data/
+.virtual_documents/
 
 # At some point, produced documentation should be checked in.
 docs/jsdoc/
