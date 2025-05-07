@@ -110,14 +110,14 @@ class IndraProcess(IndraProcessCore):
                 uuid = lib_entry['uuid']
             else:
                 self.log.error(f"Library entry {lib_entry} has no UUID")
-                uuid = "NONE"
+                continue
             if 'docs' in lib_entry:
                 for doc in lib_entry['docs']:
                     fn = doc['ref_name']
                     md5_hash = hashlib.md5(fn.encode('utf-8')).hexdigest()
                     self.md5_to_lib_entry[md5_hash] = {'filename': fn, 'uuid': uuid}
             else:
-                self.log.error(f"Document {lib_entry} has no docs")
+                self.log.warning(f"Document {lib_entry} has no docs")
         self.log.info(f"Library size: {len(self.md5_to_lib_entry)}")
 
     async def async_web_agent(self):
