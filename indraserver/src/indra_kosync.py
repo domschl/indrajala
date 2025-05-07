@@ -117,12 +117,9 @@ class IndraProcess(IndraProcessCore):
                     md5_hash = hashlib.md5(fn.encode('utf-8')).hexdigest()
                     self.md5_to_lib_entry[md5_hash] = {'filename': fn, 'uuid': uuid}
                     # Get MD5 of file content:
-                    if 'path' in doc:
-                        fn_real = doc['path']
-                        with open(fn_real, "rb") as f:
-                            file_content = f.read()
-                            md5_hash = hashlib.md5(file_content).hexdigest()
-                            self.md5_to_lib_entry[md5_hash] = {'filename': fn, 'uuid': uuid}
+                    if 'md5' in doc:
+                        md5_hash = doc['md5']
+                        self.md5_to_lib_entry[md5_hash] = {'filename': fn, 'uuid': uuid}
             else:
                 self.log.warning(f"Document {lib_entry} has no docs")
         self.log.info(f"Library size: {len(self.md5_to_lib_entry)}")
