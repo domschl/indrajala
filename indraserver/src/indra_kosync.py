@@ -169,7 +169,7 @@ class IndraProcess(IndraProcessCore):
         self.reading_state[data["username"]] = {"password": data["password"], "documents": {}}
         self.log.info(f"User create request: {data["username"]}")
         self._save_state()
-        return web.json_response({"username": data["username"]}, status=201)
+        return web.json_response({"username": data["username"]}, status=201, content_type="application/json")
 
     def _auth(self, request):
         headers = request.headers
@@ -192,7 +192,7 @@ class IndraProcess(IndraProcessCore):
     async def user_auth_handler(self, request):
         ret, _ = self._auth(request)
         if ret is None:
-            return web.json_response({"authorized": "OK"}, status=200)
+            return web.json_response({"authorized": "OK"}, status=200, content_type="application/json")
         return ret
 
     async def syncs_get_progress_handler(self, request):
@@ -220,7 +220,7 @@ class IndraProcess(IndraProcessCore):
         else:
             progress = user_info["documents"][document]
             self.log.info(f"Document {document} progress: {progress}")
-        return web.json_response(progress)
+        return web.json_response(progress, content_type="application/json", status=200)
 
     async def syncs_put_progress_handler(self, request):
         ret, user = self._auth(request)
@@ -252,10 +252,10 @@ class IndraProcess(IndraProcessCore):
             ev.data = json.dumps(reading_progress)
             self.event_send(ev)
         self._save_state()
-        return web.json_response({"document": data["document"], "timestamp": time.time()}, status=200)
+        return web.json_response({"document": data["document"], "timestamp": time.time()}, status=200, content_type="application/json")
 
     async def healthcheck_handler(self, request):
-        return web.json_response({"state": "OK"}, status=200)
+        return web.json_response({"state": "OK"}, status=200, content_type="application/json")
     
     async def async_outbound(self, ev: IndraEvent):
         pass
