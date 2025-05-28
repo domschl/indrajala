@@ -337,7 +337,7 @@ class IndraTime:
             if pt.endswith(" ad"):
                 pt = pt[:-3]
             jdt = None
-            if pt.endswith(" ma bp") or pt.endswith(" ma"):
+            if pt.endswith(" ma bp") or pt.endswith(" ma") or pt.endswith(" mya") or pt.endswith(" mya bp"):
                 ma = float(pt.split(" ")[0])
                 year = int(1950 - ma * 1000000.0)
                 month = 1
@@ -349,7 +349,7 @@ class IndraTime:
                 jdt = IndraTime.discrete_time_to_julian(
                     year, month, day, hour, minute, second, microsecond
                 )
-            elif pt.endswith(" ga bp") or pt.endswith(" ga"):
+            elif pt.endswith(" ga bp") or pt.endswith(" ga") or pt.endswith(" bya") or pt.endswith(" bya bp"):
                 ga = float(pt.split(" ")[0])
                 year = int(1950 - ga * 1000000000.0)
                 month = 1
