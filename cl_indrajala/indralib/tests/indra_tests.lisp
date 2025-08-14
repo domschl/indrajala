@@ -120,8 +120,8 @@
                              for p = (uiop:split-string a :separator "=")
                              when (= (length p) 2) append (list (intern (string-upcase (subseq (first p) 2)) :keyword) (second p))))
                  (folder (pathname (ensure-arg args :FOLDER "../test_data/")))
-                 (domain-folder (merge-pathnames "domain/" folder))
-                 (time-folder (merge-pathnames "time/" folder))
+                 (domain-folder (merge-pathnames "test_data/domain/" folder))
+                 (time-folder (merge-pathnames "test_data/time/" folder))
                  (include-failure (string= (ensure-arg args :INCLUDE_FAILURE_CASES "false") "true"))
                  (num-ok 0) (num-failed 0) (num-skipped 0) (errors '()))
             ;; domain mqcmp
@@ -145,5 +145,5 @@
         (format t "#$#$# Result #$#$#~%")
         (yason:encode (list :num_ok 0 :num_failed 1 :num_skipped 0 :errors (vector (princ-to-string e))) *standard-output*)
         (terpri)
-        (uiop:quit 1))))))
+        (uiop:quit 1)))))
 
