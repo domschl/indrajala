@@ -4,7 +4,6 @@ import uuid
 from .indra_time import IndraTime
 
 
-# XXX  https://en.wikipedia.org/wiki/Decimal_time
 class IndraEvent:
     def __init__(self):
         """Create an IndraEvent json object

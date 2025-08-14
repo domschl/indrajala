@@ -1,0 +1,149 @@
+;;;; indra_tests.lisp — run CL tests using the shared JSON fixtures
+
+(defpackage #:indralib.tests
+  (:use #:cl #:indralib)
+  (:import-from #:yason #:parse)
+  (:export #:main))
+(in-package #:indralib.tests)
+
+(defun read-json-file (path)
+  (with-open-file (in path :direction :input :external-format :utf-8)
+    (yason:parse in :object-as :hash-table)))
+
+(defun ensure-arg (args key default)
+  (or (getf args key) default))
+
+(defun cmp-time (d1 d2)
+  (let ((l1 (length d1)) (l2 (length d2)))
+    (cond
+      ((< l1 l2) (string= d1 (subseq d2 0 l1)))
+      ((< l2 l1) (string= (subseq d1 0 l2) d2))
+      (t (string= d1 d2)))))
+
+(defun run-domain-tests (folder &key include-failure-cases)
+  (let* ((file (merge-pathnames (if include-failure-cases
+                                    "domain_failure_cases.json"
+                                    "domain_publish_subscribe_data.json")
+                                folder))
+         (data (read-json-file file))
+         (num-ok 0) (num-failed 0) (num-skipped 0) (errors '()))
+    (loop for i across data do
+         (let* ((pub (gethash "publish" i))
+                (sub (gethash "subscribe" i))
+                (res (gethash "result" i)))
+           (if (eql (mqcmp pub sub) (if res t nil))
+               (incf num-ok)
+               (progn (incf num-failed)
+                      (push (format nil "Error: ~a ~a != ~a" pub sub res) errors)))))
+    (values num-ok num-failed num-skipped (nreverse errors))))
+
+(defun run-time-tests (folder)
+  (let* ((data1 (read-json-file (merge-pathnames "normalized_jd_time_data.json" folder)))
+         (data2 (read-json-file (merge-pathnames "normalized_bp_time_data.json" folder)))
+         (data3 (read-json-file (merge-pathnames "normalized_wp_decimal_time.json" folder)))
+         (num-ok 0) (num-failed 0) (num-skipped 0) (errors '()))
+    ;; data1
+    (loop for d across data1 do
+         (let* ((jd (gethash "JulianDate" d))
+                (indra-text (julian-to-iso jd))
+                (indra-jd (iso-to-julian indra-text))
+                (indra-human (julian-to-string-time jd))
+                (it (if (alexandria:ends-with-subseq " BC" indra-text)
+                        (concatenate 'string "-" (subseq indra-text 0 (- (length indra-text) 3)))
+                        indra-text))
+                (jd-str (gethash "julian_string" d))
+                (gd-str (gethash "gregorian_string" d)))
+           (declare (ignore indra-human))
+           (let ((res ""))
+             (when (cmp-time jd-str it) (setf res (concatenate 'string res "[JD]")))
+             (when (cmp-time gd-str it) (setf res (concatenate 'string res "[GD]")))
+             (if (string= res "")
+                 (progn (incf num-failed)
+                        (push (format nil "Error: Both ~a and ~a != ~a" jd-str gd-str it) errors))
+                 (incf num-ok)))
+           (if (and indra-jd (<= (abs (- indra-jd jd)) 0.0001))
+               (incf num-ok)
+               (progn (incf num-failed)
+                      (push (format nil "Error: ~a != ~a" indra-jd jd) errors)))))
+    ;; data2
+    (loop for d across data2 do
+         (let* ((gr (gethash "Gregorian year" d))
+                (bp (gethash "BP year" d))
+                (jd1 (nth-value 0 (string-time-to-julian gr)))
+                (jd2 (nth-value 0 (string-time-to-julian bp)))
+                (bpf (parse-integer (first (uiop:split-string bp :separator " "))))
+                (year (- 1950 bpf))
+                (jd3 (discrete-time-to-julian year 1 1 0 0 0 0)))
+           (declare (ignore jd2))
+           (if (and jd1 jd3 (<= (abs (- jd1 jd3)) 0.0001))
+               (incf num-ok)
+               (progn (incf num-failed)
+                      (push (format nil "Error: ~a != ~a at test ~a" jd1 jd3 (gethash "Event" d)) errors)))))
+    ;; data3
+    (loop for d across data3 do
+         (let* ((iso (gethash "date" d))
+                (frac (gethash "frac_year" d))
+                (jd (iso-to-julian iso))
+                (dt (julian-to-datetime jd))
+                (dt-from-frac (fractional-year-to-datetime frac))
+                (jd-from-frac (fractional-year-to-julian frac))
+                (frac-from-jd (julian-to-fractional-year jd))
+                (frac-from-dt (datetime-to-fractional-year dt)))
+           (when (and dt-from-frac dt)
+             (let* ((jd1 (discrete-time-to-julian (getf dt-from-frac :year) (getf dt-from-frac :month) (getf dt-from-frac :day)
+                                                  (getf dt-from-frac :hour) (getf dt-from-frac :minute) (getf dt-from-frac :second) (or (getf dt-from-frac :microsecond) 0)))
+                    (jd2 (discrete-time-to-julian (getf dt :year) (getf dt :month) (getf dt :day)
+                                                  (getf dt :hour) (getf dt :minute) (getf dt :second) (or (getf dt :microsecond) 0))))
+               (if (and jd1 jd2 (<= (abs (- jd1 jd2)) 0.0001)) (incf num-ok) (incf num-failed))))
+           (if (and jd jd-from-frac (<= (abs (- jd jd-from-frac)) 0.0001)) (incf num-ok) (incf num-failed))
+           (if (and frac frac-from-jd (<= (abs (- frac frac-from-jd)) 0.0001)) (incf num-ok) (incf num-failed))
+           (if (and frac frac-from-dt (<= (abs (- frac frac-from-dt)) 0.0001)) (incf num-ok) (incf num-failed))))
+    (values num-ok num-failed num-skipped (nreverse errors))))
+
+(defun run-json-roundtrip-tests ()
+  (let* ((e (make-indra-event :domain "a/b" :from-id "x/y" :data-type "text/plain" :data "hello"))
+         (json (event-to-json e))
+         (e2 (event-from-json json)))
+    (and (string= (event-domain e) (event-domain e2))
+         (string= (event-from-id e) (event-from-id e2))
+         (string= (event-uuid4 e) (event-uuid4 e2))
+         (string= (event-data-type e) (event-data-type e2))
+         (string= (event-data e) (event-data e2))
+         t)))
+
+(defun main (&rest argv)
+  (let ((yason:*symbol-encoder* #'yason:encode-symbol-as-string))
+    (handler-case
+        (progn
+          ;; parse args like --folder=../test_data
+          (let* ((args (loop for a in argv
+                             for p = (uiop:split-string a :separator "=")
+                             when (= (length p) 2) append (list (intern (string-upcase (subseq (first p) 2)) :keyword) (second p))))
+                 (folder (pathname (ensure-arg args :FOLDER "../test_data/")))
+                 (domain-folder (merge-pathnames "domain/" folder))
+                 (time-folder (merge-pathnames "time/" folder))
+                 (include-failure (string= (ensure-arg args :INCLUDE_FAILURE_CASES "false") "true"))
+                 (num-ok 0) (num-failed 0) (num-skipped 0) (errors '()))
+            ;; domain mqcmp
+            (multiple-value-bind (ok failed skipped errs)
+                (run-domain-tests domain-folder :include-failure-cases include-failure)
+              (incf num-ok ok) (incf num-failed failed) (incf num-skipped skipped) (setf errors (nconc errors errs)))
+            ;; time tests
+            (multiple-value-bind (ok failed skipped errs)
+                (run-time-tests time-folder)
+              (incf num-ok ok) (incf num-failed failed) (incf num-skipped skipped) (setf errors (nconc errors errs)))
+            ;; json roundtrip
+            (if (run-json-roundtrip-tests)
+                (incf num-ok)
+                (progn (incf num-failed) (push "JSON roundtrip failed" errors)))
+            ;; print result marker and JSON
+            (format t "#$#$# Result #$#$#~%")
+            (let ((obj (list :num_ok num-ok :num_failed num-failed :num_skipped num-skipped :errors (coerce (nreverse errors) 'vector))))
+              (yason:encode obj *standard-output*))
+            (terpri)))
+      (error (e)
+        (format t "#$#$# Result #$#$#~%")
+        (yason:encode (list :num_ok 0 :num_failed 1 :num_skipped 0 :errors (vector (princ-to-string e))) *standard-output*)
+        (terpri)
+        (uiop:quit 1))))))
+

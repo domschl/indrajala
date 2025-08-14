@@ -1,35 +1,54 @@
 import sys
 import subprocess
 import json
+import os
 
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
+ASD_PATH = os.path.abspath(os.path.join(ROOT_DIR, "cl_indrajala", "indralib", "indralib.asd"))
+CL_TESTS_PATH = os.path.abspath(os.path.join(ROOT_DIR, "cl_indrajala", "indralib", "tests", "indra_tests.lisp"))
+TEST_DATA_DIR = os.path.abspath(os.path.join(ROOT_DIR, "test_data"))
+DOMAIN_DIR = os.path.join(TEST_DATA_DIR, "domain")
+TIME_DIR = os.path.join(TEST_DATA_DIR, "time")
+JS_MQCMP = os.path.abspath(os.path.join(ROOT_DIR, "js_indrajala", "indralib", "tests", "indra_mqcmp_tests.js"))
+JS_TIME = os.path.abspath(os.path.join(ROOT_DIR, "js_indrajala", "indralib", "tests", "indra_time_tests.js"))
+PY_MQCMP = os.path.abspath(os.path.join(ROOT_DIR, "indralib", "tests", "mq_cmp.py"))
+PY_TIME = os.path.abspath(os.path.join(ROOT_DIR, "indralib", "tests", "time_tests.py"))
+SWIFT_PKG = os.path.abspath(os.path.join(ROOT_DIR, "swift_indrajala", "indratest"))
 
 test_tasks = [
     {
         "name": "js_indralib mqcmp domain tests via Node.js",
-        "cmd": "node ../js_indrajala/indralib/tests/indra_mqcmp_tests.js --folder=domain",
-        "failure_sim_cmd": "node ../js_indrajala/indralib/tests/indra_mqcmp_tests.js --folder=domain --include_failure_cases=true",
+        "cmd": f"node {JS_MQCMP} --folder={DOMAIN_DIR}",
+        "failure_sim_cmd": f"node {JS_MQCMP} --folder={DOMAIN_DIR} --include_failure_cases=true",
     },
     {
         "name": "py_indralib_indra_mqcmp_tests via Python",
-        "cmd": "python ../indralib/tests/mq_cmp.py --folder=domain",
-        "failure_sim_cmd": "python ../indralib/tests/mq_cmp.py --folder=domain --include_failure_cases=true",
+        "cmd": f"python {PY_MQCMP} --folder={DOMAIN_DIR}",
+        "failure_sim_cmd": f"python {PY_MQCMP} --folder={DOMAIN_DIR} --include_failure_cases=true",
     },
     {
         "name": "js_indralib time tests via Node.js",
-        "cmd": "node ../js_indrajala/indralib/tests/indra_time_tests.js --folder=time",
+        "cmd": f"node {JS_TIME} --folder={TIME_DIR}",
     },
     {
         "name": "py_indralib_indra_time_tests via Python",
-        "cmd": "python ../indralib/tests/time_tests.py --folder=time",
+        "cmd": f"python {PY_TIME} --folder={TIME_DIR}",
     },
     {
         "name": "swift_indralib domain tests via Swift",
-        "cmd": "swift run --package-path ../swift_indrajala/indratest indratest --folder=../test_data --include_failure_cases=false --test_cases=domain",
-        "failure_sim_cmd": "swift run --package-path ../swift_indrajala/indratest indratest --folder=../test_data --include_failure_cases=true --test_cases=domain",
+        "cmd": f"swift run --package-path {SWIFT_PKG} indratest --folder={TEST_DATA_DIR} --include_failure_cases=false --test_cases=domain",
+        "failure_sim_cmd": f"swift run --package-path {SWIFT_PKG} indratest --folder={TEST_DATA_DIR} --include_failure_cases=true --test_cases=domain",
     },
     {
         "name": "swift_indralib time tests via Swift",
-        "cmd": "swift run --package-path ../swift_indrajala/indratest indratest --folder=../test_data --include_failure_cases=false --test_cases=time",
+        "cmd": f"swift run --package-path {SWIFT_PKG} indratest --folder={TEST_DATA_DIR} --include_failure_cases=false --test_cases=time",
+    },
+    {
+        "name": "cl_indralib tests via SBCL",
+        "cmd": f"sbcl --noinform --non-interactive --eval '(asdf:load-asd \"{ASD_PATH}\")' --eval '(ql:quickload :indralib)' --load \"{CL_TESTS_PATH}\" --eval '(indralib.tests:main \"--folder={TEST_DATA_DIR}\" \"--include_failure_cases=false\")'",
+        "failure_sim_cmd": f"sbcl --noinform --non-interactive --eval '(asdf:load-asd \"{ASD_PATH}\")' --eval '(ql:quickload :indralib)' --load \"{CL_TESTS_PATH}\" --eval '(indralib.tests:main \"--folder={TEST_DATA_DIR}\" \"--include_failure_cases=true\")'",
     },
 ]
 
