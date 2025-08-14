@@ -10,6 +10,12 @@
   (with-open-file (in path :direction :input :external-format :utf-8)
     (yason:parse in :object-as :hash-table)))
 
+(defun get-test-cases (path)
+  (let ((data (read-json-file path)))
+    (if (hash-table-p data)
+        (gethash "test_cases" data)
+        data)))
+
 (defun ensure-arg (args key default)
   (or (getf args key) default))
 
@@ -25,9 +31,9 @@
                                     "domain_failure_cases.json"
                                     "domain_publish_subscribe_data.json")
                                 folder))
-         (data (read-json-file file))
+         (data (get-test-cases file))
          (num-ok 0) (num-failed 0) (num-skipped 0) (errors '()))
-    (loop for i across data do
+    (loop for i in data do
          (let* ((pub (gethash "publish" i))
                 (sub (gethash "subscribe" i))
                 (res (gethash "result" i)))
@@ -38,12 +44,12 @@
     (values num-ok num-failed num-skipped (nreverse errors))))
 
 (defun run-time-tests (folder)
-  (let* ((data1 (read-json-file (merge-pathnames "normalized_jd_time_data.json" folder)))
-         (data2 (read-json-file (merge-pathnames "normalized_bp_time_data.json" folder)))
-         (data3 (read-json-file (merge-pathnames "normalized_wp_decimal_time.json" folder)))
+  (let* ((data1 (get-test-cases (merge-pathnames "normalized_jd_time_data.json" folder)))
+         (data2 (get-test-cases (merge-pathnames "normalized_bp_time_data.json" folder)))
+         (data3 (get-test-cases (merge-pathnames "normalized_wp_decimal_time.json" folder)))
          (num-ok 0) (num-failed 0) (num-skipped 0) (errors '()))
     ;; data1
-    (loop for d across data1 do
+    (loop for d in data1 do
          (let* ((jd (gethash "JulianDate" d))
                 (indra-text (julian-to-iso jd))
                 (indra-jd (iso-to-julian indra-text))
@@ -66,7 +72,7 @@
                (progn (incf num-failed)
                       (push (format nil "Error: ~a != ~a" indra-jd jd) errors)))))
     ;; data2
-    (loop for d across data2 do
+    (loop for d in data2 do
          (let* ((gr (gethash "Gregorian year" d))
                 (bp (gethash "BP year" d))
                 (jd1 (nth-value 0 (string-time-to-julian gr)))
@@ -80,7 +86,7 @@
                (progn (incf num-failed)
                       (push (format nil "Error: ~a != ~a at test ~a" jd1 jd3 (gethash "Event" d)) errors)))))
     ;; data3
-    (loop for d across data3 do
+    (loop for d in data3 do
          (let* ((iso (gethash "date" d))
                 (frac (gethash "frac_year" d))
                 (jd (iso-to-julian iso))
@@ -111,17 +117,27 @@
          (string= (event-data e) (event-data e2))
          t)))
 
+(defun make-result-hash (ok failed skipped errors)
+  (let ((table (make-hash-table :test 'equal)))
+    (setf (gethash "num_ok" table) ok)
+    (setf (gethash "num_failed" table) failed)
+    (setf (gethash "num_skipped" table) skipped)
+    (setf (gethash "errors" table) (coerce errors 'vector))
+    table))
+
 (defun main (&rest argv)
-  (let ((yason:*symbol-encoder* #'yason:encode-symbol-as-string))
+  (let ((yason:*symbol-encoder* #'yason:encode-symbol-as-string)
+        (yason:*symbol-key-encoder* #'yason:encode-symbol-as-string))
     (handler-case
         (progn
           ;; parse args like --folder=../test_data
           (let* ((args (loop for a in argv
                              for p = (uiop:split-string a :separator "=")
-                             when (= (length p) 2) append (list (intern (string-upcase (subseq (first p) 2)) :keyword) (second p))))
-                 (folder (pathname (ensure-arg args :FOLDER "../test_data/")))
-                 (domain-folder (merge-pathnames "test_data/domain/" folder))
-                 (time-folder (merge-pathnames "test_data/time/" folder))
+                             if (= (length p) 2)
+                               appending (list (intern (string-upcase (subseq (first p) 2)) :keyword) (second p))))
+                 (folder (pathname (ensure-arg args :FOLDER "")))
+                 (domain-folder (merge-pathnames "domain/" folder))
+                 (time-folder (merge-pathnames "time/" folder))
                  (include-failure (string= (ensure-arg args :INCLUDE_FAILURE_CASES "false") "true"))
                  (num-ok 0) (num-failed 0) (num-skipped 0) (errors '()))
             ;; domain mqcmp
@@ -138,12 +154,12 @@
                 (progn (incf num-failed) (push "JSON roundtrip failed" errors)))
             ;; print result marker and JSON
             (format t "#$#$# Result #$#$#~%")
-            (let ((obj (list :num_ok num-ok :num_failed num-failed :num_skipped num-skipped :errors (coerce (nreverse errors) 'vector))))
+            (let ((obj (make-result-hash num-ok num-failed num-skipped (nreverse errors))))
               (yason:encode obj *standard-output*))
             (terpri)))
       (error (e)
         (format t "#$#$# Result #$#$#~%")
-        (yason:encode (list :num_ok 0 :num_failed 1 :num_skipped 0 :errors (vector (princ-to-string e))) *standard-output*)
+        (yason:encode (make-result-hash 0 1 0 (list (princ-to-string e))) *standard-output*)
         (terpri)
         (uiop:quit 1)))))
 
