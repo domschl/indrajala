@@ -6,6 +6,14 @@ Initial Common Lisp port scaffolding for IndraLib.
 - Features: `indra-event` port, JSON encode/decode, MQTT-style wildcard compare, `indra-time` utilities
 - Dependencies: [`yason`](https://github.com/phmarek/yason), [`uuid`](https://github.com/dardoria/cl-uuid) (ASDF names `yason` and `uuid`)
 
+## Preparation
+
+Add the cl_indrajala directory to the asdf registry, e.g. by adding to `.sbclrc`:
+
+```lisp
+(pushnew "~/Codeberg/Indrajala/cl_indrajala/indralib/" asdf:*central-registry* :test #'equal)
+```
+
 ## Load
 
 In a Lisp REPL with Quicklisp:
