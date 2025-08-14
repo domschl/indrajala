@@ -2,6 +2,8 @@ import sys
 import subprocess
 import json
 import os
+from typing import Any, cast
+from dataclasses import dataclass, field
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -53,7 +55,7 @@ test_tasks = [
 ]
 
 
-def run_process_and_capture_output(command):
+def run_process_and_capture_output(command: str):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     output, _ = process.communicate()
 
@@ -62,41 +64,54 @@ def run_process_and_capture_output(command):
     if start_index != -1:
         start_index += len(token)
         json_str = output[start_index:].strip()
-        json_obj = json.loads(json_str)
+        json_obj: dict[str, int | list[str]] = json.loads(json_str)  # pyright:ignore[reportAny]
         return json_obj
 
     return None
 
+@dataclass
+class Cumul:
+    num_ok: int = 0
+    num_failed: int = 0
+    num_skipped: int = 0
+    errors: list[str] = field(default_factory=list[str])
 
-def run_tests(test_tasks, simulate_failures=False):
-    cumul = {
-        "num_ok": 0,
-        "num_failed": 0,
-        "num_skipped": 0,
-        "errors": [],
-    }
+def run_tests(test_tasks:list[dict[str, Any]], simulate_failures:bool=False):  # pyright:ignore[reportExplicitAny]
+    cumul = Cumul()
     for task in test_tasks:
         if simulate_failures is True:
             if "failure_sim_cmd" not in task:
                 print(f"Skipping test: {task['name']} as no failure cases are provided")
                 continue
             print(f"Running test: {task['name']} with failure cases")
-            result = run_process_and_capture_output(task["failure_sim_cmd"])
+            result = run_process_and_capture_output(cast(str, task["failure_sim_cmd"]))
         else:
             print(f"Running test: {task['name']}")
-            result = run_process_and_capture_output(task["cmd"])
+            result = run_process_and_capture_output(cast(str, task["cmd"]))
         if result is not None:
             print(json.dumps(result, indent=2))
-            cumul["num_ok"] += result["num_ok"]
-            cumul["num_failed"] += result["num_failed"]
-            cumul["num_skipped"] += result["num_skipped"]
-            cumul["errors"].extend(result["errors"])
+            cumul.num_ok += cast(int, result["num_ok"])
+            cumul.num_failed += cast(int, result["num_failed"])
+            cumul.num_skipped += cast(int, result["num_skipped"])
+            cumul.errors.extend(cast(list[str], result["errors"]))
         else:
             print(f"FATAL: No result found for test: {task['name']}")
             exit(-1)
     print("----------------------------------------------")
     print("Cumulative results")
-    print(json.dumps(cumul, indent=2))
+    print(f"OK:      {cumul.num_ok}")
+    print(f"Fail:    {cumul.num_failed}")
+    print(f"Skipped: {cumul.num_skipped}")
+    errs = cumul.errors
+    if len(errs) > 0:
+        print("Errors:")
+        for ne, err in enumerate(errs):
+            err_lines = err.split("\n")
+            for lno, line in enumerate(err_lines):
+                if lno==0:
+                    print(f"{ne+1:3d}: {line}")
+                else:
+                    print(f"     {line}")
 
 
 if __name__ == "__main__":

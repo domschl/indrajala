@@ -95,10 +95,10 @@ For convenience, if DT is NIL, we use current time."
 (defun datetime-to-fractional-year (dt)
   "Datetime plist -> fractional year based on 365.25-day years."
   (let* ((year (getf dt :year))
-      (jd (discrete-time-to-julian
-        year (getf dt :month) (getf dt :day)
-        (getf dt :hour) (getf dt :minute) (getf dt :second)
-        (or (getf dt :microsecond) 0)))
+         (jd (discrete-time-to-julian
+              year (getf dt :month) (getf dt :day)
+              (getf dt :hour) (getf dt :minute) (getf dt :second)
+              (or (getf dt :microsecond) 0)))
          (jd-year-start (discrete-time-to-julian year 1 1 0 0 0 0)))
     (+ year (/ (* 86400.0 (- jd jd-year-start)) (* 365.25 24 60 60)))))
 
@@ -177,10 +177,10 @@ Returns NIL on invalid Gregorian gap dates (1582-10-05..14)."
                (cond
                  ((= (length dts) 1) (setf year (- 1 (parse-int (first dts)))))
                  ((= (length dts) 2) (setf year (- 1 (parse-int (first dts))))
-                                     (setf month (parse-int (second dts))))
+                  (setf month (parse-int (second dts))))
                  ((= (length dts) 3) (setf year (- 1 (parse-int (first dts))))
-                                     (setf month (parse-int (second dts)))
-                                     (setf day (parse-int (third dts))))
+                  (setf month (parse-int (second dts)))
+                  (setf day (parse-int (third dts))))
                  (t (error "Invalid date format: ~a" pt)))
                (setf jdt (discrete-time-to-julian year month day 0 0 0 0))))
             (t
