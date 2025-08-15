@@ -125,11 +125,19 @@ For convenience, if DT is NIL, we use current time."
   (handler-case (let ((*read-eval* nil)) (read-from-string s))
     (error () (error "Invalid float: ~a" s))))
 
+(defun split-by-string (string separator)
+  "Split STRING into a list of substrings separated by SEPARATOR."
+  (let ((sep-len (length separator)))
+    (loop for start = 0 then (+ end sep-len)
+          for end = (search separator string :start2 start)
+          collect (subseq string start end)
+          while end)))
+
 (defun string-time-to-julian (time-str)
   "Parse string times and return (values jd) or (values jd1 jd2) for intervals.
 Returns NIL on invalid Gregorian gap dates (1582-10-05..14)."
   (let* ((s (string-downcase (string-trim '(#\Space #\Tab #\Newline) time-str)))
-         (parts (uiop:split-string s :separator " - "))
+         (parts (split-by-string s " - "))
          (results nil))
     (labels ((push-result (jdt)
                (if (null results)
@@ -142,6 +150,7 @@ Returns NIL on invalid Gregorian gap dates (1582-10-05..14)."
                (jdt nil))
           (when (alexandria:ends-with-subseq " ad" pt :test #'char=)
             (setf pt (subseq pt 0 (- (length pt) 3))))
+          (format t "First: ~a ~%" pt)
           (cond
             ((or (alexandria:ends-with-subseq " ma bp" pt)
                  (alexandria:ends-with-subseq " ma" pt)
@@ -174,6 +183,7 @@ Returns NIL on invalid Gregorian gap dates (1582-10-05..14)."
              (let* ((num-part (first (uiop:split-string pt :separator " ")))
                     (dts (remove "" (uiop:split-string num-part :separator "-") :test #'equal))
                     (year 0) (month 1) (day 1))
+               (format t "~a ~a ~%" num-part dts)
                (cond
                  ((= (length dts) 1) (setf year (- 1 (parse-int (first dts)))))
                  ((= (length dts) 2) (setf year (- 1 (parse-int (first dts))))
