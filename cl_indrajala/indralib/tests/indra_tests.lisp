@@ -136,8 +136,8 @@
                              if (= (length p) 2)
                                appending (list (intern (string-upcase (subseq (first p) 2)) :keyword) (second p))))
                  (folder (pathname (ensure-arg args :FOLDER "test_data/")))
-                 (domain-folder (merge-pathnames "domain/" ""))
-                 (time-folder (merge-pathnames "time/" ""))
+                 (domain-folder (merge-pathnames "domain/" folder))
+                 (time-folder (merge-pathnames "time/" folder))
                  (include-failure (string= (ensure-arg args :INCLUDE_FAILURE_CASES "false") "true"))
                  (num-ok 0) (num-failed 0) (num-skipped 0) (errors '()))
             ;; domain mqcmp
