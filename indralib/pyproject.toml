@@ -9,9 +9,9 @@ authors = [{ name = "Dominik Schlösser", email = "dominik.schloesser@gmail.com"
 description = "Client for the Indrajala system"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Development Status :: 3 - Alpha",
     "Typing :: Typed",
