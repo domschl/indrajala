@@ -9,7 +9,7 @@ authors = [{ name = "Dominik Schlösser", email = "dominik.schloesser@gmail.com"
 description = "Client for the Indrajala system"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
@@ -21,5 +21,5 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/domschl/indrajala"
-"Bug Tracker" = "https://github.com/domschl/indrajala/issues"
+"Homepage" = "https://codeberg.org/domschl/indrajala"
+"Bug Tracker" = "https://codeberg.org/domschl/indrajala/issues"
