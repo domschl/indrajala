@@ -49,7 +49,7 @@ class Profiles:
             self.log.error("Default configuration written to {self.profile_file}, please edit!")
         with open(self.profile_file, "rb") as f:
             try:
-                raw_profiles: ProfileConfig = json.load(f)
+                raw_profiles: ProfileConfig = json.load(f)  # pyright: ignore[reportAny]
             except Exception as e:
                 self.log.error(f"Error reading profiles from {self.profile_file}: {e}")
                 raw_profiles = def_config
@@ -81,7 +81,6 @@ class Profiles:
         for key in optional_keys:
             if key not in profile:
                 profile[key] = ""
-        return True
 
     @staticmethod
     def get_uri(profile: Profile):

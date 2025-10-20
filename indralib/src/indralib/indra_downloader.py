@@ -21,11 +21,11 @@ import io
 
 
 class IndraDownloader:
-    def __init__(self, cache_dir="download_cache", use_cache=True, logger=None):
-        self.cache_dir = cache_dir
-        self.use_cache = use_cache
+    def __init__(self, cache_dir:str="download_cache", use_cache:bool=True, logger:logging.Logger|None=None):
+        self.cache_dir:str = cache_dir
+        self.use_cache:bool = use_cache
         if logger is None:
-            self.log = logging.getLogger("Downloader")
+            self.log:logging.Logger = logging.getLogger("Downloader")
             self.log.setLevel(logging.WARNING)
         else:
             self.log = logger

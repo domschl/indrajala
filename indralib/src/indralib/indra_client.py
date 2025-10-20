@@ -46,12 +46,10 @@ class IndraClient:
         self.error_shown: bool = False
         self.profiles: Profiles = Profiles()
         self.uri: str | None = None
-        if profile is not None and Profile.check_profile(profile) is False:
-            self.log.error(f"Invalid profile {profile}")
-            self.profile: Profile | None = None
-            return
         if profile is not None:
-            self.profile = profile
+            self.profiles.check_profile(profile)
+        if profile is not None:
+            self.profile: Profile|None = profile
             self.initialized = True
         else:
             if profile_name == "default" or profile_name is None:
@@ -314,7 +312,11 @@ class IndraClient:
         if future is None:
             return None
         hist_result = await future
-        hist: list[tuple[float, float]] = json.loads(hist_result.data)
+        try:
+            hist: list[tuple[float, float]] = cast(list[tuple[float,float]], json.loads(hist_result.data))
+        except Exception as e:
+            self.log.error(f"Failed to parse history: {e}")
+            return None
         return hist
 
     @staticmethod
@@ -420,7 +422,11 @@ class IndraClient:
         if future is None:
             return None
         domain_result = await future
-        doms: list[str] | None = json.loads(domain_result.data)
+        try:
+            doms: list[str] = cast(list[str], json.loads(domain_result.data))
+        except Exception as e:
+            self.log.error(f"Failed to parse domain_result: {e}")
+            return None
         return doms
 
     async def delete_recs(self, domains: str | list[str] | None = None, uuid4s: str | list[str] | None = None):
@@ -452,7 +458,11 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            res:int = json.loads(result.data)  # Number of deleted records
+            try:
+                res:int = cast(int, json.loads(result.data))  # Number of deleted records
+            except Exception as e:
+                self.log.error(f"Failed to parse delete_recs cnt: {e}")
+                return None
             return res
 
     async def update_recs(self, recs: IndraEvent | list[IndraEvent]):
@@ -506,7 +516,11 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            status: str =  json.loads(result.data)  # "OK"
+            try:
+                status: str =  cast(str, json.loads(result.data))  # "OK"
+            except Exception as e:
+                self.log.error(f"Failed to parse state {e}")
+                return None
             return status
 
     async def kv_read(self, key:str):
@@ -532,7 +546,11 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            value: str = json.loads(result.data)
+            try:
+                value: str = cast(str, json.loads(result.data))
+            except Exception as e:
+                self.log.error(f"Failed to parse result {e}")
+                return None
             return value
 
     async def kv_delete(self, key:str):
@@ -557,7 +575,11 @@ class IndraClient:
             self.log.error(f"Error: {result.data}")
             return None
         else:
-            status: str = json.loads(result.data)
+            try:
+                status: str = cast(str, json.loads(result.data))
+            except Exception as e:
+                self.log.error(f"Failed to parse result {e}")
+                return None
             return status
 
     async def login(self, username:str, password:str):
