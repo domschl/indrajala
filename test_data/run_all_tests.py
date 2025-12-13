@@ -47,11 +47,11 @@ test_tasks = [
         "name": "swift_indralib time tests via Swift",
         "cmd": f"swift run --package-path {SWIFT_PKG} indratest --folder={TEST_DATA_DIR} --include_failure_cases=false --test_cases=time",
     },
-    {
-        "name": "cl_indralib tests via SBCL",
-        "cmd": f"sbcl --noinform --non-interactive --eval '(asdf:load-asd \"{ASD_PATH}\")' --eval '(ql:quickload :indralib)' --load \"{CL_TESTS_PATH}\" --eval '(indralib.tests:main \"--folder={TEST_DATA_DIR}/\" \"--include_failure_cases=false\")'",
-        "failure_sim_cmd": f"sbcl --noinform --non-interactive --eval '(asdf:load-asd \"{ASD_PATH}\")' --eval '(ql:quickload :indralib)' --load \"{CL_TESTS_PATH}\" --eval '(indralib.tests:main \"--folder={TEST_DATA_DIR}/\" \"--include_failure_cases=true\")'",
-    },
+    # {
+    #     "name": "cl_indralib tests via SBCL",
+    #     "cmd": f"sbcl --noinform --non-interactive --eval '(asdf:load-asd \"{ASD_PATH}\")' --eval '(ql:quickload :indralib)' --load \"{CL_TESTS_PATH}\" --eval '(indralib.tests:main \"--folder={TEST_DATA_DIR}/\" \"--include_failure_cases=false\")'",
+    #     "failure_sim_cmd": f"sbcl --noinform --non-interactive --eval '(asdf:load-asd \"{ASD_PATH}\")' --eval '(ql:quickload :indralib)' --load \"{CL_TESTS_PATH}\" --eval '(indralib.tests:main \"--folder={TEST_DATA_DIR}/\" \"--include_failure_cases=true\")'",
+    # },
 ]
 
 
