@@ -112,6 +112,23 @@ class IndraTime:
             int(second),
             int(microsecond),
         )
+    
+    @staticmethod
+    def julian_to_discrete_time_secs(jd: float) -> tuple[int, int, int, int, int, int]:
+        """Convert Julian date to discrete time tuple, round to full seconds
+
+        Note: see julian_to_discrete_time() for microsecond precision.
+
+        :param jd: Julian date
+        :return: tuple of (year, month, day, hour, minute, second, microsecond)
+        """
+        year, month, day, hour, minute, second, microsecond = IndraTime.julian_to_discrete_time(jd)
+
+        if microsecond > 500000:
+            jdc = jd + 0.5/(3600.0 * 24.0)
+            year, month, day, hour, minute, second, _microsecond = IndraTime.julian_to_discrete_time(jdc)
+            
+        return year, month, day, hour, minute, second
 
     @staticmethod
     def discrete_time_to_julian(
@@ -183,17 +200,17 @@ class IndraTime:
         frac = dayfrac + (minute + second / 60.0) / 60.0 / 24.0
 
         # round to nearest second XXX maybe not?
-        jd0 = (intgr + frac) * 100000
-        jd = math.floor(jd0)
-        if jd0 - jd > 0.5:
-            jd += 1
-        jd = jd / 100000
+        # jd0 = (intgr + frac) * 100000
+        # jd = math.floor(jd0)
+        # if jd0 - jd > 0.5:
+        #     jd += 1
+        # jd = jd / 100000
 
         # add microsecond
-        jd += microsecond / 86400000000
+        jd = intgr + frac + microsecond / 86400000000
 
         return jd
-
+    
     @staticmethod
     def julian_to_datetime(jd: float) -> datetime.datetime:
         """Convert Julian date to datetime

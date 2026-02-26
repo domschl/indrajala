@@ -33,6 +33,16 @@ def do_tests(data, data2, data3):
         d["indra_text"] = IndraTime.julian_to_ISO(d["JulianDate"])
         d["indra_jd"] = IndraTime.ISO_to_julian(d["indra_text"])
         d["indra_human"] = IndraTime.julian_to_string_time(d["JulianDate"])
+
+        year, month, day, hour, minute, second, microsecond = IndraTime.julian_to_discrete_time(d["JulianDate"])
+        jd_rt = IndraTime.discrete_time_to_julian(year, month, day, hour, minute, second, microsecond)
+        if math.fabs(jd_rt - d["JulianDate"]) > 0.00001:
+            result["num_failed"] += 1
+            err_msg = f"Error: JD round-trip conversion failed: {jd_rt} != {d['JulianDate']}"
+            result["errors"].append(err_msg)
+        else:
+            result["num_ok"] += 1
+
         res = ""
         it = d["indra_text"]
         if it.endswith(" BC"):
@@ -75,6 +85,7 @@ def do_tests(data, data2, data3):
                     year, month, day, hour, minute, second, microsecond
                 )
         if math.isclose(jd1, jd3, abs_tol=0.0001):
+            # print(f"{jd1},{jd3}")
             result["num_ok"] += 1
         else:
             result["num_failed"] += 1
